@@ -7,7 +7,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { LandingScreen, LoginScreen, RegisterScreen } from '../screens';
+import { LandingScreen, LoginScreen, RegisterScreen, TutorialScreen, PathSelectionScreen } from '../screens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -33,6 +33,14 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen 
           name="Register" 
           component={RegisterScreen}
+        />
+        <Stack.Screen 
+          name="Tutorial" 
+          component={TutorialScreen}
+        />
+        <Stack.Screen 
+          name="PathSelection" 
+          component={PathSelectionScreen}
         />
         {/* Add more screens here as your app grows
         <Stack.Screen name="Home" component={HomeScreen} />

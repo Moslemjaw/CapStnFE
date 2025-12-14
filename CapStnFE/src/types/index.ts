@@ -7,6 +7,8 @@ export type RootStackParamList = {
   Landing: undefined;
   Login: undefined;
   Register: undefined;
+  Tutorial: undefined;
+  PathSelection: undefined;
   // Add more screens here as needed
   // Home: undefined;
   // Dashboard: undefined;
