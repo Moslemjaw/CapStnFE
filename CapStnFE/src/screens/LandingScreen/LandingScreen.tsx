@@ -251,11 +251,6 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 70,
     overflow: 'hidden',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
   },
   logoImage: {
     width: 140,

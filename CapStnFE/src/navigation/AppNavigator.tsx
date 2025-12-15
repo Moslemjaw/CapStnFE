@@ -19,6 +19,8 @@ import {
   ResearcherDashboardScreen,
   CreateSurveyScreen,
   SurveyPreviewScreen,
+  SurveyCreatedScreen,
+  SurveyArchivedScreen,
 } from '../screens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -79,6 +81,14 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen 
           name="SurveyPreview" 
           component={SurveyPreviewScreen}
+        />
+        <Stack.Screen 
+          name="SurveyCreated" 
+          component={SurveyCreatedScreen}
+        />
+        <Stack.Screen 
+          name="SurveyArchived" 
+          component={SurveyArchivedScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>

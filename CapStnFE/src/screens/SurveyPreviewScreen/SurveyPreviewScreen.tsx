@@ -85,9 +85,21 @@ export const SurveyPreviewScreen: React.FC<SurveyPreviewScreenProps> = ({ naviga
   };
 
   const handlePublish = () => {
-    // TODO: Publish survey logic
-    alert('Survey published successfully!');
-    navigation.navigate('ResearcherDashboard');
+    // Navigate to Survey Created success screen
+    navigation.navigate('SurveyCreated', {
+      surveyId: survey.id,
+      surveyTitle: survey.title,
+      questionsCount: survey.questions.length,
+    });
+  };
+
+  const handleArchive = () => {
+    // Navigate to Survey Archived success screen
+    navigation.navigate('SurveyArchived', {
+      surveyId: survey.id,
+      surveyTitle: survey.title,
+      questionsCount: survey.questions.length,
+    });
   };
 
   const handleEdit = () => {
@@ -182,18 +194,30 @@ export const SurveyPreviewScreen: React.FC<SurveyPreviewScreenProps> = ({ naviga
         <Ionicons name="pencil" size={24} color={Colors.white} />
       </TouchableOpacity>
 
-      {/* Publish Button */}
+      {/* Action Buttons */}
       <View style={styles.publishButtonContainer}>
-        <TouchableOpacity style={styles.publishButton} onPress={handlePublish}>
-          <LinearGradient
-            colors={[RESEARCHER_COLOR, '#8B5CF6']}
-            style={styles.publishButtonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity 
+            style={[styles.archiveButton, { flex: 1, marginRight: 8 }]} 
+            onPress={handleArchive}
           >
-            <Text style={styles.publishButtonText}>Publish Survey</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <Ionicons name="archive-outline" size={20} color="#6B7280" style={styles.archiveButtonIcon} />
+            <Text style={styles.archiveButtonText}>Archive</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.publishButton, { flex: 1, marginLeft: 8 }]} 
+            onPress={handlePublish}
+          >
+            <LinearGradient
+              colors={[RESEARCHER_COLOR, '#8B5CF6']}
+              style={styles.publishButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.publishButtonText}>Publish</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -399,6 +423,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 0,
+  },
+  archiveButton: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  archiveButtonIcon: {
+    marginRight: 6,
+  },
+  archiveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
   },
   publishButton: {
     borderRadius: 12,

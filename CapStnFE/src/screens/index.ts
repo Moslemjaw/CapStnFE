@@ -17,4 +17,6 @@ export { SurveyCompletedScreen } from './SurveyCompletedScreen/SurveyCompletedSc
 export { ResearcherDashboardScreen } from './ResearcherDashboardScreen/ResearcherDashboardScreen';
 export { CreateSurveyScreen } from './CreateSurveyScreen/CreateSurveyScreen';
 export { SurveyPreviewScreen } from './SurveyPreviewScreen/SurveyPreviewScreen';
+export { SurveyCreatedScreen } from './SurveyCreatedScreen/SurveyCreatedScreen';
+export { SurveyArchivedScreen } from './SurveyArchivedScreen/SurveyArchivedScreen';
 

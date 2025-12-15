@@ -31,6 +31,16 @@ export type RootStackParamList = {
   SurveyPreview: {
     surveyId: string;
   };
+  SurveyCreated: {
+    surveyId: string;
+    surveyTitle: string;
+    questionsCount: number;
+  };
+  SurveyArchived: {
+    surveyId: string;
+    surveyTitle: string;
+    questionsCount: number;
+  };
 };
 
 // User types (for future backend integration)
