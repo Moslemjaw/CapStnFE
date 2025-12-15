@@ -39,7 +39,7 @@ export default function Register() {
         await storeUser(normalizedUser);
       }
       setIsAutheticated(true);
-      router.replace("/(protected)/(tabs)/index" as any);
+      router.replace("/tutorial");
     },
   });
 

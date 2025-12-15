@@ -28,6 +28,9 @@ export default function RootLayout() {
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
+            <Stack.Screen name="landing" />
+            <Stack.Screen name="tutorial" />
+            <Stack.Screen name="path-selection" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(protected)" />
           </Stack>

@@ -12,10 +12,14 @@ export default function ProtectedLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
-      <Stack.Screen name="category" />
-      <Stack.Screen name="recipe" />
-      <Stack.Screen name="user" />
+      <Stack.Screen name="participant-home" />
+      <Stack.Screen name="researcher-dashboard" />
+      <Stack.Screen name="survey" />
+      <Stack.Screen name="survey-completed" />
+      <Stack.Screen name="create-survey" />
+      <Stack.Screen name="survey-preview" />
+      <Stack.Screen name="survey-created" />
+      <Stack.Screen name="survey-archived" />
     </Stack>
   );
 }

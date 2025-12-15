@@ -9,5 +9,5 @@ export default function Index() {
     return <Redirect href={"/(protected)/(tabs)/(home)/" as any} />;
   }
 
-  return <Redirect href="/(auth)/login" />;
+  return <Redirect href="/landing" />;
 }
