@@ -33,9 +33,12 @@ export const PathSelectionScreen: React.FC<PathSelectionScreenProps> = ({ naviga
   
   const handleSelectPath = (pathId: 'participant' | 'researcher') => {
     console.log('Selected path:', pathId);
-    // TODO: Navigate to respective dashboard/home based on path
-    // For now, just log the selection
-    alert(`You selected: ${pathId}\n\nThis will navigate to the ${pathId} dashboard when implemented.`);
+    
+    if (pathId === 'participant') {
+      navigation.navigate('ParticipantHome');
+    } else {
+      navigation.navigate('ResearcherDashboard');
+    }
   };
 
   const handleGoBack = () => {

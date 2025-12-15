@@ -7,7 +7,19 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { LandingScreen, LoginScreen, RegisterScreen, TutorialScreen, PathSelectionScreen } from '../screens';
+import { 
+  LandingScreen, 
+  LoginScreen, 
+  RegisterScreen, 
+  TutorialScreen, 
+  PathSelectionScreen,
+  ParticipantHomeScreen,
+  SurveyScreen,
+  SurveyCompletedScreen,
+  ResearcherDashboardScreen,
+  CreateSurveyScreen,
+  SurveyPreviewScreen,
+} from '../screens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -42,10 +54,32 @@ export const AppNavigator: React.FC = () => {
           name="PathSelection" 
           component={PathSelectionScreen}
         />
-        {/* Add more screens here as your app grows
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        */}
+        {/* Participant Flow Screens */}
+        <Stack.Screen 
+          name="ParticipantHome" 
+          component={ParticipantHomeScreen}
+        />
+        <Stack.Screen 
+          name="Survey" 
+          component={SurveyScreen}
+        />
+        <Stack.Screen 
+          name="SurveyCompleted" 
+          component={SurveyCompletedScreen}
+        />
+        {/* Researcher Flow Screens */}
+        <Stack.Screen 
+          name="ResearcherDashboard" 
+          component={ResearcherDashboardScreen}
+        />
+        <Stack.Screen 
+          name="CreateSurvey" 
+          component={CreateSurveyScreen}
+        />
+        <Stack.Screen 
+          name="SurveyPreview" 
+          component={SurveyPreviewScreen}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

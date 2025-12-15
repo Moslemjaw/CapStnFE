@@ -9,9 +9,28 @@ export type RootStackParamList = {
   Register: undefined;
   Tutorial: undefined;
   PathSelection: undefined;
-  // Add more screens here as needed
-  // Home: undefined;
-  // Dashboard: undefined;
+  // Participant flow screens
+  ParticipantHome: undefined;
+  Survey: {
+    surveyId: string;
+    surveyTitle: string;
+    points: number;
+    questionsCount: number;
+    duration: number;
+  };
+  SurveyCompleted: {
+    surveyTitle: string;
+    points: number;
+    duration: number;
+  };
+  // Researcher flow screens
+  ResearcherDashboard: undefined;
+  CreateSurvey: {
+    surveyId?: string;
+  };
+  SurveyPreview: {
+    surveyId: string;
+  };
 };
 
 // User types (for future backend integration)
