@@ -57,6 +57,8 @@ interface CreateSurveyScreenProps {
 }
 
 export const CreateSurveyScreen: React.FC<CreateSurveyScreenProps> = ({ navigation, route }) => {
+  const [surveyTitle, setSurveyTitle] = useState('');
+  const [surveySubtitle, setSurveySubtitle] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -66,6 +68,7 @@ export const CreateSurveyScreen: React.FC<CreateSurveyScreenProps> = ({ navigati
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [showTrashBin, setShowTrashBin] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
+  const [validationError, setValidationError] = useState<string>('');
   const dragAnim = useRef(new Animated.ValueXY()).current;
   const screenHeight = Dimensions.get('window').height;
   
@@ -324,20 +327,58 @@ export const CreateSurveyScreen: React.FC<CreateSurveyScreenProps> = ({ navigati
     return '';
   };
 
+  const validateSurvey = (): string[] => {
+    const errors: string[] = [];
+    if (!surveyTitle.trim()) {
+      errors.push('Survey title is required');
+    }
+    if (questions.length === 0) {
+      errors.push('At least one question is required');
+    }
+    return errors;
+  };
+
   const handlePreviewSurvey = () => {
+    const errors = validateSurvey();
+    if (errors.length > 0) {
+      // Show alert
+      alert(`Please fix the following issues:\n\n${errors.join('\n')}`);
+      // Show inline error
+      setValidationError(errors.join(', '));
+      return;
+    }
+    
+    // Clear any previous errors
+    setValidationError('');
+    
+    // Navigate with survey data
     navigation.navigate('SurveyPreview', {
       surveyId: route.params?.surveyId || 'new',
+      surveyTitle: surveyTitle.trim(),
+      surveySubtitle: surveySubtitle.trim() || undefined,
+      questions: questions,
     });
   };
 
   const handleArchiveSurvey = () => {
+    const errors = validateSurvey();
+    if (errors.length > 0) {
+      // Show alert
+      alert(`Please fix the following issues:\n\n${errors.join('\n')}`);
+      // Show inline error
+      setValidationError(errors.join(', '));
+      return;
+    }
+    
+    // Clear any previous errors
+    setValidationError('');
+    
     const surveyId = route.params?.surveyId || `survey-${Date.now()}`;
-    const surveyTitle = 'Student Study Habits'; // TODO: Get from form
     const questionsCount = questions.length;
 
     navigation.navigate('SurveyArchived', {
       surveyId,
-      surveyTitle,
+      surveyTitle: surveyTitle.trim(),
       questionsCount,
     });
   };
@@ -357,6 +398,36 @@ export const CreateSurveyScreen: React.FC<CreateSurveyScreenProps> = ({ navigati
           <View style={styles.header}>
             <Text style={styles.title}>Add Questions</Text>
             <Text style={styles.subtitle}>Build your survey question by question</Text>
+          </View>
+
+          {/* Survey Title and Subtitle */}
+          <View style={styles.surveyMetadataCard}>
+            <View style={styles.metadataSection}>
+              <Text style={styles.metadataLabel}>
+                Survey Title <Text style={styles.requiredAsterisk}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.metadataInput}
+                placeholder="Enter survey title..."
+                placeholderTextColor={Colors.textMuted}
+                value={surveyTitle}
+                onChangeText={(text) => {
+                  setSurveyTitle(text);
+                  // Clear validation error when user starts typing
+                  if (validationError) setValidationError('');
+                }}
+              />
+            </View>
+            <View style={[styles.metadataSection, styles.metadataSectionLast]}>
+              <Text style={styles.metadataLabel}>Survey Subtitle (Optional)</Text>
+              <TextInput
+                style={styles.metadataInput}
+                placeholder="Enter survey subtitle..."
+                placeholderTextColor={Colors.textMuted}
+                value={surveySubtitle}
+                onChangeText={setSurveySubtitle}
+              />
+            </View>
           </View>
 
           {/* Selection Mode Header */}
@@ -738,6 +809,12 @@ export const CreateSurveyScreen: React.FC<CreateSurveyScreenProps> = ({ navigati
               </LinearGradient>
             </TouchableOpacity>
           </View>
+          {validationError ? (
+            <View style={styles.errorMessageContainer}>
+              <Ionicons name="alert-circle" size={16} color={Colors.error} />
+              <Text style={styles.errorMessageText}>{validationError}</Text>
+            </View>
+          ) : null}
         </View>
       </SafeAreaView>
   );
@@ -1259,6 +1336,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.white,
+  },
+  surveyMetadataCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  metadataSection: {
+    marginBottom: 16,
+  },
+  metadataSectionLast: {
+    marginBottom: 0,
+  },
+  metadataLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  requiredAsterisk: {
+    color: Colors.error,
+  },
+  metadataInput: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  errorMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
+  errorMessageText: {
+    fontSize: 13,
+    color: Colors.error,
+    flex: 1,
   },
 });
 

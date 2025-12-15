@@ -3,7 +3,7 @@
  * Preview how respondents will see the survey
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -22,47 +22,14 @@ import { RootStackParamList } from '../../types';
 
 const RESEARCHER_COLOR = '#6366F1';
 
-// Mock survey data
-const MOCK_SURVEY = {
-  id: '1',
-  title: 'Campus Food Feedback',
-  description: 'Help us understand your dining preferences and experiences on campus. Your feedback will improve meal options for everyone.',
-  points: 15,
-  duration: 5,
-  questions: [
-    {
-      id: '1',
-      text: 'How satisfied are you with dining options on campus?',
-      type: 'Multiple Choice',
-      options: [
-        'Very satisfied',
-        'Somewhat satisfied',
-        'Neutral',
-        'Not satisfied',
-      ],
-    },
-    {
-      id: '2',
-      text: 'How many meals do you eat on campus daily?',
-      type: 'Number',
-    },
-    {
-      id: '3',
-      text: 'Which dining location do you visit most frequently?',
-      type: 'Multiple Choice',
-      options: [
-        'Main Cafeteria',
-        'Student Union Food Court',
-        'Library Café',
-        'Sports Center Snack Bar',
-      ],
-    },
-    {
-      id: '4',
-      text: 'Any additional comments about campus dining?',
-      type: 'Text',
-    },
-  ],
+type Question = {
+  id: string;
+  text: string;
+  type: 'choice' | 'written';
+  required: boolean;
+  minSelections?: number;
+  maxSelections?: number;
+  options?: string[];
 };
 
 type SurveyPreviewScreenNavigationProp = NativeStackNavigationProp<
@@ -78,7 +45,8 @@ interface SurveyPreviewScreenProps {
 }
 
 export const SurveyPreviewScreen: React.FC<SurveyPreviewScreenProps> = ({ navigation, route }) => {
-  const survey = MOCK_SURVEY;
+  const { surveyId, surveyTitle, surveySubtitle, questions } = route.params;
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, Set<number>>>({});
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -87,65 +55,124 @@ export const SurveyPreviewScreen: React.FC<SurveyPreviewScreenProps> = ({ naviga
   const handlePublish = () => {
     // Navigate to Survey Created success screen
     navigation.navigate('SurveyCreated', {
-      surveyId: survey.id,
-      surveyTitle: survey.title,
-      questionsCount: survey.questions.length,
+      surveyId,
+      surveyTitle,
+      questionsCount: questions.length,
     });
   };
 
   const handleArchive = () => {
     // Navigate to Survey Archived success screen
     navigation.navigate('SurveyArchived', {
-      surveyId: survey.id,
-      surveyTitle: survey.title,
-      questionsCount: survey.questions.length,
+      surveyId,
+      surveyTitle,
+      questionsCount: questions.length,
     });
   };
 
   const handleEdit = () => {
-    navigation.navigate('CreateSurvey', { surveyId: survey.id });
+    navigation.navigate('CreateSurvey', { surveyId });
   };
 
-  const renderQuestion = (question: typeof MOCK_SURVEY.questions[0], index: number) => {
+  const handleOptionToggle = (questionId: string, optionIndex: number) => {
+    setSelectedOptions(prev => {
+      const current = prev[questionId] || new Set<number>();
+      const question = questions.find(q => q.id === questionId);
+      
+      if (!question || question.type !== 'choice') return prev;
+      
+      const min = question.minSelections || 1;
+      const max = question.maxSelections || 1;
+      const isSingleChoice = min === 1 && max === 1;
+      
+      const newSet = new Set(current);
+      
+      if (isSingleChoice) {
+        // Single choice: replace selection
+        newSet.clear();
+        newSet.add(optionIndex);
+      } else {
+        // Multiple choice: toggle selection
+        if (newSet.has(optionIndex)) {
+          newSet.delete(optionIndex);
+        } else {
+          // Check max limit
+          if (newSet.size < max) {
+            newSet.add(optionIndex);
+          }
+        }
+      }
+      
+      return { ...prev, [questionId]: newSet };
+    });
+  };
+
+  const renderQuestion = (question: Question, index: number) => {
+    const isSingleChoice = question.type === 'choice' && 
+      question.minSelections === 1 && question.maxSelections === 1;
+    const isMultipleChoice = question.type === 'choice' && !isSingleChoice;
+    const selected = selectedOptions[question.id] || new Set<number>();
+    
     return (
       <View key={question.id} style={styles.questionCard}>
-        <Text style={styles.questionLabel}>Question {index + 1}</Text>
+        <View style={styles.questionHeader}>
+          <Text style={styles.questionLabel}>Question {index + 1}</Text>
+          {question.required ? (
+            <View style={styles.requiredBadge}>
+              <Text style={styles.requiredBadgeText}>Required</Text>
+            </View>
+          ) : (
+            <View style={styles.optionalBadge}>
+              <Text style={styles.optionalBadgeText}>Optional</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.questionText}>{question.text}</Text>
         
-        {question.type === 'Multiple Choice' && question.options && (
+        {question.type === 'choice' && question.options && (
           <View style={styles.optionsContainer}>
-            {question.options.map((option, optIndex) => (
-              <View key={optIndex} style={styles.optionButton}>
-                <View style={styles.radioOuter}>
-                  <View style={styles.radioInner} />
-                </View>
-                <Text style={styles.optionText}>{option}</Text>
-              </View>
-            ))}
+            {question.options.map((option, optIndex) => {
+              const isSelected = selected.has(optIndex);
+              return (
+                <TouchableOpacity
+                  key={optIndex}
+                  style={styles.optionButton}
+                  onPress={() => handleOptionToggle(question.id, optIndex)}
+                >
+                  {isSingleChoice ? (
+                    <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+                      {isSelected && <View style={styles.radioInner} />}
+                    </View>
+                  ) : (
+                    <View style={[styles.checkboxOuter, isSelected && styles.checkboxOuterSelected]}>
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={14} color={Colors.white} />
+                      )}
+                    </View>
+                  )}
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            {isMultipleChoice && question.minSelections && question.maxSelections && (
+              <Text style={styles.selectionHint}>
+                Select {question.minSelections === question.maxSelections 
+                  ? `exactly ${question.minSelections}` 
+                  : `${question.minSelections} to ${question.maxSelections}`} option{question.maxSelections > 1 ? 's' : ''}
+              </Text>
+            )}
           </View>
         )}
 
-        {question.type === 'Number' && (
-          <View style={styles.numberInputContainer}>
-            <TextInput
-              style={styles.numberInput}
-              placeholder="0-5"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              editable={false}
-            />
-          </View>
-        )}
-
-        {question.type === 'Text' && (
+        {question.type === 'written' && (
           <View style={styles.textAreaContainer}>
             <TextInput
               style={styles.textArea}
-              placeholder="Share your thoughts..."
+              placeholder={question.required ? "Your answer..." : "Your answer (optional)..."}
               placeholderTextColor={Colors.textMuted}
               multiline
               numberOfLines={4}
-              editable={false}
+              editable={true}
             />
           </View>
         )}
@@ -172,21 +199,14 @@ export const SurveyPreviewScreen: React.FC<SurveyPreviewScreenProps> = ({ naviga
 
         {/* Survey Info Card */}
         <View style={styles.surveyInfoCard}>
-          <Text style={styles.surveyTitle}>{survey.title}</Text>
-          <Text style={styles.surveyDescription}>{survey.description}</Text>
-          <View style={styles.surveyMeta}>
-            <View style={styles.pointsBadge}>
-              <Text style={styles.pointsBadgeText}>+{survey.points} pts</Text>
-            </View>
-            <View style={styles.durationContainer}>
-              <Ionicons name="time-outline" size={16} color={Colors.textMuted} />
-              <Text style={styles.durationText}>{survey.duration} min</Text>
-            </View>
-          </View>
+          <Text style={styles.surveyTitle}>{surveyTitle}</Text>
+          {surveySubtitle && (
+            <Text style={styles.surveyDescription}>{surveySubtitle}</Text>
+          )}
         </View>
 
         {/* Questions */}
-        {survey.questions.map((question, index) => renderQuestion(question, index))}
+        {questions.map((question, index) => renderQuestion(question, index))}
       </ScrollView>
 
       {/* Floating Edit Button */}
@@ -325,11 +345,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  questionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   questionLabel: {
     fontSize: 13,
     fontWeight: '500',
     color: Colors.textMuted,
-    marginBottom: 8,
+  },
+  requiredBadge: {
+    backgroundColor: `${Colors.success}15`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  requiredBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.success,
+  },
+  optionalBadge: {
+    backgroundColor: `${Colors.textMuted}15`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  optionalBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textMuted,
   },
   questionText: {
     fontSize: 18,
@@ -359,10 +406,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  radioOuterSelected: {
+    borderColor: Colors.primary,
+  },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
+    backgroundColor: Colors.primary,
+  },
+  checkboxOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  checkboxOuterSelected: {
+    borderColor: Colors.primary,
     backgroundColor: Colors.primary,
   },
   optionText: {
@@ -370,17 +434,11 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     flex: 1,
   },
-  numberInputContainer: {
-    marginTop: 8,
-  },
-  numberInput: {
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  selectionHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   textAreaContainer: {
     marginTop: 8,

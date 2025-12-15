@@ -30,6 +30,17 @@ export type RootStackParamList = {
   };
   SurveyPreview: {
     surveyId: string;
+    surveyTitle: string;
+    surveySubtitle?: string;
+    questions: Array<{
+      id: string;
+      text: string;
+      type: 'choice' | 'written';
+      required: boolean;
+      minSelections?: number;
+      maxSelections?: number;
+      options?: string[];
+    }>;
   };
   SurveyCreated: {
     surveyId: string;
