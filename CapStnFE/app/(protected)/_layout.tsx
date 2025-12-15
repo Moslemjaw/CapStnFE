@@ -3,19 +3,18 @@ import { Redirect, Stack } from "expo-router";
 import { useContext } from "react";
 
 export default function ProtectedLayout() {
-  const { isAutheticated } = useContext(AuthContext);
+  const { isAuthenticated } = useContext(AuthContext);
 
-  if (!isAutheticated) {
+  if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
   }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="choose-path" />
+      <Stack.Screen name="(researcher)" />
+      <Stack.Screen name="(respondent)" />
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(modals)" options={{ presentation: "modal" }} />
-      <Stack.Screen name="category" />
-      <Stack.Screen name="recipe" />
-      <Stack.Screen name="user" />
     </Stack>
   );
 }

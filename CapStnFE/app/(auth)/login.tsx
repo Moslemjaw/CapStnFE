@@ -20,7 +20,7 @@ export default function Index() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { setIsAutheticated } = useContext(AuthContext);
+  const { setIsAuthenticated } = useContext(AuthContext);
   const router = useRouter();
 
   const { mutate, isPending, error } = useMutation({
@@ -39,11 +39,11 @@ export default function Index() {
           await storeUser(normalizedUser);
         }
         console.log("Token stored, setting authenticated to true");
-        setIsAutheticated(true);
+        setIsAuthenticated(true);
         // Small delay to ensure state is updated
         setTimeout(() => {
-          console.log("Navigating to protected route");
-          router.replace("/(protected)/(tabs)/(home)/" as any);
+          console.log("Navigating to choose path");
+          router.replace("/(protected)/choose-path" as any);
         }, 100);
       } else {
         console.log("No token in response:", data);

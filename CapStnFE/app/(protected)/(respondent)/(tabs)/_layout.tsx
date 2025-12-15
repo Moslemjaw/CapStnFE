@@ -1,0 +1,63 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+
+export default function RespondentTabsLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: "#22C55E",
+        tabBarInactiveTintColor: "#9CA3AF",
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopWidth: 1,
+          borderTopColor: "#E5E7EB",
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+        },
+        headerShown: false,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="available"
+        options={{
+          title: "Available",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="completed"
+        options={{
+          title: "Completed",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
+  );
+}

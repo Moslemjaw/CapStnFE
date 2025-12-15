@@ -3,10 +3,10 @@ import { useContext } from "react";
 import AuthContext from "@/context/AuthContext";
 
 export default function Index() {
-  const { isAutheticated } = useContext(AuthContext);
+  const { isAuthenticated } = useContext(AuthContext);
 
-  if (isAutheticated) {
-    return <Redirect href={"/(protected)/(tabs)/(home)/" as any} />;
+  if (isAuthenticated) {
+    return <Redirect href={"/(protected)/choose-path" as any} />;
   }
 
   return <Redirect href="/(auth)/login" />;

@@ -1,8 +1,9 @@
 import UserInfo from "@/types/UserInfo";
-import instance from "@/api/index";
+import type User from "@/types/User";
+import instance from ".";
 
 const login = async (userInfo: UserInfo) => {
-  const { data } = await instance.post("/users/login", userInfo);
+  const { data } = await instance.post("/login", userInfo);
   return data;
 };
 
@@ -20,19 +21,27 @@ const register = async (userInfo: UserInfo, image: string, name: string) => {
     } as any);
   }
 
-  const { data } = await instance.post("/users/register", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return data;
+  try {
+    console.log(
+      "Registering user - URL:",
+      `${instance.defaults.baseURL}/register`
+    );
+    const { data } = await instance.post("/register", formData);
+    return data;
+  } catch (error: any) {
+    console.error("Register error:", error);
+    console.error("Request URL:", error?.config?.url);
+    console.error("Full URL:", error?.config?.baseURL + error?.config?.url);
+    console.error("Response:", error?.response?.data);
+    throw error;
+  }
 };
 
-const me = async () => {
+const me = async (): Promise<User | null> => {
   try {
     // First try to get user from storage
     const { getUser, decodeToken, getToken, storeUser } = await import(
-      "@/api/storage"
+      "./storage"
     );
     const storedUser = await getUser();
     if (storedUser) {
@@ -41,31 +50,36 @@ const me = async () => {
 
     // If no stored user, try to decode token and fetch user by ID
     const token = await getToken();
-    if (token) {
-      const decoded = decodeToken(token);
-      if (decoded?.id || decoded?.userId || decoded?._id) {
-        const userId = decoded.id || decoded.userId || decoded._id;
-        try {
-          const { getUserById } = await import("@/api/users");
-          const user = await getUserById(userId);
-          // Store user for future use
-          await storeUser(user);
-          return user;
-        } catch (fetchError) {
-          console.error("Error fetching user by ID:", fetchError);
-          // Return null instead of throwing to prevent route errors
-          return null;
-        }
-      }
+    if (!token) {
+      return null;
+    }
+
+    const decoded = decodeToken(token);
+    if (!decoded) {
+      return null;
+    }
+
+    const userId = decoded.id || decoded.userId || decoded._id;
+    if (!userId) {
+      return null;
+    }
+
+    try {
+      const { getUserById } = await import("./users");
+      const user = await getUserById(userId);
+      // Store user for future use
+      await storeUser(user);
+      return user;
+    } catch (fetchError) {
+      console.error("Error fetching user by ID:", fetchError);
+      // Return null instead of throwing to prevent route errors
+      return null;
     }
   } catch (error) {
     console.error("Error in me() function:", error);
     // Return null instead of throwing to prevent route errors
     return null;
   }
-
-  // Return null if no user found instead of throwing
-  return null;
 };
 
 // Note: getAllUsers is in api/users.ts (uses /users endpoint per Backend.md)

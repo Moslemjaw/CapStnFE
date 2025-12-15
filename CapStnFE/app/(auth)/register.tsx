@@ -23,7 +23,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const router = useRouter();
-  const { setIsAutheticated } = useContext(AuthContext);
+  const { setIsAuthenticated } = useContext(AuthContext);
 
   const { mutate, isPending } = useMutation({
     mutationKey: ["register"],
@@ -38,8 +38,8 @@ export default function Register() {
         };
         await storeUser(normalizedUser);
       }
-      setIsAutheticated(true);
-      router.replace("/(protected)/(tabs)/index" as any);
+      setIsAuthenticated(true);
+      router.replace("/(protected)/choose-path" as any);
     },
   });
 

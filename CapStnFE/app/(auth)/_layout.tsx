@@ -3,9 +3,9 @@ import { Redirect, Stack } from "expo-router";
 import { useContext } from "react";
 
 export default function AuthLayout() {
-  const { isAutheticated } = useContext(AuthContext);
+  const { isAuthenticated } = useContext(AuthContext);
 
-  if (isAutheticated) {
+  if (isAuthenticated) {
     return <Redirect href={"/(protected)/(tabs)/(home)" as any} />;
   }
 

@@ -1,36 +1,40 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import User from "@/types/User";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const storeToken = async (value: string) => {
+const storeToken = async (value: string): Promise<void> => {
   try {
     await AsyncStorage.setItem("Token", value);
   } catch (error) {
-    console.log(error);
+    console.error("Error storing token:", error);
+    throw new Error("Failed to store authentication token");
   }
 };
 
-const getToken = async () => {
+const getToken = async (): Promise<string | null> => {
   try {
     return await AsyncStorage.getItem("Token");
   } catch (error) {
-    console.log(error);
+    console.error("Error retrieving token:", error);
+    return null;
   }
 };
 
-const deleteToken = async () => {
+const deleteToken = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem("Token");
     await AsyncStorage.removeItem("CurrentUser");
   } catch (error) {
-    console.log(error);
+    console.error("Error deleting token:", error);
+    throw new Error("Failed to delete authentication token");
   }
 };
 
-const storeUser = async (user: any) => {
+const storeUser = async (user: User): Promise<void> => {
   try {
     await AsyncStorage.setItem("CurrentUser", JSON.stringify(user));
   } catch (error) {
-    console.log(error);
+    console.error("Error storing user:", error);
+    throw new Error("Failed to store user data");
   }
 };
 

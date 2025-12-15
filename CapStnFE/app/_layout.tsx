@@ -9,13 +9,13 @@ import { getToken } from "@/api/storage";
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
-  const [isAutheticated, setIsAutheticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const checkToken = async () => {
       const token = await getToken();
       if (token) {
-        setIsAutheticated(true);
+        setIsAuthenticated(true);
       }
     };
     checkToken();
@@ -23,7 +23,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={{ isAutheticated, setIsAutheticated }}>
+      <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
         <SafeAreaProvider style={{ flex: 1 }}>
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }}>
