@@ -23,7 +23,7 @@ import { login } from "@/api/auth";
 import { storeToken, storeUser } from "@/api/storage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = SCREEN_WIDTH * 0.6; // Smaller cards - 60% of screen width
+const CARD_WIDTH = SCREEN_WIDTH * 0.5; // Smaller cards - 50% of screen width
 
 const CAROUSEL_CARDS = [
   {
@@ -205,6 +205,7 @@ export default function Index() {
               showsHorizontalScrollIndicator={false}
               onScroll={handleScroll}
               scrollEventThrottle={16}
+              decelerationRate="fast"
               style={styles.carouselScrollView}
               contentContainerStyle={styles.carouselContent}
             >
@@ -414,9 +415,11 @@ const styles = StyleSheet.create({
   },
   carouselSection: {
     marginBottom: 32,
+    alignItems: "center",
   },
   carouselScrollView: {
     marginBottom: 16,
+    width: SCREEN_WIDTH,
   },
   carouselContent: {
     alignItems: "center",
