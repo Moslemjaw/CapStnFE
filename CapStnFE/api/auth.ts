@@ -3,7 +3,9 @@ import type User from "@/types/User";
 import instance from ".";
 
 const login = async (userInfo: UserInfo) => {
-  const { data } = await instance.post("/login", userInfo);
+  const { data } = await instance.post("/user/login", userInfo);
+  console.log(data);
+  console.log("data.token from login", data.token);
   return data;
 };
 
@@ -24,9 +26,9 @@ const register = async (userInfo: UserInfo, image: string, name: string) => {
   try {
     console.log(
       "Registering user - URL:",
-      `${instance.defaults.baseURL}/register`
+      `${instance.defaults.baseURL}/user/register`
     );
-    const { data } = await instance.post("/register", formData);
+    const { data } = await instance.post("/user/register", formData);
     return data;
   } catch (error: any) {
     console.error("Register error:", error);

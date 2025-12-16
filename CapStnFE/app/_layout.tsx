@@ -9,13 +9,25 @@ import { getToken } from "@/api/storage";
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  // Start with false to ensure login page is shown first
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkToken = async () => {
-      const token = await getToken();
-      if (token) {
-        setIsAuthenticated(true);
+      try {
+        const token = await getToken();
+        if (token) {
+          setIsAuthenticated(true);
+        } else {
+          // Explicitly set to false to ensure login page is shown
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error("Error checking token:", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
     };
     checkToken();
@@ -23,7 +35,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
+      <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, isLoading }}>
         <SafeAreaProvider style={{ flex: 1 }}>
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }}>

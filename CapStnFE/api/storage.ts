@@ -21,8 +21,38 @@ const getToken = async (): Promise<string | null> => {
 
 const deleteToken = async (): Promise<void> => {
   try {
+    console.log("Deleting token");
+
+    // Get token before deletion for verification
+    const tokenBefore = await AsyncStorage.getItem("Token");
+    console.log(
+      "Token before deletion:",
+      tokenBefore ? "exists" : "does not exist"
+    );
+
     await AsyncStorage.removeItem("Token");
     await AsyncStorage.removeItem("CurrentUser");
+
+    // Verify token was actually deleted
+    const tokenAfter = await AsyncStorage.getItem("Token");
+    console.log(
+      "Token after deletion:",
+      tokenAfter ? "still exists!" : "deleted successfully"
+    );
+
+    if (tokenAfter) {
+      console.error("Token still exists after deletion attempt!");
+      // Try again with multiRemove
+      await AsyncStorage.multiRemove(["Token", "CurrentUser"]);
+      const tokenAfterRetry = await AsyncStorage.getItem("Token");
+      if (tokenAfterRetry) {
+        throw new Error(
+          "Failed to delete authentication token after multiple attempts"
+        );
+      }
+    }
+
+    console.log("Token deletion verified successfully");
   } catch (error) {
     console.error("Error deleting token:", error);
     throw new Error("Failed to delete authentication token");
