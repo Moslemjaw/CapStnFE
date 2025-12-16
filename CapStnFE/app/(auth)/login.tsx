@@ -32,6 +32,7 @@ export default function Index() {
     onSuccess: async (data) => {
       console.log("Login success, data:", data);
       if (data?.token) {
+        console.log("data.token", data.token);
         await storeToken(data.token);
         // Store user data if available (normalize id to _id)
         if (data?.user) {
@@ -43,11 +44,8 @@ export default function Index() {
         }
         console.log("Token stored, setting authenticated to true");
         setIsAuthenticated(true);
-        // Small delay to ensure state is updated
-        setTimeout(() => {
-          console.log("Navigating to choose path");
-          router.replace("/(protected)/choose-path" as any);
-        }, 100);
+        console.log("Navigating to choose path");
+        router.replace("/(protected)/choose-path" as any);
       } else {
         console.log("No token in response:", data);
         Alert.alert("Error", "Invalid response from server");

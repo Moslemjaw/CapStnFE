@@ -4,6 +4,7 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useContext } from "react";
@@ -11,13 +12,24 @@ import { LinearGradient } from "expo-linear-gradient";
 import AuthContext from "@/context/AuthContext";
 
 export default function Index() {
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, isLoading } = useContext(AuthContext);
   const router = useRouter();
 
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  // If authenticated, redirect to protected routes
   if (isAuthenticated) {
     return <Redirect href={"/(protected)/choose-path" as any} />;
   }
 
+  // Show landing page if not authenticated
   return (
     <ScrollView
       contentContainerStyle={styles.scrollContent}
