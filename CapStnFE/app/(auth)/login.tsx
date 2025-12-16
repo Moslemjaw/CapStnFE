@@ -83,7 +83,6 @@ export default function Index() {
         <View style={styles.decorativeCircle3} />
 
         <View style={styles.content}>
-          <Text style={styles.title}>Welcome back.</Text>
           <Text style={styles.subtitle}>
             Log in to continue your SIGHT experience.
           </Text>
@@ -103,7 +102,7 @@ export default function Index() {
               <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="ali@example.com"
+                placeholder="example@email.com"
                 placeholderTextColor="#9CA3AF"
                 value={email}
                 onChangeText={setEmail}

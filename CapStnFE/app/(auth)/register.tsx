@@ -24,8 +24,10 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
   const { setIsAuthenticated } = useContext(AuthContext);
 
@@ -56,11 +58,25 @@ export default function Register() {
   });
 
   const handleRegistration = () => {
-    if (email && password && name) {
-      mutate();
-    } else {
+    if (!email || !password || !name) {
       Alert.alert("Validation Error", "Please fill in all required fields.");
+      return;
     }
+    if (password !== confirmPassword) {
+      Alert.alert(
+        "Validation Error",
+        "Passwords do not match. Please try again."
+      );
+      return;
+    }
+    if (password.length < 8) {
+      Alert.alert(
+        "Validation Error",
+        "Password must be at least 8 characters long."
+      );
+      return;
+    }
+    mutate();
   };
 
   const pickImage = async () => {
@@ -140,7 +156,7 @@ export default function Register() {
                 <Text style={styles.label}>Full Name</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ali Alarbash"
+                  placeholder="John Doe"
                   placeholderTextColor="#9CA3AF"
                   value={name}
                   onChangeText={setName}
@@ -191,6 +207,32 @@ export default function Register() {
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.helperText}>At least 8 characters</Text>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Re-enter your password"
+                    placeholderTextColor="#9CA3AF"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#6B7280"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <Text style={styles.separatorText}>

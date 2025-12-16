@@ -2,18 +2,151 @@ import {
   StyleSheet,
   Text,
   View,
+  TextInput,
   TouchableOpacity,
-  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
   ActivityIndicator,
+  ScrollView,
+  Dimensions,
+  Image,
 } from "react-native";
+import React, { useContext, useState, useRef, useEffect } from "react";
 import { Redirect, useRouter } from "expo-router";
-import { useContext } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import AuthContext from "@/context/AuthContext";
+import UserInfo from "@/types/UserInfo";
+import { login } from "@/api/auth";
+import { storeToken, storeUser } from "@/api/storage";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CARD_WIDTH = SCREEN_WIDTH * 0.6; // Smaller cards - 60% of screen width
+
+const CAROUSEL_CARDS = [
+  {
+    number: "1",
+    title: "Real-time Data",
+    description: "Get instant insights from your survey responses as they come in.",
+  },
+  {
+    number: "2",
+    title: "Advanced Analytics",
+    description: "Powerful data visualizations that reveal patterns and trends.",
+  },
+  {
+    number: "3",
+    title: "Secure Insights",
+    description: "Your data is protected with enterprise-grade security measures.",
+  },
+  {
+    number: "4",
+    title: "Customizable Reports",
+    description: "Create and customize reports tailored to your specific needs.",
+  },
+];
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useContext(AuthContext);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const autoSlideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { isAuthenticated, isLoading, setIsAuthenticated } = useContext(AuthContext);
   const router = useRouter();
+
+  // Auto-slide carousel every 5 seconds
+  useEffect(() => {
+    const startAutoSlide = () => {
+      autoSlideTimerRef.current = setInterval(() => {
+        setCurrentCardIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % CAROUSEL_CARDS.length;
+          scrollViewRef.current?.scrollTo({
+            x: nextIndex * SCREEN_WIDTH,
+            animated: true,
+          });
+          return nextIndex;
+        });
+      }, 5000);
+    };
+
+    startAutoSlide();
+
+    return () => {
+      if (autoSlideTimerRef.current) {
+        clearInterval(autoSlideTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Handle scroll events to update current index
+  const handleScroll = (event: any) => {
+    const scrollPosition = event.nativeEvent.contentOffset.x;
+    const index = Math.round(scrollPosition / SCREEN_WIDTH);
+    if (index !== currentCardIndex && index >= 0 && index < CAROUSEL_CARDS.length) {
+      setCurrentCardIndex(index);
+      // Reset auto-slide timer when user manually swipes
+      if (autoSlideTimerRef.current) {
+        clearInterval(autoSlideTimerRef.current);
+      }
+      autoSlideTimerRef.current = setInterval(() => {
+        setCurrentCardIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % CAROUSEL_CARDS.length;
+          scrollViewRef.current?.scrollTo({
+            x: nextIndex * SCREEN_WIDTH,
+            animated: true,
+          });
+          return nextIndex;
+        });
+      }, 5000);
+    }
+  };
+
+  const { mutate, isPending, error } = useMutation({
+    mutationKey: ["Login"],
+    mutationFn: (userInfo: UserInfo) => login(userInfo),
+    onSuccess: async (data) => {
+      console.log("Login success, data:", data);
+      if (data?.token) {
+        console.log("data.token", data.token);
+        await storeToken(data.token);
+        // Store user data if available (normalize id to _id)
+        if (data?.user) {
+          const normalizedUser = {
+            ...data.user,
+            _id: data.user.id || data.user._id,
+          };
+          await storeUser(normalizedUser);
+        }
+        console.log("Token stored, setting authenticated to true");
+        setIsAuthenticated(true);
+        console.log("Navigating to choose path");
+        router.replace("/(protected)/choose-path" as any);
+      } else {
+        console.log("No token in response:", data);
+        Alert.alert("Error", "Invalid response from server");
+      }
+    },
+    onError: (error: any) => {
+      console.error("Login error:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Login failed. Please check your credentials and try again.";
+      Alert.alert("Login Error", errorMessage);
+    },
+  });
+
+  const handleLogin = () => {
+    if (email && password) {
+      mutate({ email, password });
+    }
+  };
+
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -29,78 +162,187 @@ export default function Index() {
     return <Redirect href={"/(protected)/choose-path" as any} />;
   }
 
-  // Show landing page if not authenticated
   return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.container}>
-        {/* Decorative Circles */}
-        <View style={styles.decorativeCircle1} />
-        <View style={styles.decorativeCircle2} />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.contentContainer}>
+          {/* Decorative Circles */}
+          <View style={styles.decorativeCircle1} />
+          <View style={styles.decorativeCircle2} />
+          <View style={styles.decorativeCircle3} />
 
-        {/* Main Gradient Circle */}
-        <View style={styles.gradientCircleContainer}>
-          <LinearGradient
-            colors={["#60A5FA", "#34D399"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientCircle}
-          />
-        </View>
+          {/* Branding Section */}
+          <View style={styles.brandingSection}>
+            {/* Small decorative circle above logo */}
+            <View style={styles.smallDecorativeCircle} />
+            
+            {/* Main Logo */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("@/assets/logo.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
 
-        {/* App Name and Tagline */}
-        <View style={styles.brandingContainer}>
-          <Text style={styles.appName}>SIGHT</Text>
-          <Text style={styles.tagline}>See insights clearly.</Text>
-        </View>
+            {/* Tagline */}
+            <Text style={styles.tagline}>See insights clearly.</Text>
+          </View>
 
-        {/* Action Buttons */}
-        <View style={styles.buttonsContainer}>
-          <TouchableOpacity
-            onPress={() => router.push("/(auth)/register")}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={["#60A5FA", "#34D399"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.getStartedButton}
+          {/* Carousel Section */}
+          <View style={styles.carouselSection}>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              style={styles.carouselScrollView}
+              contentContainerStyle={styles.carouselContent}
             >
-              <Text style={styles.getStartedButtonText}>Get Started</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              {CAROUSEL_CARDS.map((card, index) => (
+                <View key={index} style={styles.carouselCardWrapper}>
+                  <View style={[styles.carouselCard, { width: CARD_WIDTH }]}>
+                    <View style={styles.cardPlaceholderContainer}>
+                      <Text style={styles.cardPlaceholder}>Placeholder</Text>
+                    </View>
+                    <Text style={styles.cardNumber}>{card.number}.</Text>
+                    <Text style={styles.cardTitle}>{card.title}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
 
-          <TouchableOpacity
-            onPress={() => router.push("/(auth)/login")}
-            style={styles.logInButton}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.logInButtonText}>Log In</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Carousel Indicators */}
+            <View style={styles.indicatorsContainer}>
+              {CAROUSEL_CARDS.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicator,
+                    index === currentCardIndex && styles.indicatorActive,
+                  ]}
+                >
+                  {index === currentCardIndex && (
+                    <LinearGradient
+                      colors={["#60A5FA", "#34D399"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.indicatorGradient}
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
+          </View>
 
-        {/* Value Proposition */}
-        <View style={styles.valuePropContainer}>
-          <Text style={styles.valuePropHeading}>
-            Turn answers into clarity.
-          </Text>
-          <Text style={styles.valuePropDescription}>
-            SIGHT transforms raw survey responses into clear, actionable
-            insights using intelligent analysis and beautiful visualizations.
-          </Text>
+          {/* Login Form Section */}
+          <View style={styles.formSection}>
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>
+                  {error?.response?.data?.message ||
+                    error?.message ||
+                    "Login failed. Please try again."}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="example@email.com"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleLogin}
+              disabled={isPending}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={["#60A5FA", "#34D399"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[
+                  styles.loginButton,
+                  isPending && styles.loginButtonDisabled,
+                ]}
+              >
+                <Text style={styles.loginButtonText}>
+                  {isPending ? "Signing In..." : "Log In"}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.bottomLinkContainer}>
+              <Text style={styles.bottomLinkText}>
+                Don't have an account?{" "}
+                <Text
+                  style={styles.signUpLink}
+                  onPress={() => router.navigate("/(auth)/register")}
+                >
+                  Sign up
+                </Text>
+              </Text>
+            </View>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
   scrollContent: {
     flexGrow: 1,
   },
-  container: {
+  contentContainer: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 24,
@@ -126,19 +368,37 @@ const styles = StyleSheet.create({
     top: 200,
     right: -20,
   },
-  gradientCircleContainer: {
+  decorativeCircle3: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(96, 165, 250, 0.06)",
+    bottom: 100,
+    left: -30,
+  },
+  brandingSection: {
     alignItems: "center",
-    marginTop: 40,
     marginBottom: 32,
+    position: "relative",
   },
-  gradientCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+  smallDecorativeCircle: {
+    position: "absolute",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(96, 165, 250, 0.12)",
+    top: -10,
+    right: SCREEN_WIDTH / 2 - 30,
   },
-  brandingContainer: {
+  logoContainer: {
     alignItems: "center",
-    marginBottom: 48,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  logo: {
+    width: 160,
+    height: 160,
   },
   appName: {
     fontSize: 48,
@@ -148,55 +408,157 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tagline: {
-    fontSize: 18,
+    fontSize: 20,
     color: "#6B7280",
-    fontWeight: "400",
+    fontWeight: "700",
   },
-  buttonsContainer: {
+  carouselSection: {
+    marginBottom: 32,
+  },
+  carouselScrollView: {
+    marginBottom: 16,
+  },
+  carouselContent: {
+    alignItems: "center",
+  },
+  carouselCardWrapper: {
+    width: SCREEN_WIDTH,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  carouselCard: {
+    backgroundColor: "rgba(96, 165, 250, 0.08)",
+    borderRadius: 24,
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 180,
+  },
+  cardPlaceholderContainer: {
+    marginBottom: 12,
     width: "100%",
-    marginBottom: 48,
+    height: 120,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  getStartedButton: {
+  cardPlaceholder: {
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  cardNumber: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#111827",
+    textAlign: "center",
+  },
+  indicatorsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+  },
+  indicatorActive: {
+    borderWidth: 0,
+    width: 24,
+  },
+  indicatorGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 4,
+  },
+  formSection: {
+    width: "100%",
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#111827",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#111827",
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  loginButton: {
     borderRadius: 24,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginTop: 8,
   },
-  getStartedButtonText: {
+  loginButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },
-  logInButton: {
-    borderRadius: 24,
-    paddingVertical: 16,
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  bottomLinkContainer: {
+    marginTop: 24,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
-  logInButtonText: {
-    color: "#111827",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  valuePropContainer: {
-    marginTop: "auto",
-    paddingTop: 32,
-  },
-  valuePropHeading: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 12,
-    textAlign: "left",
-  },
-  valuePropDescription: {
+  bottomLinkText: {
     fontSize: 14,
     color: "#6B7280",
-    lineHeight: 20,
-    textAlign: "left",
+  },
+  signUpLink: {
+    color: "#3B82F6",
+    fontWeight: "500",
+  },
+  errorContainer: {
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#EF4444",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 14,
+    textAlign: "center",
   },
 });
