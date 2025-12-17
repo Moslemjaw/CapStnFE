@@ -139,3 +139,32 @@ export const unpublishSurvey = async (surveyId: string): Promise<Survey> => {
     throw error;
   }
 };
+
+/**
+ * Update a survey
+ */
+export interface UpdateSurveyData {
+  title?: string;
+  description?: string;
+  rewardPoints?: number;
+  estimatedMinutes?: number;
+}
+
+export const updateSurvey = async (
+  surveyId: string,
+  surveyData: UpdateSurveyData
+): Promise<Survey> => {
+  try {
+    const { data } = await instance.put<SurveyResponse>(
+      `/survey/${surveyId}`,
+      surveyData
+    );
+    if (!data.survey) {
+      throw new Error("Failed to update survey");
+    }
+    return data.survey;
+  } catch (error) {
+    console.error("Error updating survey:", error);
+    throw error;
+  }
+};
