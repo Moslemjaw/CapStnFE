@@ -14,9 +14,10 @@ import {
 import React, { useEffect, useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { getPublishedSurveys } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
-import { getResponsesBySurveyId } from "@/api/responses";
+import { getResponsesBySurveyId, getResponsesByUserId } from "@/api/responses";
 import { getUser } from "@/api/storage";
 import { SurveyWithMetadata } from "@/types/Survey";
 import User from "@/types/User";
@@ -25,6 +26,7 @@ type QuestionCountFilter = "all" | "1-5" | "6-10" | "11-15" | "16+";
 type MaxTimeFilter = "all" | "1-5" | "5-10" | "10-15" | "15-30" | "30+";
 
 export default function ResearcherSurveys() {
+  const router = useRouter();
   const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>([]);
   const [availableSurveys, setAvailableSurveys] = useState<SurveyWithMetadata[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,10 +59,21 @@ export default function ResearcherSurveys() {
     setLoading(true);
     setError(null);
     try {
+      // Fetch user responses to check which surveys are answered
+      let userResponses: any[] = [];
+      if (user?._id) {
+        try {
+          userResponses = await getResponsesByUserId(user._id);
+        } catch (err) {
+          console.error("Error fetching user responses:", err);
+          // Continue without user responses if fetch fails
+        }
+      }
+
       // Load featured surveys first
-      const featured = await loadFeaturedSurveys();
+      const featured = await loadFeaturedSurveys(userResponses);
       // Then load available surveys (which will exclude featured)
-      await loadAvailableSurveys(featured.map((s) => s._id));
+      await loadAvailableSurveys(featured.map((s) => s._id), userResponses);
     } catch (err: any) {
       console.error("Error loading surveys:", err);
       setError(err.message || "Failed to load surveys");
@@ -69,7 +82,7 @@ export default function ResearcherSurveys() {
     }
   };
 
-  const loadFeaturedSurveys = async (): Promise<SurveyWithMetadata[]> => {
+  const loadFeaturedSurveys = async (userResponses: any[] = []): Promise<SurveyWithMetadata[]> => {
     // Fetch all published surveys
     const publishedSurveys = await getPublishedSurveys();
 
@@ -97,20 +110,24 @@ export default function ResearcherSurveys() {
       .sort((a, b) => (b.responseCount || 0) - (a.responseCount || 0))
       .slice(0, 5);
 
-    // Fetch question count for each survey
+    // Fetch question count and check if answered for each survey
     const surveysWithMetadata = await Promise.all(
       topSurveys.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return {
             ...survey,
             questionCount: questions.length,
+            isAnswered,
           };
         } catch (err) {
           console.error(`Error fetching questions for survey ${survey._id}:`, err);
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return {
             ...survey,
             questionCount: 0,
+            isAnswered,
           };
         }
       })
@@ -120,7 +137,7 @@ export default function ResearcherSurveys() {
     return surveysWithMetadata;
   };
 
-  const loadAvailableSurveys = async (featuredIds: string[] = []) => {
+  const loadAvailableSurveys = async (featuredIds: string[] = [], userResponses: any[] = []) => {
     if (!user?._id) {
       return;
     }
@@ -136,20 +153,24 @@ export default function ResearcherSurveys() {
         survey.creatorId !== user._id && !featuredIds.includes(survey._id)
     );
 
-    // Fetch question count for each survey
+    // Fetch question count and check if answered for each survey
     const surveysWithMetadata = await Promise.all(
       available.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return {
             ...survey,
             questionCount: questions.length,
+            isAnswered,
           };
         } catch (err) {
           console.error(`Error fetching questions for survey ${survey._id}:`, err);
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return {
             ...survey,
             questionCount: 0,
+            isAnswered,
           };
         }
       })
@@ -161,8 +182,19 @@ export default function ResearcherSurveys() {
   // Reload available surveys when featured surveys change (for manual refresh)
   useEffect(() => {
     if (featuredSurveys.length > 0 && user) {
-      const featuredIds = featuredSurveys.map((s) => s._id);
-      loadAvailableSurveys(featuredIds);
+      const loadData = async () => {
+        let userResponses: any[] = [];
+        if (user?._id) {
+          try {
+            userResponses = await getResponsesByUserId(user._id);
+          } catch (err) {
+            console.error("Error fetching user responses:", err);
+          }
+        }
+        const featuredIds = featuredSurveys.map((s) => s._id);
+        await loadAvailableSurveys(featuredIds, userResponses);
+      };
+      loadData();
     }
   }, [featuredSurveys.length, user?._id]);
 
@@ -231,8 +263,10 @@ export default function ResearcherSurveys() {
   );
 
   const handleSurveyAction = (survey: SurveyWithMetadata) => {
-    Alert.alert("Answer Survey", `Answering survey: ${survey.title}`);
-    // TODO: Navigate to survey answer page
+    router.push({
+      pathname: "/(protected)/(researcher)/survey-view",
+      params: { surveyId: survey._id },
+    } as any);
   };
 
   const clearFilters = () => {
@@ -550,8 +584,13 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress }) => {
           style={styles.actionButton}
           onPress={() => onPress(survey)}
         >
-          <Text style={styles.actionButtonText}>Answer</Text>
+          <Text style={styles.actionButtonText}>View</Text>
         </TouchableOpacity>
+        {survey.isAnswered && (
+          <View style={styles.answeredChip}>
+            <Text style={styles.answeredChipText}>Answered</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -792,6 +831,9 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   actionButton: {
     paddingVertical: 10,
@@ -802,6 +844,17 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  answeredChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: "#10B981",
+  },
+  answeredChipText: {
+    fontSize: 12,
     fontWeight: "600",
     color: "#FFFFFF",
   },

@@ -14,7 +14,7 @@ export default function ProtectedLayout() {
       <Stack.Screen name="choose-path" />
       <Stack.Screen name="(researcher)" />
       <Stack.Screen name="(respondent)" />
-      <Stack.Screen name="(tabs)" />
+      {/* <Stack.Screen name="(tabs)" /> */}
     </Stack>
   );
 }
