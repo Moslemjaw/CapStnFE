@@ -118,6 +118,15 @@ export default function Register() {
           <View style={styles.decorativeCircle3} />
 
           <View style={styles.content}>
+            {/* Back Button */}
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={24} color="#111827" />
+            </TouchableOpacity>
+
             <Text style={styles.title}>Create your SIGHT account</Text>
             <Text style={styles.subtitle}>Start your journey with clarity.</Text>
 
@@ -469,5 +478,10 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 14,
     textAlign: "center",
+  },
+  backButton: {
+    marginBottom: 16,
+    padding: 8,
+    alignSelf: "flex-start",
   },
 });
