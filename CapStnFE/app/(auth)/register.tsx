@@ -45,7 +45,7 @@ export default function Register() {
         await storeUser(normalizedUser);
       }
       setIsAuthenticated(true);
-      router.replace("/(protected)/choose-path" as any);
+      router.replace("/(protected)/tutorial" as any);
     },
     onError: (error: any) => {
       console.error("Register error:", error);
