@@ -124,8 +124,8 @@ export default function Index() {
         }
         console.log("Token stored, setting authenticated to true");
         setIsAuthenticated(true);
-        console.log("Navigating to choose path");
-        router.replace("/(protected)/choose-path" as any);
+        console.log("Navigating to researcher dashboard");
+        router.replace("/(protected)/(researcher)/(tabs)/" as any);
       } else {
         console.log("No token in response:", data);
         Alert.alert("Error", "Invalid response from server");
@@ -159,7 +159,7 @@ export default function Index() {
 
   // If authenticated, redirect to protected routes
   if (isAuthenticated) {
-    return <Redirect href={"/(protected)/choose-path" as any} />;
+    return <Redirect href={"/(protected)/(researcher)/(tabs)/" as any} />;
   }
 
   return (

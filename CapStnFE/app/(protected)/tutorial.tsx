@@ -90,7 +90,7 @@ export default function Tutorial() {
   };
 
   const handleGetStarted = () => {
-    router.replace("/(protected)/choose-path" as any);
+    router.replace("/(protected)/(researcher)/(tabs)/" as any);
   };
 
   return (
