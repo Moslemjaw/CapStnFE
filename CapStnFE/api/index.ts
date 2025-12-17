@@ -15,7 +15,7 @@ const getBaseURL = () => {
 
     if (hostUri) {
       const host = hostUri.split(":")[0];
-      return `http://${host}:8080`;
+      return `http://${host}:8000`;
     }
   } catch (e) {
     console.log("Error determining API host from Expo Constants", e);
@@ -24,11 +24,11 @@ const getBaseURL = () => {
   // Fallbacks per-platform
   if (Platform.OS === "android") {
     // Special localhost alias for Android emulator
-    return "http://10.0.2.2:8080";
+    return "http://10.0.2.2:8000";
   }
 
   // iOS simulator & web can usually use localhost directly
-  return "http://localhost:8080";
+  return "http://localhost:8000";
 };
 
 const baseURL = getBaseURL();
