@@ -1,32 +1,34 @@
 import axios from "axios";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { getToken } from "./storage";
 
-// Use localhost for web, and your computer's IP for mobile devices/emulators
+// Determine base URL that also works on physical devices & emulators
 const getBaseURL = () => {
-  if (Platform.OS === "web") {
-    return "http://localhost:8000";
+  try {
+    // In Expo dev, this usually contains the host the JS bundle was loaded from,
+    // e.g. "192.168.0.10:19000" or "localhost:19000"
+    const hostUri =
+      (Constants.expoConfig as any)?.hostUri ||
+      (Constants.manifest as any)?.debuggerHost ||
+      (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
+
+    if (hostUri) {
+      const host = hostUri.split(":")[0];
+      return `http://${host}:8080`;
+    }
+  } catch (e) {
+    console.log("Error determining API host from Expo Constants", e);
   }
 
-  // For Android emulator
+  // Fallbacks per-platform
   if (Platform.OS === "android") {
-    // Uncomment the line below if using Android emulator
-    // return "http://10.0.2.2:8082";
-    // For physical Android device, use your computer's IP
-    return "http://localhost:8000";
+    // Special localhost alias for Android emulator
+    return "http://10.0.2.2:8080";
   }
 
-  // For iOS simulator, localhost works
-  // For physical iOS device, use your computer's IP
-  if (Platform.OS === "ios") {
-    // Uncomment the line below if using iOS simulator
-    // return "http://localhost:8082";
-    // For physical iOS device, use your computer's IP
-    return "http://localhost:8000";
-  }
-
-  // Default fallback
-  return "http://localhost:8000";
+  // iOS simulator & web can usually use localhost directly
+  return "http://localhost:8080";
 };
 
 const baseURL = getBaseURL();
