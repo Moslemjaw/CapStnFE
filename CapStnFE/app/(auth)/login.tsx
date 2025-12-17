@@ -27,22 +27,22 @@ const CARD_WIDTH = SCREEN_WIDTH * 0.5; // Smaller cards - 50% of screen width
 
 const CAROUSEL_CARDS = [
   {
-    number: "1",
+    emoji: "⚡",
     title: "Real-time Data",
     description: "Get instant insights from your survey responses as they come in.",
   },
   {
-    number: "2",
+    emoji: "📊",
     title: "Advanced Analytics",
     description: "Powerful data visualizations that reveal patterns and trends.",
   },
   {
-    number: "3",
+    emoji: "🔒",
     title: "Secure Insights",
     description: "Your data is protected with enterprise-grade security measures.",
   },
   {
-    number: "4",
+    emoji: "📋",
     title: "Customizable Reports",
     description: "Create and customize reports tailored to your specific needs.",
   },
@@ -212,9 +212,8 @@ export default function Login() {
                 <View key={index} style={styles.carouselCardWrapper}>
                   <View style={[styles.carouselCard, { width: CARD_WIDTH }]}>
                     <View style={styles.cardPlaceholderContainer}>
-                      <Text style={styles.cardPlaceholder}>Placeholder</Text>
+                      <Text style={styles.cardEmoji}>{card.emoji}</Text>
                     </View>
-                    <Text style={styles.cardNumber}>{card.number}.</Text>
                     <Text style={styles.cardTitle}>{card.title}</Text>
                   </View>
                 </View>
@@ -443,16 +442,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cardPlaceholder: {
-    fontSize: 16,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  cardNumber: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
+  cardEmoji: {
+    fontSize: 48,
   },
   cardTitle: {
     fontSize: 22,

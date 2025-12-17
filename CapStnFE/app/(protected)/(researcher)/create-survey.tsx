@@ -16,12 +16,15 @@ import {
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { createSurvey, CreateSurveyData } from "@/api/surveys";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { createSurvey, CreateSurveyData, getSurveyById, updateSurvey, unpublishSurvey } from "@/api/surveys";
 import {
   createQuestion,
   CreateQuestionData,
   Question,
+  getQuestionsBySurveyId,
+  updateQuestion,
+  deleteQuestion,
 } from "@/api/questions";
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
@@ -40,11 +43,13 @@ interface LocalQuestion {
 
 export default function CreateSurvey() {
   const router = useRouter();
+  const { surveyId } = useLocalSearchParams<{ surveyId?: string }>();
   const [user, setUser] = useState<User | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<LocalQuestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<{
@@ -64,11 +69,50 @@ export default function CreateSurvey() {
 
   useEffect(() => {
     loadUser();
-  }, []);
+    if (surveyId) {
+      loadSurveyForEdit();
+    }
+  }, [surveyId]);
 
   const loadUser = async () => {
     const userData = await getUser();
     setUser(userData);
+  };
+
+  const loadSurveyForEdit = async () => {
+    if (!surveyId) return;
+    
+    setLoading(true);
+    try {
+      const [surveyData, questionsData] = await Promise.all([
+        getSurveyById(surveyId),
+        getQuestionsBySurveyId(surveyId),
+      ]);
+
+      // Sort questions by order
+      const sortedQuestions = questionsData.sort((a, b) => a.order - b.order);
+
+      // Populate form with survey data
+      setTitle(surveyData.title);
+      setDescription(surveyData.description || "");
+      
+      // Convert API questions to LocalQuestion format
+      const localQuestions: LocalQuestion[] = sortedQuestions.map((q) => ({
+        text: q.text,
+        type: q.type === "text" ? "text" : "multiple_choice",
+        options: q.options,
+        isRequired: q.isRequired,
+        logicType: "any", // Default, as we don't store this in the API yet
+      }));
+
+      setQuestions(localQuestions);
+      setIsEditMode(true);
+    } catch (err: any) {
+      console.error("Error loading survey for edit:", err);
+      Alert.alert("Error", "Failed to load survey for editing");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const validateForm = (): boolean => {
@@ -226,36 +270,80 @@ export default function CreateSurvey() {
 
     setLoading(true);
     try {
-      const surveyData: CreateSurveyData = {
-        title: title.trim(),
-        description: description.trim() || "No description provided",
-        rewardPoints: calculateRewardPoints(),
-        estimatedMinutes: 1,
-        creatorId: user._id,
-      };
+      let finalSurveyId: string;
 
-      const survey = await createSurvey(surveyData);
-
-      // Create all questions
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        const questionData: CreateQuestionData = {
-          surveyId: survey._id,
-          order: i + 1,
-          text: q.text,
-          type: q.type,
-          options: q.options,
-          isRequired: q.isRequired,
+      if (isEditMode && surveyId) {
+        // Edit mode: Update existing survey
+        await updateSurvey(surveyId, {
+          title: title.trim(),
+          description: description.trim() || "No description provided",
+          rewardPoints: calculateRewardPoints(),
+        });
+        
+        // Get existing questions and update/delete as needed
+        const existingQuestions = await getQuestionsBySurveyId(surveyId);
+        
+        // Delete all existing questions
+        for (const q of existingQuestions) {
+          await deleteQuestion(q._id);
+        }
+        
+        // Create updated questions
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const questionData: CreateQuestionData = {
+            surveyId: surveyId,
+            order: i + 1,
+            text: q.text,
+            type: q.type,
+            options: q.options,
+            isRequired: q.isRequired,
+          };
+          await createQuestion(questionData);
+        }
+        
+        // Archive the survey
+        await unpublishSurvey(surveyId);
+        finalSurveyId = surveyId;
+      } else {
+        // Create mode: Create new survey
+        const surveyData: CreateSurveyData = {
+          title: title.trim(),
+          description: description.trim() || "No description provided",
+          rewardPoints: calculateRewardPoints(),
+          estimatedMinutes: 1,
+          creatorId: user._id,
         };
-        await createQuestion(questionData);
+
+        const survey = await createSurvey(surveyData);
+
+        // Create all questions
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const questionData: CreateQuestionData = {
+            surveyId: survey._id,
+            order: i + 1,
+            text: q.text,
+            type: q.type,
+            options: q.options,
+            isRequired: q.isRequired,
+          };
+          await createQuestion(questionData);
+        }
+        
+        finalSurveyId = survey._id;
       }
 
-      Alert.alert("Success", "Survey archived successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
+      // Navigate to archive success page
+      router.replace({
+        pathname: "/(protected)/(researcher)/survey-archive-success",
+        params: {
+          surveyId: finalSurveyId,
+          questionCount: questions.length.toString(),
+          points: calculateRewardPoints().toString(),
+          estimatedMinutes: "1",
         },
-      ]);
+      } as any);
     } catch (err: any) {
       console.error("Error archiving survey:", err);
       Alert.alert(
@@ -279,39 +367,77 @@ export default function CreateSurvey() {
 
     setLoading(true);
     try {
-      const surveyData: CreateSurveyData = {
-        title: title.trim(),
-        description: description.trim() || "No description provided",
-        rewardPoints: calculateRewardPoints(),
-        estimatedMinutes: 1,
-        creatorId: user._id,
-      };
+      let finalSurveyId: string;
 
-      const survey = await createSurvey(surveyData);
-
-      // Create all questions
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        const questionData: CreateQuestionData = {
-          surveyId: survey._id,
-          order: i + 1,
-          text: q.text,
-          type: q.type,
-          options: q.options,
-          isRequired: q.isRequired,
+      if (isEditMode && surveyId) {
+        // Edit mode: Update existing survey
+        await updateSurvey(surveyId, {
+          title: title.trim(),
+          description: description.trim() || "No description provided",
+          rewardPoints: calculateRewardPoints(),
+        });
+        
+        // Get existing questions and update/delete as needed
+        const existingQuestions = await getQuestionsBySurveyId(surveyId);
+        
+        // Delete all existing questions
+        for (const q of existingQuestions) {
+          await deleteQuestion(q._id);
+        }
+        
+        // Create updated questions
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const questionData: CreateQuestionData = {
+            surveyId: surveyId,
+            order: i + 1,
+            text: q.text,
+            type: q.type,
+            options: q.options,
+            isRequired: q.isRequired,
+          };
+          await createQuestion(questionData);
+        }
+        
+        finalSurveyId = surveyId;
+      } else {
+        // Create mode: Create new survey
+        const surveyData: CreateSurveyData = {
+          title: title.trim(),
+          description: description.trim() || "No description provided",
+          rewardPoints: calculateRewardPoints(),
+          estimatedMinutes: 1,
+          creatorId: user._id,
         };
-        await createQuestion(questionData);
+
+        const survey = await createSurvey(surveyData);
+
+        // Create all questions
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const questionData: CreateQuestionData = {
+            surveyId: survey._id,
+            order: i + 1,
+            text: q.text,
+            type: q.type,
+            options: q.options,
+            isRequired: q.isRequired,
+          };
+          await createQuestion(questionData);
+        }
+        
+        finalSurveyId = survey._id;
       }
 
       router.push({
         pathname: "/(protected)/(researcher)/survey-preview",
-        params: { surveyId: survey._id },
+        params: { surveyId: finalSurveyId },
       } as any);
     } catch (err: any) {
-      console.error("Error creating survey for preview:", err);
+      console.error("Error creating/updating survey for preview:", err);
       Alert.alert(
         "Error",
-        err.response?.data?.message || err.message || "Failed to create survey. Please try again."
+        err.response?.data?.message || err.message || "Failed to create/update survey. Please try again."
       );
     } finally {
       setLoading(false);

@@ -82,8 +82,10 @@ export default function SurveyPreview() {
 
     setActionLoading(true);
     try {
-      await unpublishSurvey(surveyId);
-      setSurvey({ ...survey, draft: "unpublished" });
+      // Only call unpublishSurvey if the survey is currently published
+      if (survey.draft === "published") {
+        await unpublishSurvey(surveyId);
+      }
       
       // Navigate to success page (replace to prevent going back to preview)
       router.replace({
@@ -101,7 +103,6 @@ export default function SurveyPreview() {
         "Error",
         err.response?.data?.message || err.message || "Failed to archive survey. Please try again."
       );
-    } finally {
       setActionLoading(false);
     }
   };
@@ -112,9 +113,9 @@ export default function SurveyPreview() {
     setActionLoading(true);
     try {
       await publishSurvey(surveyId);
-      setSurvey({ ...survey, draft: "published" });
       
       // Navigate to success page (replace to prevent going back to preview)
+      // Don't update state before navigation to avoid button being disabled
       router.replace({
         pathname: "/(protected)/(researcher)/survey-publish-success",
         params: {
@@ -136,7 +137,11 @@ export default function SurveyPreview() {
   };
 
   const handleEdit = () => {
-    router.back();
+    if (!surveyId) return;
+    router.push({
+      pathname: "/(protected)/(researcher)/create-survey",
+      params: { surveyId: surveyId },
+    } as any);
   };
 
   const openTimeEditModal = () => {
@@ -314,7 +319,7 @@ export default function SurveyPreview() {
           <TouchableOpacity
             style={[styles.actionButton, styles.archiveButton]}
             onPress={handleArchive}
-            disabled={actionLoading || survey?.draft === "unpublished"}
+            disabled={actionLoading}
           >
             {actionLoading ? (
               <ActivityIndicator size="small" color="#6B7280" />
