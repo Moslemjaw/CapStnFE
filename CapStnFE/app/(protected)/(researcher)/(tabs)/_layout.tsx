@@ -21,9 +21,9 @@ export default function ResearcherTabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -37,11 +37,11 @@ export default function ResearcherTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="analytics"
+        name="research"
         options={{
-          title: "Analytics",
+          title: "Research",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart-outline" size={size} color={color} />
+            <Ionicons name="search-outline" size={size} color={color} />
           ),
         }}
       />
