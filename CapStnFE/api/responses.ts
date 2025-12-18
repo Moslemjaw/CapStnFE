@@ -75,3 +75,34 @@ export const getResponseById = async (id: string): Promise<Response> => {
   }
 };
 
+/**
+ * Create a new response
+ */
+export interface CreateResponseData {
+  surveyId: string;
+  startedAt?: string;
+  submittedAt: string;
+  durationMs?: number;
+  isFlaggedSpam?: boolean;
+  trustImpact?: number;
+  answers: Answer[];
+}
+
+export const createResponse = async (
+  responseData: CreateResponseData
+): Promise<Response> => {
+  try {
+    const { data } = await instance.post<ResponseData>(
+      "/response",
+      responseData
+    );
+    if (!data.response) {
+      throw new Error("Failed to create response");
+    }
+    return data.response;
+  } catch (error) {
+    console.error("Error creating response:", error);
+    throw error;
+  }
+};
+

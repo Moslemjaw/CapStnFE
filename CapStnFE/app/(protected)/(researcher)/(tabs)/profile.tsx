@@ -8,6 +8,7 @@ import {
   Pressable,
   Dimensions,
   Animated,
+  Image,
 } from "react-native";
 import React, { useContext, useEffect, useState, useRef } from "react";
 import {
@@ -19,6 +20,7 @@ import { useRouter } from "expo-router";
 import AuthContext from "@/context/AuthContext";
 import { getUser, deleteToken } from "@/api/storage";
 import User from "@/types/User";
+import { getImageUrl } from "@/utils/imageUtils";
 
 export default function ResearcherProfile() {
   const [user, setUser] = useState<User | null>(null);
@@ -27,6 +29,7 @@ export default function ResearcherProfile() {
   const insets = useSafeAreaInsets();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Animation values
   const termsSlideAnim = useRef(new Animated.Value(0)).current;
@@ -105,6 +108,7 @@ export default function ResearcherProfile() {
     const loadUser = async () => {
       const userData = await getUser();
       setUser(userData);
+      setImageError(false); // Reset image error when user changes
     };
     loadUser();
   }, []);
@@ -178,11 +182,36 @@ export default function ResearcherProfile() {
           {/* User Info Card */}
           <View style={styles.userCard}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {user?.name ? getInitials(user.name) : "AA"}
-                </Text>
-              </View>
+              {user?.image && !imageError ? (
+                <Image
+                  source={{ uri: getImageUrl(user.image) || undefined }}
+                  style={styles.avatarImage}
+                  onError={(errorEvent) => {
+                    const error = errorEvent.nativeEvent?.error || errorEvent;
+                    console.error("Error loading profile image:", {
+                      error: error,
+                      errorMessage: error?.message || String(error),
+                      errorCode: errorEvent.nativeEvent?.errorCode,
+                      fullEvent: errorEvent,
+                    });
+                    console.log(
+                      "Image URL attempted:",
+                      getImageUrl(user.image)
+                    );
+                    setImageError(true);
+                  }}
+                  onLoad={() => {
+                    console.log("Profile image loaded successfully");
+                    setImageError(false);
+                  }}
+                />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {user?.name ? getInitials(user.name) : "AA"}
+                  </Text>
+                </View>
+              )}
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>
@@ -700,6 +729,13 @@ const styles = StyleSheet.create({
     borderColor: "#7DD3FC",
     justifyContent: "center",
     alignItems: "center",
+  },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: "#7DD3FC",
   },
   avatarText: {
     fontSize: 20,

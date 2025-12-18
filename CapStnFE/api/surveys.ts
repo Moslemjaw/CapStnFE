@@ -32,6 +32,19 @@ export const getPublishedSurveys = async (): Promise<Survey[]> => {
 };
 
 /**
+ * Get all unpublished surveys
+ */
+export const getUnpublishedSurveys = async (): Promise<Survey[]> => {
+  try {
+    const { data } = await instance.get<SurveyResponse>("/survey/unpublished");
+    return data.surveys || [];
+  } catch (error) {
+    console.error("Error fetching unpublished surveys:", error);
+    throw error;
+  }
+};
+
+/**
  * Get survey by ID
  */
 export const getSurveyById = async (id: string): Promise<Survey> => {
@@ -48,12 +61,16 @@ export const getSurveyById = async (id: string): Promise<Survey> => {
 };
 
 /**
- * Get all surveys
+ * Get all surveys (both published and unpublished)
  */
 export const getSurveys = async (): Promise<Survey[]> => {
   try {
-    const { data } = await instance.get<SurveyResponse>("/survey/");
-    return data.surveys || [];
+    // Fetch both published and unpublished surveys
+    const [published, unpublished] = await Promise.all([
+      getPublishedSurveys(),
+      getUnpublishedSurveys(),
+    ]);
+    return [...published, ...unpublished];
   } catch (error) {
     console.error("Error fetching surveys:", error);
     throw error;
@@ -67,7 +84,12 @@ export const getSurveysByCreatorId = async (
   creatorId: string
 ): Promise<Survey[]> => {
   try {
-    const allSurveys = await getSurveys();
+    // Fetch both published and unpublished surveys, then filter by creatorId
+    const [published, unpublished] = await Promise.all([
+      getPublishedSurveys(),
+      getUnpublishedSurveys(),
+    ]);
+    const allSurveys = [...published, ...unpublished];
     return allSurveys.filter((survey) => survey.creatorId === creatorId);
   } catch (error) {
     console.error("Error fetching surveys by creator ID:", error);
@@ -90,10 +112,7 @@ export const createSurvey = async (
   surveyData: CreateSurveyData
 ): Promise<Survey> => {
   try {
-    const { data } = await instance.post<SurveyResponse>(
-      "/survey/",
-      surveyData
-    );
+    const { data } = await instance.post<SurveyResponse>("/survey", surveyData);
     if (!data.survey) {
       throw new Error("Failed to create survey");
     }

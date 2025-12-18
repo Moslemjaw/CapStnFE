@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getSurveyById } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
+import { createResponse, Answer } from "@/api/responses";
 import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 
@@ -23,6 +27,9 @@ export default function SurveyView() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [startTime] = useState<Date>(new Date());
 
   useEffect(() => {
     if (surveyId) {
@@ -54,9 +61,135 @@ export default function SurveyView() {
     }
   };
 
-  const handleAnswerPress = () => {
-    Alert.alert("Answer Survey", "Answer functionality will be implemented soon.");
-    // TODO: Navigate to answer screen
+  const handleAnswerChange = (questionId: string, value: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: value,
+    }));
+  };
+
+  const handleOptionSelect = (
+    questionId: string,
+    option: string,
+    questionType: Question["type"]
+  ) => {
+    if (questionType === "single_choice" || questionType === "dropdown") {
+      // Single selection
+      handleAnswerChange(questionId, option);
+    } else if (
+      questionType === "multiple_choice" ||
+      questionType === "checkbox"
+    ) {
+      // Multiple selection - toggle option
+      const currentAnswer = answers[questionId] || "";
+      const selectedOptions = currentAnswer ? currentAnswer.split(",") : [];
+      const optionIndex = selectedOptions.indexOf(option);
+
+      if (optionIndex > -1) {
+        // Remove option
+        selectedOptions.splice(optionIndex, 1);
+      } else {
+        // Add option
+        selectedOptions.push(option);
+      }
+
+      handleAnswerChange(questionId, selectedOptions.join(","));
+    }
+  };
+
+  const isOptionSelected = (
+    questionId: string,
+    option: string,
+    questionType: Question["type"]
+  ): boolean => {
+    const answer = answers[questionId] || "";
+    if (questionType === "single_choice" || questionType === "dropdown") {
+      return answer === option;
+    } else if (
+      questionType === "multiple_choice" ||
+      questionType === "checkbox"
+    ) {
+      const selectedOptions = answer ? answer.split(",") : [];
+      return selectedOptions.includes(option);
+    }
+    return false;
+  };
+
+  const validateAnswers = (): boolean => {
+    for (const question of questions) {
+      if (question.isRequired && !answers[question._id]) {
+        Alert.alert(
+          "Required Question",
+          `Please answer "${question.text}" before submitting.`
+        );
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!surveyId || !survey) return;
+
+    if (!validateAnswers()) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const submittedAt = new Date();
+      const durationMs = submittedAt.getTime() - startTime.getTime();
+
+      const answerArray: Answer[] = questions
+        .filter((q) => answers[q._id])
+        .map((q) => ({
+          questionId: q._id,
+          value: answers[q._id],
+        }));
+
+      if (answerArray.length === 0) {
+        Alert.alert("Error", "Please answer at least one question.");
+        setSubmitting(false);
+        return;
+      }
+
+      await createResponse({
+        surveyId,
+        startedAt: startTime.toISOString(),
+        submittedAt: submittedAt.toISOString(),
+        durationMs,
+        answers: answerArray,
+      });
+
+      // Calculate statistics
+      const requiredAnswered = questions.filter(
+        (q) => q.isRequired && answers[q._id]
+      ).length;
+      const optionalAnswered = questions.filter(
+        (q) => !q.isRequired && answers[q._id]
+      ).length;
+
+      // Navigate to success page
+      router.replace({
+        pathname: "/(protected)/(researcher)/survey-answer-success",
+        params: {
+          surveyId,
+          requiredAnswered: requiredAnswered.toString(),
+          optionalAnswered: optionalAnswered.toString(),
+          pointsEarned: survey.rewardPoints.toString(),
+        },
+      } as any);
+    } catch (err: any) {
+      console.error("Error submitting response:", err);
+      Alert.alert(
+        "Error",
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to submit response. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getQuestionTypeLabel = (type: Question["type"]) => {
@@ -106,105 +239,169 @@ export default function SurveyView() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        {/* Survey Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{survey.title}</Text>
-          {survey.description && (
-            <Text style={styles.description}>{survey.description}</Text>
-          )}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Survey Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>{survey.title}</Text>
+            {survey.description && (
+              <Text style={styles.description}>{survey.description}</Text>
+            )}
 
-          <View style={styles.metadata}>
-            <View style={styles.metadataItem}>
-              <Ionicons name="time-outline" size={18} color="#6B7280" />
-              <Text style={styles.metadataText}>
-                {survey.estimatedMinutes} min
-              </Text>
-            </View>
+            <View style={styles.metadata}>
+              <View style={styles.metadataItem}>
+                <Ionicons name="time-outline" size={18} color="#6B7280" />
+                <Text style={styles.metadataText}>
+                  {survey.estimatedMinutes} min
+                </Text>
+              </View>
 
-            <View style={styles.metadataItem}>
-              <Ionicons name="list-outline" size={18} color="#6B7280" />
-              <Text style={styles.metadataText}>
-                {questions.length} questions
-              </Text>
-            </View>
+              <View style={styles.metadataItem}>
+                <Ionicons name="list-outline" size={18} color="#6B7280" />
+                <Text style={styles.metadataText}>
+                  {questions.length} questions
+                </Text>
+              </View>
 
-            <View style={styles.metadataItem}>
-              <Ionicons name="star-outline" size={18} color="#F59E0B" />
-              <Text style={[styles.metadataText, styles.pointsText]}>
-                {survey.rewardPoints} pts
-              </Text>
+              <View style={styles.metadataItem}>
+                <Ionicons name="star-outline" size={18} color="#F59E0B" />
+                <Text style={[styles.metadataText, styles.pointsText]}>
+                  {survey.rewardPoints} pts
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Questions Section */}
-        <View style={styles.questionsSection}>
-          <Text style={styles.sectionTitle}>Questions</Text>
+          {/* Questions Section */}
+          <View style={styles.questionsSection}>
+            <Text style={styles.sectionTitle}>Questions</Text>
 
-          {questions.length === 0 ? (
-            <View style={styles.emptyQuestions}>
-              <Ionicons name="help-circle-outline" size={32} color="#9CA3AF" />
-              <Text style={styles.emptyQuestionsText}>
-                No questions available for this survey
-              </Text>
-            </View>
-          ) : (
-            questions.map((question, index) => (
-              <View key={question._id} style={styles.questionCard}>
-                <View style={styles.questionHeader}>
-                  <Text style={styles.questionNumber}>
-                    Question {index + 1}
-                  </Text>
-                  {question.isRequired && (
-                    <View style={styles.requiredBadge}>
-                      <Text style={styles.requiredText}>Required</Text>
-                    </View>
-                  )}
-                </View>
-
-                <Text style={styles.questionText}>{question.text}</Text>
-
-                <View style={styles.questionType}>
-                  <Text style={styles.questionTypeText}>
-                    Type: {getQuestionTypeLabel(question.type)}
-                  </Text>
-                </View>
-
-                {question.options && question.options.length > 0 && (
-                  <View style={styles.optionsContainer}>
-                    <Text style={styles.optionsLabel}>Options:</Text>
-                    {question.options.map((option, optIndex) => (
-                      <View key={optIndex} style={styles.optionItem}>
-                        <Ionicons
-                          name="ellipse-outline"
-                          size={16}
-                          color="#6B7280"
-                        />
-                        <Text style={styles.optionText}>{option}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+            {questions.length === 0 ? (
+              <View style={styles.emptyQuestions}>
+                <Ionicons
+                  name="help-circle-outline"
+                  size={32}
+                  color="#9CA3AF"
+                />
+                <Text style={styles.emptyQuestionsText}>
+                  No questions available for this survey
+                </Text>
               </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
+            ) : (
+              questions.map((question, index) => (
+                <View key={question._id} style={styles.questionCard}>
+                  <View style={styles.questionHeader}>
+                    <Text style={styles.questionNumber}>
+                      Question {index + 1}
+                    </Text>
+                    {question.isRequired && (
+                      <View style={styles.requiredBadge}>
+                        <Text style={styles.requiredText}>Required</Text>
+                      </View>
+                    )}
+                  </View>
 
-      {/* Answer Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.answerButton}
-          onPress={handleAnswerPress}
-        >
-          <Text style={styles.answerButtonText}>Answer</Text>
-        </TouchableOpacity>
-      </View>
+                  <Text style={styles.questionText}>{question.text}</Text>
+
+                  {/* Answer Input Section */}
+                  {question.type === "text" ? (
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Type your answer here..."
+                      placeholderTextColor="#9CA3AF"
+                      value={answers[question._id] || ""}
+                      onChangeText={(text) =>
+                        handleAnswerChange(question._id, text)
+                      }
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                    />
+                  ) : question.options && question.options.length > 0 ? (
+                    <View style={styles.optionsContainer}>
+                      {question.options.map((option, optIndex) => {
+                        const isSelected = isOptionSelected(
+                          question._id,
+                          option,
+                          question.type
+                        );
+                        const isMultiple =
+                          question.type === "multiple_choice" ||
+                          question.type === "checkbox";
+
+                        return (
+                          <TouchableOpacity
+                            key={optIndex}
+                            style={[
+                              styles.optionButton,
+                              isSelected && styles.optionButtonSelected,
+                            ]}
+                            onPress={() =>
+                              handleOptionSelect(
+                                question._id,
+                                option,
+                                question.type
+                              )
+                            }
+                          >
+                            <Ionicons
+                              name={
+                                isMultiple
+                                  ? isSelected
+                                    ? "checkbox"
+                                    : "checkbox-outline"
+                                  : isSelected
+                                  ? "radio-button-on"
+                                  : "radio-button-off"
+                              }
+                              size={20}
+                              color={isSelected ? "#3B82F6" : "#6B7280"}
+                            />
+                            <Text
+                              style={[
+                                styles.optionButtonText,
+                                isSelected && styles.optionButtonTextSelected,
+                              ]}
+                            >
+                              {option}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Submit Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.answerButton,
+              submitting && styles.answerButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.answerButtonText}>Submit</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -213,6 +410,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
+  },
+  keyboardView: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,
@@ -351,27 +551,43 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontStyle: "italic",
   },
+  textInput: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: "#111827",
+    minHeight: 100,
+    marginTop: 12,
+  },
   optionsContainer: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    marginTop: 12,
   },
-  optionsLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  optionItem: {
+  optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
   },
-  optionText: {
-    fontSize: 14,
-    color: "#6B7280",
+  optionButtonSelected: {
+    borderColor: "#3B82F6",
+    backgroundColor: "#EFF6FF",
+  },
+  optionButtonText: {
+    fontSize: 16,
+    color: "#374151",
+    marginLeft: 12,
+    flex: 1,
+  },
+  optionButtonTextSelected: {
+    color: "#1E40AF",
+    fontWeight: "500",
   },
   footer: {
     padding: 24,
@@ -385,7 +601,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#3B82F6",
+    minHeight: 48,
+  },
+  answerButtonDisabled: {
+    opacity: 0.6,
   },
   answerButtonText: {
     fontSize: 16,
@@ -393,4 +614,3 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 });
-
