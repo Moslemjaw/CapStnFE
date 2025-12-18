@@ -128,7 +128,7 @@ export const createSurvey = async (
  */
 export const publishSurvey = async (surveyId: string): Promise<Survey> => {
   try {
-    const { data } = await instance.post<SurveyResponse>(
+    const { data } = await instance.put<SurveyResponse>(
       `/survey/publish/${surveyId}`
     );
     if (!data.survey) {
@@ -146,7 +146,7 @@ export const publishSurvey = async (surveyId: string): Promise<Survey> => {
  */
 export const unpublishSurvey = async (surveyId: string): Promise<Survey> => {
   try {
-    const { data } = await instance.post<SurveyResponse>(
+    const { data } = await instance.put<SurveyResponse>(
       `/survey/unpublish/${surveyId}`
     );
     if (!data.survey) {

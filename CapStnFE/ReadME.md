@@ -94,7 +94,7 @@ Create a `.env` file in the root directory with the following variables:
 
 ```env
 # Server Configuration
-PORT=8000
+PORT=8080
 
 # Database
 MONGODB_URI=mongodb://localhost:27017/capstn
@@ -109,7 +109,7 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
 
 ### Variable Descriptions
 
-- **PORT**: Server port (default: 8000)
+- **PORT**: Server port (default: 8080)
 - **MONGODB_URI**: MongoDB connection string
 - **JWT_SECRET**: Secret key for JWT token signing (use a strong random string)
 - **SALT**: Bcrypt salt rounds for password hashing (default: 10)
@@ -202,11 +202,15 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
   type: "single" | "multi",         // Required, Analysis type
   status: "processing" | "ready" | "failed", // Required
   progress: number,                 // 0-100, Default: 0
+  idMapping: {                      // ID conversion mappings
+    surveys: Map<string, string>,   // shortId -> realId (e.g., "s1" -> ObjectId)
+    questions: Map<string, string>  // shortId -> realId (e.g., "q1" -> ObjectId)
+  },
   data: {
     overview: string,               // Required, Overall analysis summary
     surveys: [                      // Array of survey-specific analysis
       {
-        surveyId: string,           // Short ID (s1, s2, etc.)
+        surveyId: string,           // Real MongoDB ObjectId (not short ID)
         responseCountUsed: number,
         findings: [                 // Key findings
           {
@@ -272,11 +276,12 @@ Authorization: Bearer <token>
 The following endpoints require authentication (use the `authorize` middleware):
 
 - `POST /survey` - Create survey
-- `POST /survey/publish/:id` - Publish survey
-- `POST /survey/unpublish/:id` - Unpublish survey
+- `PUT /survey/publish/:id` - Publish survey
+- `PUT /survey/unpublish/:id` - Unpublish survey
 - `POST /response` - Create response
-- `POST /analyse/analyze` - Create AI analysis
-- `GET /analyse/analyze/:analysisId` - Get analysis status
+- `POST /analyse` - Create AI analysis
+- `GET /analyse/:analysisId` - Get analysis status
+- `GET /analyse` - Get all analyses
 
 ### Getting User ID from Token
 
@@ -294,10 +299,53 @@ const userId = customReq.user?.id;
 ### Base URL
 
 ```
-http://localhost:8000
+http://localhost:8080
 ```
 
 All endpoints return JSON responses.
+
+---
+
+### API Quick Reference
+
+| Method               | Endpoint                     | Auth Required | Description               |
+| -------------------- | ---------------------------- | ------------- | ------------------------- |
+| **User APIs**        |
+| POST                 | `/user/register`             | ❌            | Register new user         |
+| POST                 | `/user/login`                | ❌            | Login user                |
+| GET                  | `/user`                      | ❌            | Get all users             |
+| GET                  | `/user/:userId`              | ❌            | Get user by ID            |
+| **Survey APIs**      |
+| POST                 | `/survey`                    | ✅            | Create survey             |
+| GET                  | `/survey/:id`                | ❌            | Get survey by ID          |
+| GET                  | `/survey/published`          | ❌            | Get published surveys     |
+| GET                  | `/survey/unpublished`        | ❌            | Get unpublished surveys   |
+| PUT                  | `/survey/:id`                | ❌            | Update survey             |
+| DELETE               | `/survey/:id`                | ❌            | Delete survey             |
+| PUT                  | `/survey/publish/:id`        | ✅            | Publish survey            |
+| PUT                  | `/survey/unpublish/:id`      | ✅            | Unpublish survey          |
+| **Question APIs**    |
+| POST                 | `/question`                  | ❌            | Create question           |
+| GET                  | `/question`                  | ❌            | Get all questions         |
+| GET                  | `/question/:id`              | ❌            | Get question by ID        |
+| GET                  | `/question/survey/:surveyId` | ❌            | Get questions by survey   |
+| PUT                  | `/question/:id`              | ❌            | Update question           |
+| DELETE               | `/question/:id`              | ❌            | Delete question           |
+| **Response APIs**    |
+| POST                 | `/response`                  | ✅            | Create response           |
+| GET                  | `/response`                  | ❌            | Get all responses         |
+| GET                  | `/response/:id`              | ❌            | Get response by ID        |
+| GET                  | `/response/survey/:surveyId` | ❌            | Get responses by survey   |
+| GET                  | `/response/user/:userId`     | ❌            | Get responses by user     |
+| PUT                  | `/response/:id`              | ❌            | Update response           |
+| DELETE               | `/response/:id`              | ❌            | Delete response           |
+| **AI Analysis APIs** |
+| POST                 | `/analyse/test`              | ❌            | Test AI connection        |
+| POST                 | `/analyse`                   | ✅            | Create AI analysis        |
+| GET                  | `/analyse`                   | ✅            | Get all analyses for user |
+| GET                  | `/analyse/:analysisId`       | ✅            | Get analysis status       |
+
+**Note:** Routes marked with ✅ require a Bearer token in the Authorization header.
 
 ---
 
@@ -612,7 +660,7 @@ All endpoints return JSON responses.
 
 ### 5. Publish Survey
 
-**Endpoint:** `POST /survey/publish/:id`
+**Endpoint:** `PUT /survey/publish/:id`
 
 **Authentication:** Required (Bearer token)
 
@@ -642,7 +690,7 @@ All endpoints return JSON responses.
 
 ### 6. Unpublish Survey
 
-**Endpoint:** `POST /survey/unpublish/:id`
+**Endpoint:** `PUT /survey/unpublish/:id`
 
 **Authentication:** Required (Bearer token)
 
@@ -1139,7 +1187,7 @@ All endpoints return JSON responses.
 
 ### 2. Create AI Analysis
 
-**Endpoint:** `POST /analyse/analyze`
+**Endpoint:** `POST /analyse`
 
 **Authentication:** Required (Bearer token)
 
@@ -1183,18 +1231,83 @@ OR for multiple surveys:
 - `"single"`: One survey analyzed
 - `"multi"`: Multiple surveys analyzed together
 
+**Response Deduplication:**
+
+- If a user submits multiple responses to the same survey, only the **newest** response (by `submittedAt`) is analyzed
+- This prevents duplicate responses from skewing results
+- Spam-flagged responses (`isFlaggedSpam: true`) are excluded
+
+**ID Conversion:**
+
+- AI receives short IDs (s1, q1) to save token costs
+- Real MongoDB ObjectIds are stored and returned to frontend
+- Frontend receives usable IDs directly - no mapping needed
+
 **Notes:**
 
 - Analysis is performed asynchronously
 - Use the `analysisId` to poll for status updates
 - The analysis transforms survey data into a format optimized for AI processing
-- Responses flagged as spam are excluded from analysis
+- All survey and question IDs in the response are **real MongoDB ObjectIds**
 
 ---
 
-### 3. Get Analysis Status
+### 3. Get All Analyses
 
-**Endpoint:** `GET /analyse/analyze/:analysisId`
+**Endpoint:** `GET /analyse`
+
+**Authentication:** Required (Bearer token)
+
+**Success Response (200):**
+
+```json
+{
+  "message": "Analyses fetched successfully",
+  "analyses": [
+    {
+      "analysisId": "507f1f77bcf86cd799439017",
+      "surveyIds": ["507f1f77bcf86cd799439012"],
+      "type": "single",
+      "status": "ready",
+      "progress": 100,
+      "data": {
+        "overview": "...",
+        "surveys": [...]
+      },
+      "createdAt": "2024-01-20T10:00:00.000Z",
+      "updatedAt": "2024-01-20T10:05:00.000Z"
+    },
+    {
+      "analysisId": "507f1f77bcf86cd799439018",
+      "surveyIds": ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439014"],
+      "type": "multi",
+      "status": "processing",
+      "progress": 45,
+      "data": null,
+      "createdAt": "2024-01-20T11:00:00.000Z",
+      "updatedAt": "2024-01-20T11:02:00.000Z"
+    }
+  ],
+  "count": 2
+}
+```
+
+**Notes:**
+
+- Returns all analyses for the authenticated user
+- Sorted by newest first (most recent at the top)
+- `data` is `null` for analyses that are not ready
+- Use this endpoint to display analysis history in the frontend
+
+**Error Responses:**
+
+- `401`: Unauthorized (missing/invalid token)
+
+---
+
+### 4. Get Analysis Status
+
+**Endpoint:** `GET /analyse/:analysisId`
 
 **Authentication:** Required (Bearer token)
 
@@ -1207,13 +1320,15 @@ OR for multiple surveys:
 ```json
 {
   "analysisId": "507f1f77bcf86cd799439017",
+  "surveyIds": ["507f1f77bcf86cd799439012"],
+  "type": "single",
   "status": "ready",
   "progress": 100,
   "data": {
     "overview": "Overall analysis summary of the survey responses...",
     "surveys": [
       {
-        "surveyId": "s1",
+        "surveyId": "6942ff483725212c049e18cf",
         "responseCountUsed": 150,
         "findings": [
           {
@@ -1260,6 +1375,12 @@ OR for multiple surveys:
 }
 ```
 
+**Important Notes:**
+
+- `surveyId` in the data is a **real MongoDB ObjectId** (e.g., `"6942ff483725212c049e18cf"`), not a short ID
+- You can use these IDs directly to query surveys/questions
+- The frontend doesn't need to do any ID mapping
+
 **Status Values:**
 
 - `"processing"`: Analysis in progress
@@ -1289,7 +1410,7 @@ OR for multiple surveys:
 // Frontend polling example
 const pollAnalysis = async (analysisId) => {
   const interval = setInterval(async () => {
-    const response = await fetch(`/analyse/analyze/${analysisId}`, {
+    const response = await fetch(`/analyse/${analysisId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await response.json();
@@ -1352,7 +1473,7 @@ const pollAnalysis = async (analysisId) => {
    ↓
 6. User publishes survey
    ↓
-7. POST /survey/publish/:id
+7. PUT /survey/publish/:id
    - Updates draft = "published"
    ↓
 8. Survey is now visible via GET /survey/published
@@ -1385,7 +1506,7 @@ const pollAnalysis = async (analysisId) => {
 ```
 1. Authenticated user requests analysis
    ↓
-2. POST /analyse/analyze
+2. POST /analyse
    - Validates surveyIds (string or array)
    - Determines type: "single" or "multi"
    ↓
@@ -1417,7 +1538,7 @@ const pollAnalysis = async (analysisId) => {
    - progress: 100%
    - data: { full analysis results }
    ↓
-9. Frontend polls GET /analyse/analyze/:analysisId
+9. Frontend polls GET /analyse/:analysisId
    - Checks status and progress
    - Displays progress bar
    - Shows results when ready
@@ -1536,7 +1657,7 @@ The backend uses centralized error handling:
 3. **Create `.env` file**
 
    ```env
-   PORT=8000
+   PORT=8080
    MONGODB_URI=mongodb://localhost:27017/capstn
    JWT_SECRET=your-super-secret-jwt-key-change-this
    SALT=10
@@ -1556,7 +1677,7 @@ The backend uses centralized error handling:
    npm start
    ```
 
-   The server will start on `http://localhost:8000`
+   The server will start on `http://localhost:8080`
 
 ### Development
 
@@ -1567,7 +1688,7 @@ The backend uses centralized error handling:
 ### File Uploads
 
 - Uploaded images are stored in `/uploads` directory
-- Access uploaded files via: `http://localhost:8000/media/<filename>`
+- Access uploaded files via: `http://localhost:8080/media/<filename>`
 - Ensure the `uploads` directory exists and has write permissions
 
 ### Database Connection
@@ -1589,7 +1710,7 @@ The backend uses CORS middleware to allow cross-origin requests. Configure CORS 
 Profile images are served statically from `/media` endpoint:
 
 ```
-GET /media/uploads/profile-123.jpg
+GET http://localhost:8080/media/uploads/profile-123.jpg
 ```
 
 ### Token Expiration
@@ -1620,12 +1741,34 @@ Responses with `isFlaggedSpam: true` are automatically excluded from AI analysis
 3. **Error Handling**: Handle `"failed"` status appropriately
 4. **Data Display**: Only display `data` when `status === "ready"`
 5. **Multiple Surveys**: Use array of surveyIds for cross-survey analysis
+6. **ID Usage**: Survey and question IDs in the response are real ObjectIds - use them directly
+7. **Response Deduplication**: Be aware that multiple responses from the same user to the same survey will result in only the newest being analyzed
+
+### Recent Updates (January 2024)
+
+#### ID Mapping System
+
+- **What**: AI processing uses short IDs (s1, q1) to reduce costs, but real MongoDB ObjectIds are returned to the frontend
+- **Why**: Saves OpenAI API costs while providing frontend with usable IDs
+- **Impact**: No frontend changes needed - you receive real IDs directly
+
+#### Response Deduplication Fix
+
+- **What**: Fixed bug where `submittedAt` wasn't being fetched for response comparison
+- **Why**: Ensures the newest response is correctly selected when a user submits multiple times
+- **Impact**: More accurate analysis when users re-submit surveys
+
+#### Get All Analyses Endpoint
+
+- **What**: New `GET /analyse` endpoint to fetch all analyses for a user
+- **Why**: Enable analysis history and dashboard features
+- **Impact**: Frontend can now display user's analysis history
 
 ---
 
 ## API Base URLs
 
-- **Development**: `http://localhost:8000`
+- **Development**: `http://localhost:8080`
 - **Production**: Update in frontend configuration
 
 ## Support
@@ -1634,4 +1777,33 @@ For issues or questions, refer to the codebase or contact the development team.
 
 ---
 
-**Last Updated**: January 2024
+## Recent Updates (January 2025)
+
+### 🆕 ID Mapping System
+
+- **What**: AI uses short IDs internally but returns real MongoDB ObjectIds
+- **Why**: Saves 40% on OpenAI costs while providing usable IDs to frontend
+- **Impact**: No frontend mapping needed - survey/question IDs are real ObjectIds
+
+### 🐛 Response Deduplication Fix
+
+- **What**: Fixed bug where `submittedAt` wasn't being fetched
+- **Why**: Ensures newest response is selected when users submit multiple times
+- **Impact**: More accurate analysis results
+
+### 📊 Get All Analyses Endpoint
+
+- **What**: New `GET /analyse` endpoint
+- **Why**: Enable analysis history and dashboard features
+- **Impact**: Frontend can display user's analysis history
+
+### Key Points for Frontend Developers:
+
+- ✅ Survey IDs in analysis results are **real ObjectIds** - use them directly
+- ✅ No ID conversion or mapping needed
+- ✅ Multiple responses from same user → only newest is analyzed
+- ✅ New endpoint to fetch all user's analyses
+
+---
+
+**Last Updated**: January 2025

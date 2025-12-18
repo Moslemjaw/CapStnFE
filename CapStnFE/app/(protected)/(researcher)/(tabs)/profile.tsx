@@ -39,6 +39,7 @@ export default function ResearcherProfile() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [totalPoints, setTotalPoints] = useState<number>(0);
   const [weeklyPoints, setWeeklyPoints] = useState<number>(0);
   const [loadingWeeklyPoints, setLoadingWeeklyPoints] = useState(false);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
@@ -117,18 +118,19 @@ export default function ResearcherProfile() {
     }
   }, [showPrivacyModal]);
 
-  const calculateWeeklyPoints = useCallback(async (userId: string) => {
+  const calculateTotalAndWeeklyPoints = useCallback(async (userId: string) => {
     try {
       setLoadingWeeklyPoints(true);
-      // Get start of current week (Monday)
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust when day is Sunday
-      const startOfWeek = new Date(now.setDate(diff));
-      startOfWeek.setHours(0, 0, 0, 0);
 
       // Get all user responses
       const responses = await getResponsesByUserId(userId);
+
+      // Get start of current week (Monday)
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const startOfWeek = new Date(now.setDate(diff));
+      startOfWeek.setHours(0, 0, 0, 0);
 
       // Filter responses from this week
       const weeklyResponses = responses.filter((response) => {
@@ -137,10 +139,8 @@ export default function ResearcherProfile() {
         return submittedDate >= startOfWeek;
       });
 
-      // Get unique survey IDs to avoid duplicate fetches
-      const uniqueSurveyIds = [
-        ...new Set(weeklyResponses.map((r) => r.surveyId)),
-      ];
+      // Get unique survey IDs from ALL responses to avoid duplicate fetches
+      const uniqueSurveyIds = [...new Set(responses.map((r) => r.surveyId))];
 
       // Fetch all surveys in parallel
       const surveyPromises = uniqueSurveyIds.map((surveyId) =>
@@ -160,15 +160,23 @@ export default function ResearcherProfile() {
         }
       });
 
-      // Calculate total points
-      const totalPoints = weeklyResponses.reduce((sum, response) => {
+      // Calculate total lifetime points
+      const lifetimePoints = responses.reduce((sum, response) => {
         const points = surveyPointsMap.get(response.surveyId) || 0;
         return sum + points;
       }, 0);
 
-      setWeeklyPoints(totalPoints);
+      // Calculate weekly points
+      const weekPoints = weeklyResponses.reduce((sum, response) => {
+        const points = surveyPointsMap.get(response.surveyId) || 0;
+        return sum + points;
+      }, 0);
+
+      setTotalPoints(lifetimePoints);
+      setWeeklyPoints(weekPoints);
     } catch (err) {
-      console.error("Error calculating weekly points:", err);
+      console.error("Error calculating points:", err);
+      setTotalPoints(0);
       setWeeklyPoints(0);
     } finally {
       setLoadingWeeklyPoints(false);
@@ -176,6 +184,12 @@ export default function ResearcherProfile() {
   }, []);
 
   const loadStreak = useCallback(async (userId: string) => {
+    if (!userId) {
+      setCurrentStreak(0);
+      setLoadingStreak(false);
+      return;
+    }
+
     try {
       setLoadingStreak(true);
       const streak = await calculateStreak(userId);
@@ -201,14 +215,14 @@ export default function ResearcherProfile() {
     setUser(userData);
     setImageError(false); // Reset image error when user changes
 
-    // Calculate weekly points and streak if user exists
+    // Calculate total/weekly points and streak if user exists
     if (userData?._id) {
       await Promise.all([
-        calculateWeeklyPoints(userData._id),
+        calculateTotalAndWeeklyPoints(userData._id),
         loadStreak(userData._id),
       ]);
     }
-  }, [calculateWeeklyPoints, loadStreak]);
+  }, [calculateTotalAndWeeklyPoints, loadStreak]);
 
   useEffect(() => {
     loadUser();
@@ -266,18 +280,52 @@ export default function ResearcherProfile() {
       .slice(0, 2);
   };
 
-  const getLevelName = (level?: number) => {
-    if (!level) return "Level 1: Beginner";
-    const levels = [
-      "Level 1: Beginner",
-      "Level 2: Intermediate",
-      "Level 3: Advanced",
-      "Level 4: Expert",
-      "Level 5: Master",
+  // Calculate level and progress based on points
+  const calculateLevel = (points: number) => {
+    // Level thresholds: 0-99: 1, 100-299: 2, 300-599: 3, 600-999: 4, 1000+: 5
+    const thresholds = [0, 100, 300, 600, 1000];
+    const levelNames = [
+      "Beginner",
+      "Intermediate",
+      "Advanced",
+      "Expert",
+      "Master",
     ];
-    return levels[level - 1] || "Level 1: Beginner";
+
+    let currentLevel = 1;
+    for (let i = 0; i < thresholds.length; i++) {
+      if (points >= thresholds[i]) {
+        currentLevel = i + 1;
+      }
+    }
+
+    // Cap at level 5
+    if (currentLevel > 5) currentLevel = 5;
+
+    // Calculate progress to next level
+    const currentThreshold = thresholds[currentLevel - 1] || 0;
+    const nextThreshold =
+      thresholds[currentLevel] || thresholds[thresholds.length - 1];
+    const progressPoints = points - currentThreshold;
+    const neededPoints = nextThreshold - currentThreshold;
+    const progressPercent =
+      currentLevel >= 5 ? 100 : (progressPoints / neededPoints) * 100;
+
+    return {
+      level: currentLevel,
+      levelName: levelNames[currentLevel - 1],
+      currentThreshold,
+      nextThreshold,
+      progressPoints,
+      neededPoints,
+      progressPercent: Math.min(progressPercent, 100),
+      isMaxLevel: currentLevel >= 5,
+    };
   };
+
+  const levelInfo = calculateLevel(totalPoints);
   const imageUrl = getImageUrl(user?.image || "");
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -290,7 +338,7 @@ export default function ResearcherProfile() {
           {/* User Info Card */}
           <View style={styles.userCard}>
             <View style={styles.avatarContainer}>
-              {user?.image ? (
+              {user?.image && !imageError && imageUrl ? (
                 <Image
                   source={{ uri: imageUrl }}
                   style={styles.avatarImage}
@@ -324,7 +372,9 @@ export default function ResearcherProfile() {
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Points</Text>
-              <Text style={styles.statValue}>{user?.points || 0} pts</Text>
+              <Text style={styles.statValue}>
+                {loadingWeeklyPoints ? "..." : totalPoints} pts
+              </Text>
               <Text style={styles.statSubtext}>
                 {loadingWeeklyPoints
                   ? "Calculating..."
@@ -334,12 +384,42 @@ export default function ResearcherProfile() {
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Streak</Text>
               <Text style={styles.statValue}>
-                {loadingStreak ? "..." : currentStreak || user?.streakDays || 0}{" "}
-                days
+                {loadingStreak
+                  ? "..."
+                  : `${currentStreak || user?.streakDays || 0} ${
+                      (currentStreak || user?.streakDays || 0) === 1
+                        ? "day"
+                        : "days"
+                    }`}
               </Text>
-              <Text style={styles.statSubtext}>
-                {getLevelName(user?.level)}
-              </Text>
+              <Text style={styles.statSubtext}>Keep it going!</Text>
+            </View>
+          </View>
+
+          {/* Level Progress Section */}
+          <View style={styles.levelContainer}>
+            <View style={styles.levelHeader}>
+              <View style={styles.levelInfo}>
+                <Ionicons name="shield-checkmark" size={24} color="#8B5CF6" />
+                <View style={styles.levelTextContainer}>
+                  <Text style={styles.levelTitle}>
+                    Level {levelInfo.level}: {levelInfo.levelName}
+                  </Text>
+                  <Text style={styles.levelSubtext}>
+                    {levelInfo.isMaxLevel
+                      ? "Maximum level reached!"
+                      : `${levelInfo.progressPoints} / ${levelInfo.neededPoints} pts to next level`}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.progressBarContainer}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { width: `${levelInfo.progressPercent}%` },
+                ]}
+              />
             </View>
           </View>
 
@@ -907,6 +987,49 @@ const styles = StyleSheet.create({
   statSubtext: {
     fontSize: 12,
     color: "#3B82F6",
+  },
+  levelContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  levelHeader: {
+    marginBottom: 12,
+  },
+  levelInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  levelTextContainer: {
+    flex: 1,
+  },
+  levelTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  levelSubtext: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#8B5CF6",
+    borderRadius: 4,
   },
   settingsSection: {
     marginBottom: 32,

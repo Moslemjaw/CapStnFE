@@ -16,10 +16,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getSurveyById } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
-import { createResponse, Answer } from "@/api/responses";
+import {
+  createResponse,
+  Answer,
+  getResponsesByUserId,
+  Response,
+} from "@/api/responses";
 import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 import { updateUserProgress } from "@/utils/userProgress";
+import { getUser } from "@/api/storage";
 
 export default function SurveyView() {
   const router = useRouter();
@@ -31,12 +37,51 @@ export default function SurveyView() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [startTime] = useState<Date>(new Date());
+  const [hasAnswered, setHasAnswered] = useState(false);
+  const [checkingAnswered, setCheckingAnswered] = useState(true);
+  const [userResponse, setUserResponse] = useState<Response | null>(null);
 
   useEffect(() => {
     if (surveyId) {
       loadSurveyData();
+      checkIfAlreadyAnswered();
     }
   }, [surveyId]);
+
+  const checkIfAlreadyAnswered = async () => {
+    if (!surveyId) return;
+
+    setCheckingAnswered(true);
+    try {
+      const user = await getUser();
+      if (user?._id) {
+        const userResponses = await getResponsesByUserId(user._id);
+        const existingResponse = userResponses.find(
+          (response) => response.surveyId === surveyId
+        );
+
+        if (existingResponse) {
+          setHasAnswered(true);
+          setUserResponse(existingResponse);
+
+          // Populate answers from the response
+          const populatedAnswers: Record<string, string> = {};
+          existingResponse.answers.forEach((answer) => {
+            populatedAnswers[answer.questionId] = answer.value;
+          });
+          setAnswers(populatedAnswers);
+        } else {
+          setHasAnswered(false);
+        }
+      }
+    } catch (err: any) {
+      console.error("Error checking if survey was answered:", err);
+      // Don't block the user if check fails
+      setHasAnswered(false);
+    } finally {
+      setCheckingAnswered(false);
+    }
+  };
 
   const loadSurveyData = async () => {
     if (!surveyId) return;
@@ -132,6 +177,21 @@ export default function SurveyView() {
   const handleSubmit = async () => {
     if (!surveyId || !survey) return;
 
+    // Check if user has already answered
+    if (hasAnswered) {
+      Alert.alert(
+        "Already Answered",
+        "You have already submitted a response to this survey. Each user can only answer a survey once.",
+        [
+          {
+            text: "Go Back",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+      return;
+    }
+
     if (!validateAnswers()) {
       return;
     }
@@ -185,12 +245,29 @@ export default function SurveyView() {
       } as any);
     } catch (err: any) {
       console.error("Error submitting response:", err);
-      Alert.alert(
-        "Error",
-        err.response?.data?.message ||
-          err.message ||
-          "Failed to submit response. Please try again."
-      );
+
+      // Check if error is due to duplicate submission
+      const errorMessage = err.response?.data?.message || err.message || "";
+      if (
+        errorMessage.toLowerCase().includes("already") ||
+        errorMessage.toLowerCase().includes("duplicate")
+      ) {
+        Alert.alert(
+          "Already Answered",
+          "You have already submitted a response to this survey.",
+          [
+            {
+              text: "Go Back",
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          errorMessage || "Failed to submit response. Please try again."
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -213,7 +290,7 @@ export default function SurveyView() {
     }
   };
 
-  if (loading) {
+  if (loading || checkingAnswered) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
@@ -282,6 +359,39 @@ export default function SurveyView() {
                 </Text>
               </View>
             </View>
+
+            {/* Already Completed Banner */}
+            {hasAnswered && userResponse && (
+              <View style={styles.completedBanner}>
+                <View style={styles.completedHeader}>
+                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                  <View style={styles.completedTextContainer}>
+                    <Text style={styles.completedTitle}>Survey Completed</Text>
+                    <Text style={styles.completedSubtext}>
+                      Viewing your response from{" "}
+                      {new Date(
+                        userResponse.submittedAt || ""
+                      ).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.completedStats}>
+                  <View style={styles.completedStat}>
+                    <Ionicons name="time-outline" size={14} color="#6B7280" />
+                    <Text style={styles.completedStatText}>
+                      Took {Math.round((userResponse.durationMs || 0) / 60000)}{" "}
+                      min
+                    </Text>
+                  </View>
+                  <View style={styles.completedStat}>
+                    <Ionicons name="trophy" size={14} color="#F59E0B" />
+                    <Text style={styles.completedStatText}>
+                      +{survey.rewardPoints} pts earned
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Questions Section */}
@@ -318,8 +428,13 @@ export default function SurveyView() {
                   {/* Answer Input Section */}
                   {question.type === "text" ? (
                     <TextInput
-                      style={styles.textInput}
-                      placeholder="Type your answer here..."
+                      style={[
+                        styles.textInput,
+                        hasAnswered && styles.textInputReadOnly,
+                      ]}
+                      placeholder={
+                        hasAnswered ? "" : "Type your answer here..."
+                      }
                       placeholderTextColor="#9CA3AF"
                       value={answers[question._id] || ""}
                       onChangeText={(text) =>
@@ -328,6 +443,7 @@ export default function SurveyView() {
                       multiline
                       numberOfLines={4}
                       textAlignVertical="top"
+                      editable={!hasAnswered}
                     />
                   ) : question.options && question.options.length > 0 ? (
                     <View style={styles.optionsContainer}>
@@ -347,6 +463,7 @@ export default function SurveyView() {
                             style={[
                               styles.optionButton,
                               isSelected && styles.optionButtonSelected,
+                              hasAnswered && styles.optionButtonReadOnly,
                             ]}
                             onPress={() =>
                               handleOptionSelect(
@@ -355,6 +472,7 @@ export default function SurveyView() {
                                 question.type
                               )
                             }
+                            disabled={hasAnswered}
                           >
                             <Ionicons
                               name={
@@ -393,15 +511,17 @@ export default function SurveyView() {
           <TouchableOpacity
             style={[
               styles.answerButton,
-              submitting && styles.answerButtonDisabled,
+              (submitting || hasAnswered) && styles.answerButtonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || hasAnswered}
           >
             {submitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.answerButtonText}>Submit</Text>
+              <Text style={styles.answerButtonText}>
+                {hasAnswered ? "Already Answered" : "Submit"}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -616,5 +736,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  completedBanner: {
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#10B981",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+  },
+  completedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 12,
+  },
+  completedTextContainer: {
+    flex: 1,
+  },
+  completedTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#065F46",
+    marginBottom: 2,
+  },
+  completedSubtext: {
+    fontSize: 13,
+    color: "#047857",
+  },
+  completedStats: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  completedStat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  completedStatText: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  textInputReadOnly: {
+    backgroundColor: "#F3F4F6",
+    color: "#374151",
+  },
+  optionButtonReadOnly: {
+    opacity: 0.7,
   },
 });

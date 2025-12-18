@@ -15,7 +15,7 @@ const getImageBaseURL = () => {
     if (hostUri) {
       const host = hostUri.split(":")[0];
       // Backend serves media on port 8000, not 8080
-      return `http://${host}:8000`;
+      return `http://${host}:8080`;
     }
   } catch (e) {
     console.log(
@@ -27,18 +27,18 @@ const getImageBaseURL = () => {
   // Fallbacks per-platform - use port 8000 for media
   if (Platform.OS === "android") {
     // Special localhost alias for Android emulator
-    return "http://10.0.2.2:8000";
+    return "http://10.0.2.2:8080";
   }
 
   // iOS simulator & web can usually use localhost directly
   // For physical devices, use the IP address
   if (Platform.OS === "ios") {
     // For physical iOS device, use your computer's IP
-    return "http://192.168.8.196:8000";
+    return "http://192.168.8.196:8080";
   }
 
   // Default fallback - use IP for physical devices
-  return "http://192.168.8.196:8000";
+  return "http://192.168.8.196:8080";
 };
 
 /**

@@ -151,28 +151,61 @@ export default function ResearcherResearch() {
   };
 
   const handleAnalyzeSurvey = (survey: SurveyWithResponseCount) => {
-    Alert.alert(
-      "Analyze Survey",
-      `AI analysis for "${survey.title}" will be available soon.`,
-      [{ text: "OK" }]
-    );
+    router.push({
+      pathname: "/(protected)/(researcher)/survey-analyses",
+      params: { surveyId: survey._id },
+    } as any);
   };
 
   const handleToggleStatus = async (survey: SurveyWithResponseCount) => {
-    try {
-      if (survey.draft === "published") {
-        await unpublishSurvey(survey._id);
-        Alert.alert("Success", "Survey archived successfully");
-      } else {
-        await publishSurvey(survey._id);
-        Alert.alert("Success", "Survey published successfully");
-      }
-      // Refresh data
-      await loadSurveysAndStatistics();
-    } catch (err: any) {
-      console.error("Error toggling survey status:", err);
-      Alert.alert("Error", err.message || "Failed to update survey status");
-    }
+    const isPublishing = survey.draft === "unpublished";
+    const action = isPublishing ? "publish" : "archive";
+
+    // Confirm action with user
+    Alert.alert(
+      isPublishing ? "Publish Survey" : "Archive Survey",
+      isPublishing
+        ? `Are you sure you want to publish "${survey.title}"? It will be visible to all users.`
+        : `Are you sure you want to archive "${survey.title}"? It will no longer be visible to users.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: isPublishing ? "Publish" : "Archive",
+          onPress: async () => {
+            try {
+              if (isPublishing) {
+                await publishSurvey(survey._id);
+                Alert.alert(
+                  "Success",
+                  "Survey published successfully! It is now visible to all users."
+                );
+              } else {
+                await unpublishSurvey(survey._id);
+                Alert.alert(
+                  "Success",
+                  "Survey archived successfully. It is no longer visible to users."
+                );
+              }
+              // Refresh data
+              await loadSurveysAndStatistics();
+            } catch (err: any) {
+              console.error(`Error ${action}ing survey:`, err);
+              const errorMessage =
+                err.response?.data?.message ||
+                err.message ||
+                `Failed to ${action} survey`;
+              Alert.alert(
+                "Error",
+                `${errorMessage}. Please check your connection and try again.`
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading && !refreshing) {
@@ -241,18 +274,14 @@ export default function ResearcherResearch() {
           <TouchableOpacity
             style={styles.massAnalysisButton}
             onPress={() => {
-              Alert.alert(
-                "Mass Analysis",
-                "AI-powered mass analysis feature will be available soon.",
-                [{ text: "OK" }]
-              );
+              router.push("/(protected)/(researcher)/mass-analyses" as any);
             }}
           >
             <Ionicons name="analytics-outline" size={28} color="#FFFFFF" />
             <View style={styles.massAnalysisTextContainer}>
-              <Text style={styles.massAnalysisButtonText}>Mass Analysis</Text>
+              <Text style={styles.massAnalysisButtonText}>Mass Analyses</Text>
               <Text style={styles.massAnalysisButtonSubtext}>
-                Analyze multiple of surveys at once
+                Analyze multiple surveys at once
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
@@ -406,7 +435,7 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
         >
           <Ionicons name="analytics-outline" size={18} color="#8B5CF6" />
           <Text style={[styles.actionButtonText, styles.analyzeButtonText]}>
-            Analyze
+            Analyses
           </Text>
         </TouchableOpacity>
 

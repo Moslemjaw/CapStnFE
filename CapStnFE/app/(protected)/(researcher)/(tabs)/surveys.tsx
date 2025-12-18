@@ -27,8 +27,12 @@ type MaxTimeFilter = "all" | "1-5" | "5-10" | "10-15" | "15-30" | "30+";
 
 export default function ResearcherSurveys() {
   const router = useRouter();
-  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>([]);
-  const [availableSurveys, setAvailableSurveys] = useState<SurveyWithMetadata[]>([]);
+  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>(
+    []
+  );
+  const [availableSurveys, setAvailableSurveys] = useState<
+    SurveyWithMetadata[]
+  >([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [questionCountFilter, setQuestionCountFilter] =
     useState<QuestionCountFilter>("all");
@@ -38,6 +42,7 @@ export default function ResearcherSurveys() {
   const [user, setUser] = useState<User | null>(null);
   const [showQuestionDropdown, setShowQuestionDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [showAnswered, setShowAnswered] = useState(false);
 
   // Load user on mount
   useEffect(() => {
@@ -73,7 +78,10 @@ export default function ResearcherSurveys() {
       // Load featured surveys first
       const featured = await loadFeaturedSurveys(userResponses);
       // Then load available surveys (which will exclude featured)
-      await loadAvailableSurveys(featured.map((s) => s._id), userResponses);
+      await loadAvailableSurveys(
+        featured.map((s) => s._id),
+        userResponses
+      );
     } catch (err: any) {
       console.error("Error loading surveys:", err);
       setError(err.message || "Failed to load surveys");
@@ -82,21 +90,39 @@ export default function ResearcherSurveys() {
     }
   };
 
-  const loadFeaturedSurveys = async (userResponses: any[] = []): Promise<SurveyWithMetadata[]> => {
-    // Fetch all published surveys
+  const loadFeaturedSurveys = async (
+    userResponses: any[] = []
+  ): Promise<SurveyWithMetadata[]> => {
+    // Fetch all published surveys (including user's own)
     const publishedSurveys = await getPublishedSurveys();
 
-    // Fetch response count for each survey
+    // Get start of current week (7 days ago)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    oneWeekAgo.setHours(0, 0, 0, 0);
+
+    // Fetch response count for this week only
     const surveysWithCounts = await Promise.all(
       publishedSurveys.map(async (survey) => {
         try {
           const responses = await getResponsesBySurveyId(survey._id);
+
+          // Count only responses from this week
+          const responsesThisWeek = responses.filter((response) => {
+            if (!response.submittedAt) return false;
+            const submittedDate = new Date(response.submittedAt);
+            return submittedDate >= oneWeekAgo;
+          });
+
           return {
             ...survey,
-            responseCount: responses.length,
+            responseCount: responsesThisWeek.length,
           };
         } catch (err) {
-          console.error(`Error fetching responses for survey ${survey._id}:`, err);
+          console.error(
+            `Error fetching responses for survey ${survey._id}:`,
+            err
+          );
           return {
             ...survey,
             responseCount: 0,
@@ -105,7 +131,7 @@ export default function ResearcherSurveys() {
       })
     );
 
-    // Sort by response count and take top 5
+    // Sort by weekly response count and take top 5
     const topSurveys = surveysWithCounts
       .sort((a, b) => (b.responseCount || 0) - (a.responseCount || 0))
       .slice(0, 5);
@@ -115,15 +141,22 @@ export default function ResearcherSurveys() {
       topSurveys.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return {
             ...survey,
             questionCount: questions.length,
             isAnswered,
           };
         } catch (err) {
-          console.error(`Error fetching questions for survey ${survey._id}:`, err);
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          console.error(
+            `Error fetching questions for survey ${survey._id}:`,
+            err
+          );
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return {
             ...survey,
             questionCount: 0,
@@ -137,36 +170,48 @@ export default function ResearcherSurveys() {
     return surveysWithMetadata;
   };
 
-  const loadAvailableSurveys = async (featuredIds: string[] = [], userResponses: any[] = []) => {
+  const loadAvailableSurveys = async (
+    featuredIds: string[] = [],
+    userResponses: any[] = []
+  ) => {
     if (!user?._id) {
+      console.log("No user ID, skipping loadAvailableSurveys");
       return;
     }
 
     // Fetch all published surveys
     const publishedSurveys = await getPublishedSurveys();
+    console.log("Total published surveys:", publishedSurveys.length);
+    console.log("Current user ID:", user._id);
 
-    // Filter out:
-    // 1. Surveys created by current user
-    // 2. Surveys that are in featured list
+    // Filter out only surveys created by current user
+    // Keep all other published surveys (including featured ones for full list)
     const available = publishedSurveys.filter(
-      (survey) =>
-        survey.creatorId !== user._id && !featuredIds.includes(survey._id)
+      (survey) => survey.creatorId !== user._id
     );
+    console.log("Available surveys (not created by user):", available.length);
 
     // Fetch question count and check if answered for each survey
     const surveysWithMetadata = await Promise.all(
       available.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return {
             ...survey,
             questionCount: questions.length,
             isAnswered,
           };
         } catch (err) {
-          console.error(`Error fetching questions for survey ${survey._id}:`, err);
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          console.error(
+            `Error fetching questions for survey ${survey._id}:`,
+            err
+          );
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return {
             ...survey,
             questionCount: 0,
@@ -176,6 +221,7 @@ export default function ResearcherSurveys() {
       })
     );
 
+    console.log("Available surveys with metadata:", surveysWithMetadata.length);
     setAvailableSurveys(surveysWithMetadata);
   };
 
@@ -257,10 +303,21 @@ export default function ResearcherSurveys() {
     [featuredSurveys, searchQuery, questionCountFilter, maxTimeFilter]
   );
 
-  const filteredAvailable = useMemo(
-    () => filterSurveys(availableSurveys),
-    [availableSurveys, searchQuery, questionCountFilter, maxTimeFilter]
-  );
+  const filteredAvailable = useMemo(() => {
+    // First apply showAnswered filter
+    let surveys = availableSurveys;
+    if (!showAnswered) {
+      surveys = surveys.filter((survey) => !survey.isAnswered);
+    }
+    // Then apply other filters
+    return filterSurveys(surveys);
+  }, [
+    availableSurveys,
+    searchQuery,
+    questionCountFilter,
+    maxTimeFilter,
+    showAnswered,
+  ]);
 
   const handleSurveyAction = (survey: SurveyWithMetadata) => {
     router.push({
@@ -280,8 +337,21 @@ export default function ResearcherSurveys() {
     questionCountFilter !== "all" ||
     maxTimeFilter !== "all";
 
-  const maxTimeOptions: MaxTimeFilter[] = ["all", "1-5", "5-10", "10-15", "15-30", "30+"];
-  const questionOptions: QuestionCountFilter[] = ["all", "1-5", "6-10", "11-15", "16+"];
+  const maxTimeOptions: MaxTimeFilter[] = [
+    "all",
+    "1-5",
+    "5-10",
+    "10-15",
+    "15-30",
+    "30+",
+  ];
+  const questionOptions: QuestionCountFilter[] = [
+    "all",
+    "1-5",
+    "6-10",
+    "11-15",
+    "16+",
+  ];
 
   const getQuestionLabel = (value: QuestionCountFilter) => {
     return value === "all" ? "All" : value;
@@ -315,7 +385,12 @@ export default function ResearcherSurveys() {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color="#6B7280" style={styles.searchIcon} />
+        <Ionicons
+          name="search-outline"
+          size={20}
+          color="#6B7280"
+          style={styles.searchIcon}
+        />
         <TextInput
           style={styles.searchInput}
           placeholder="Search surveys by title..."
@@ -368,7 +443,8 @@ export default function ResearcherSurveys() {
                       key={option}
                       style={[
                         styles.dropdownItem,
-                        questionCountFilter === option && styles.dropdownItemActive,
+                        questionCountFilter === option &&
+                          styles.dropdownItemActive,
                       ]}
                       onPress={() => {
                         setQuestionCountFilter(option);
@@ -378,7 +454,8 @@ export default function ResearcherSurveys() {
                       <Text
                         style={[
                           styles.dropdownItemText,
-                          questionCountFilter === option && styles.dropdownItemTextActive,
+                          questionCountFilter === option &&
+                            styles.dropdownItemTextActive,
                         ]}
                       >
                         {getQuestionLabel(option)}
@@ -438,7 +515,8 @@ export default function ResearcherSurveys() {
                       <Text
                         style={[
                           styles.dropdownItemText,
-                          maxTimeFilter === option && styles.dropdownItemTextActive,
+                          maxTimeFilter === option &&
+                            styles.dropdownItemTextActive,
                         ]}
                       >
                         {getTimeLabel(option)}
@@ -474,10 +552,7 @@ export default function ResearcherSurveys() {
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            onPress={loadSurveys}
-            style={styles.retryButton}
-          >
+          <TouchableOpacity onPress={loadSurveys} style={styles.retryButton}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -498,7 +573,12 @@ export default function ResearcherSurveys() {
               >
                 {filteredFeatured.map((survey) => (
                   <View key={survey._id} style={styles.featuredCardContainer}>
-                    <SurveyCard survey={survey} onPress={handleSurveyAction} />
+                    <SurveyCard
+                      survey={survey}
+                      onPress={handleSurveyAction}
+                      showResponseCount={true}
+                      currentUserId={user?._id}
+                    />
                   </View>
                 ))}
               </ScrollView>
@@ -507,10 +587,37 @@ export default function ResearcherSurveys() {
 
           {/* Available Surveys Section */}
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Available Surveys</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Available Surveys</Text>
+              <TouchableOpacity
+                style={[
+                  styles.answeredFilterToggle,
+                  !showAnswered && styles.answeredFilterToggleActive,
+                ]}
+                onPress={() => setShowAnswered(!showAnswered)}
+              >
+                <Ionicons
+                  name={showAnswered ? "eye-off" : "eye"}
+                  size={18}
+                  color={!showAnswered ? "#8B5CF6" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.answeredFilterText,
+                    !showAnswered && styles.answeredFilterTextActive,
+                  ]}
+                >
+                  {showAnswered ? "Hide Answered" : "Show Answered"}
+                </Text>
+              </TouchableOpacity>
+            </View>
             {filteredAvailable.length === 0 ? (
               <View style={styles.emptySection}>
-                <Ionicons name="document-text-outline" size={32} color="#9CA3AF" />
+                <Ionicons
+                  name="document-text-outline"
+                  size={32}
+                  color="#9CA3AF"
+                />
                 <Text style={styles.emptySectionText}>
                   {hasActiveFilters
                     ? "No surveys match your filters"
@@ -523,6 +630,7 @@ export default function ResearcherSurveys() {
                   key={survey._id}
                   survey={survey}
                   onPress={handleSurveyAction}
+                  currentUserId={user?._id}
                 />
               ))
             )}
@@ -537,17 +645,36 @@ export default function ResearcherSurveys() {
 interface SurveyCardProps {
   survey: SurveyWithMetadata;
   onPress: (survey: SurveyWithMetadata) => void;
+  showResponseCount?: boolean;
+  currentUserId?: string;
 }
 
-const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress }) => {
+const SurveyCard: React.FC<SurveyCardProps> = ({
+  survey,
+  onPress,
+  showResponseCount = false,
+  currentUserId,
+}) => {
+  const isOwnSurvey = !!(currentUserId && survey.creatorId === currentUserId);
+
   return (
     <TouchableOpacity
-      style={styles.card}
-      onPress={() => onPress(survey)}
-      activeOpacity={0.7}
+      style={[styles.card, isOwnSurvey && styles.cardOwned]}
+      onPress={() => {
+        if (!isOwnSurvey) {
+          onPress(survey);
+        }
+      }}
+      activeOpacity={isOwnSurvey ? 1 : 0.7}
+      disabled={isOwnSurvey}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{survey.title}</Text>
+        {isOwnSurvey && (
+          <View style={styles.ownBadge}>
+            <Text style={styles.ownBadgeText}>Your Survey</Text>
+          </View>
+        )}
       </View>
 
       {survey.description && (
@@ -559,9 +686,7 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress }) => {
       <View style={styles.cardDetails}>
         <View style={styles.detailItem}>
           <Ionicons name="time-outline" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>
-            {survey.estimatedMinutes} min
-          </Text>
+          <Text style={styles.detailText}>{survey.estimatedMinutes} min</Text>
         </View>
 
         <View style={styles.detailItem}>
@@ -570,6 +695,15 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress }) => {
             {survey.questionCount || 0} questions
           </Text>
         </View>
+
+        {showResponseCount && (
+          <View style={styles.detailItem}>
+            <Ionicons name="people-outline" size={16} color="#8B5CF6" />
+            <Text style={[styles.detailText, styles.responseText]}>
+              {survey.responseCount || 0} responses
+            </Text>
+          </View>
+        )}
 
         <View style={styles.detailItem}>
           <Ionicons name="star-outline" size={16} color="#F59E0B" />
@@ -580,13 +714,15 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress }) => {
       </View>
 
       <View style={styles.cardFooter}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => onPress(survey)}
-        >
-          <Text style={styles.actionButtonText}>View</Text>
-        </TouchableOpacity>
-        {survey.isAnswered && (
+        {!isOwnSurvey && (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => onPress(survey)}
+          >
+            <Text style={styles.actionButtonText}>View</Text>
+          </TouchableOpacity>
+        )}
+        {survey.isAnswered && !isOwnSurvey && (
           <View style={styles.answeredChip}>
             <Text style={styles.answeredChipText}>Answered</Text>
           </View>
@@ -796,13 +932,35 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  cardOwned: {
+    opacity: 0.7,
+    borderWidth: 2,
+    borderColor: "#3B82F6",
+    backgroundColor: "#F0F9FF",
+  },
   cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 8,
   },
   cardTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: "700",
     color: "#111827",
+    marginRight: 8,
+  },
+  ownBadge: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  ownBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   cardDescription: {
     fontSize: 14,
@@ -857,5 +1015,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  responseText: {
+    color: "#8B5CF6",
+    fontWeight: "600",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  answeredFilterToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+  },
+  answeredFilterToggleActive: {
+    backgroundColor: "#EDE9FE",
+    borderColor: "#C4B5FD",
+  },
+  answeredFilterText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  answeredFilterTextActive: {
+    color: "#8B5CF6",
+    fontWeight: "700",
   },
 });
