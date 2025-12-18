@@ -93,7 +93,10 @@ export default function ResearcherResearch() {
             responseCount: responses.length,
           };
         } catch (err) {
-          console.error(`Error fetching responses for survey ${survey._id}:`, err);
+          console.error(
+            `Error fetching responses for survey ${survey._id}:`,
+            err
+          );
           return {
             ...survey,
             responseCount: 0,
@@ -142,7 +145,7 @@ export default function ResearcherResearch() {
 
   const handleViewSurvey = (survey: SurveyWithResponseCount) => {
     router.push({
-      pathname: "/(protected)/(researcher)/survey-view",
+      pathname: "/(protected)/(researcher)/survey-details",
       params: { surveyId: survey._id },
     } as any);
   };
@@ -168,10 +171,7 @@ export default function ResearcherResearch() {
       await loadSurveysAndStatistics();
     } catch (err: any) {
       console.error("Error toggling survey status:", err);
-      Alert.alert(
-        "Error",
-        err.message || "Failed to update survey status"
-      );
+      Alert.alert("Error", err.message || "Failed to update survey status");
     }
   };
 
@@ -204,19 +204,8 @@ export default function ResearcherResearch() {
           </Text>
         </View>
 
-        {/* Create New Survey Button */}
-        <View style={styles.createButtonContainer}>
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={handleCreateSurvey}
-          >
-            <Ionicons name="add-circle" size={24} color="#FFFFFF" />
-            <Text style={styles.createButtonText}>Create New Survey</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Statistics Cards */}
-        <View style={styles.statsContainer}>
+        {/* Total Surveys and Active Surveys (2 boxes at the beginning) */}
+        <View style={styles.topStatsContainer}>
           <StatCard
             icon="document-text-outline"
             value={statistics.totalSurveys}
@@ -229,6 +218,10 @@ export default function ResearcherResearch() {
             label="Active Surveys"
             color="#10B981"
           />
+        </View>
+
+        {/* Statistics Cards (4 boxes) */}
+        <View style={styles.statsContainer}>
           <StatCard
             icon="archive-outline"
             value={statistics.archivedSurveys}
@@ -243,6 +236,40 @@ export default function ResearcherResearch() {
           />
         </View>
 
+        {/* Mass Analysis Button */}
+        <View style={styles.massAnalysisContainer}>
+          <TouchableOpacity
+            style={styles.massAnalysisButton}
+            onPress={() => {
+              Alert.alert(
+                "Mass Analysis",
+                "AI-powered mass analysis feature will be available soon.",
+                [{ text: "OK" }]
+              );
+            }}
+          >
+            <Ionicons name="analytics-outline" size={28} color="#FFFFFF" />
+            <View style={styles.massAnalysisTextContainer}>
+              <Text style={styles.massAnalysisButtonText}>Mass Analysis</Text>
+              <Text style={styles.massAnalysisButtonSubtext}>
+                Analyze multiple of surveys at once
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Create New Survey Button */}
+        <View style={styles.createButtonContainer}>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleCreateSurvey}
+          >
+            <Ionicons name="add-circle" size={24} color="#FFFFFF" />
+            <Text style={styles.createButtonText}>Create New Survey</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* My Surveys Section */}
         <View style={styles.surveysSection}>
           <Text style={styles.sectionTitle}>My Surveys</Text>
@@ -251,16 +278,17 @@ export default function ResearcherResearch() {
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle-outline" size={32} color="#EF4444" />
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity
-                onPress={loadData}
-                style={styles.retryButton}
-              >
+              <TouchableOpacity onPress={loadData} style={styles.retryButton}>
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
           ) : surveys.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={48} color="#9CA3AF" />
+              <Ionicons
+                name="document-text-outline"
+                size={48}
+                color="#9CA3AF"
+              />
               <Text style={styles.emptyText}>No surveys created yet</Text>
               <Text style={styles.emptySubtext}>
                 Create your first survey to get started
@@ -294,7 +322,9 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ icon, value, label, color }) => {
   return (
     <View style={styles.statCard}>
-      <View style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}>
+      <View
+        style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}
+      >
         <Ionicons name={icon as any} size={24} color={color} />
       </View>
       <Text style={styles.statValue}>{value}</Text>
@@ -395,9 +425,7 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
           <Text
             style={[
               styles.actionButtonText,
-              isActive
-                ? styles.archiveButtonText
-                : styles.publishButtonText,
+              isActive ? styles.archiveButtonText : styles.publishButtonText,
             ]}
           >
             {isActive ? "Archive" : "Publish"}
@@ -444,9 +472,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6B7280",
   },
+  topStatsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 24,
+    marginBottom: 16,
+    gap: 12,
+  },
   createButtonContainer: {
     paddingHorizontal: 24,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   createButton: {
     flexDirection: "row",
@@ -462,6 +496,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  massAnalysisContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  massAnalysisButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#8B5CF6",
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    gap: 16,
+    shadowColor: "#8B5CF6",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  massAnalysisTextContainer: {
+    flex: 1,
+  },
+  massAnalysisButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  massAnalysisButtonSubtext: {
+    fontSize: 13,
+    color: "#E9D5FF",
   },
   statsContainer: {
     flexDirection: "row",

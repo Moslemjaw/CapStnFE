@@ -19,6 +19,7 @@ import { getQuestionsBySurveyId } from "@/api/questions";
 import { createResponse, Answer } from "@/api/responses";
 import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
+import { updateUserProgress } from "@/utils/userProgress";
 
 export default function SurveyView() {
   const router = useRouter();
@@ -160,6 +161,9 @@ export default function SurveyView() {
         durationMs,
         answers: answerArray,
       });
+
+      // Update user progress (points and streak)
+      await updateUserProgress(surveyId, survey.rewardPoints);
 
       // Calculate statistics
       const requiredAnswered = questions.filter(

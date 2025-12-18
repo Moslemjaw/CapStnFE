@@ -1,52 +1,87 @@
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 
-// Get the base URL for images
+// Get the base URL for images - should match API base URL
+// Note: API uses port 8080, but backend serves media on port 8000
 const getImageBaseURL = () => {
-  if (Platform.OS === "web") {
-    return "http://localhost:8000";
+  try {
+    // In Expo dev, this usually contains the host the JS bundle was loaded from,
+    // e.g. "192.168.0.10:19000" or "localhost:19000"
+    const hostUri =
+      (Constants.expoConfig as any)?.hostUri ||
+      (Constants.manifest as any)?.debuggerHost ||
+      (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
+
+    if (hostUri) {
+      const host = hostUri.split(":")[0];
+      // Backend serves media on port 8000, not 8080
+      return `http://${host}:8000`;
+    }
+  } catch (e) {
+    console.log(
+      "[getImageBaseURL] Error determining host from Expo Constants",
+      e
+    );
   }
 
-  // For Android emulator
+  // Fallbacks per-platform - use port 8000 for media
   if (Platform.OS === "android") {
-    // Uncomment the line below if using Android emulator
-    // return "http://10.0.2.2:8000";
-    // For physical Android device, use your computer's IP
-    return "http://192.168.8.196:8000";
+    // Special localhost alias for Android emulator
+    return "http://10.0.2.2:8000";
   }
 
-  // For iOS simulator, localhost works
-  // For physical iOS device, use your computer's IP
+  // iOS simulator & web can usually use localhost directly
+  // For physical devices, use the IP address
   if (Platform.OS === "ios") {
-    // Uncomment the line below if using iOS simulator
-    // return "http://localhost:8000";
     // For physical iOS device, use your computer's IP
     return "http://192.168.8.196:8000";
   }
 
-  // Default fallback
+  // Default fallback - use IP for physical devices
   return "http://192.168.8.196:8000";
 };
 
 /**
- * Converts a relative image URL to an absolute URL
- * @param imageUrl - The image URL from the backend (can be relative or absolute)
- * @returns Absolute URL for the image
+ * Converts an image path from the database to a full URL
+ * Currently trying: Method 1 - /media/filename (without uploads prefix)
+ *
+ * @param imagePath - The image path from the database
+ * @returns Full URL for the image or undefined if no path provided
  */
 export const getImageUrl = (
-  imageUrl: string | undefined | null
+  imagePath: string | undefined | null
 ): string | undefined => {
-  if (!imageUrl) {
+  // Return undefined if no image path
+  if (!imagePath || imagePath.trim() === "") {
     return undefined;
   }
 
-  // If it's already an absolute URL (starts with http:// or https://), return as is
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-    return imageUrl;
+  // If already an absolute URL, return as is
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
   }
 
-  // If it's a relative URL, prepend the base URL
   const baseURL = getImageBaseURL();
-  // Remove leading slash if present to avoid double slashes
-  const cleanPath = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
-  return `${baseURL}${cleanPath}`;
+
+  // Normalize path separators (convert backslashes to forward slashes)
+  let normalizedPath = imagePath.replace(/\\/g, "/");
+
+  // METHOD 1: /media/filename (without uploads prefix)
+  // Remove "uploads/" prefix if present
+  let cleanPath = normalizedPath;
+  if (cleanPath.startsWith("uploads/")) {
+    cleanPath = cleanPath.substring("uploads/".length);
+  } else if (cleanPath.startsWith("/uploads/")) {
+    cleanPath = cleanPath.substring("/uploads/".length);
+  }
+  cleanPath = cleanPath.replace(/^\/+/, "");
+
+  if (!cleanPath || cleanPath.trim() === "") {
+    return undefined;
+  }
+
+  // Construct URL: baseURL/media/filename
+  const finalUrl = `${baseURL}/media/${cleanPath}`;
+
+  return finalUrl;
 };

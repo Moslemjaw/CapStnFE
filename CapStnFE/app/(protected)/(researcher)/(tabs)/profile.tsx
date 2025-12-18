@@ -10,17 +10,26 @@ import {
   Animated,
   Image,
 } from "react-native";
-import React, { useContext, useEffect, useState, useRef } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import AuthContext from "@/context/AuthContext";
-import { getUser, deleteToken } from "@/api/storage";
+import { getUser, deleteToken, storeUser } from "@/api/storage";
 import User from "@/types/User";
 import { getImageUrl } from "@/utils/imageUtils";
+import { getResponsesByUserId } from "@/api/responses";
+import { getSurveyById } from "@/api/surveys";
+import { calculateStreak } from "@/utils/userProgress";
 
 export default function ResearcherProfile() {
   const [user, setUser] = useState<User | null>(null);
@@ -30,6 +39,10 @@ export default function ResearcherProfile() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [weeklyPoints, setWeeklyPoints] = useState<number>(0);
+  const [loadingWeeklyPoints, setLoadingWeeklyPoints] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const [loadingStreak, setLoadingStreak] = useState(false);
 
   // Animation values
   const termsSlideAnim = useRef(new Animated.Value(0)).current;
@@ -104,14 +117,109 @@ export default function ResearcherProfile() {
     }
   }, [showPrivacyModal]);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const userData = await getUser();
-      setUser(userData);
-      setImageError(false); // Reset image error when user changes
-    };
-    loadUser();
+  const calculateWeeklyPoints = useCallback(async (userId: string) => {
+    try {
+      setLoadingWeeklyPoints(true);
+      // Get start of current week (Monday)
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust when day is Sunday
+      const startOfWeek = new Date(now.setDate(diff));
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      // Get all user responses
+      const responses = await getResponsesByUserId(userId);
+
+      // Filter responses from this week
+      const weeklyResponses = responses.filter((response) => {
+        if (!response.submittedAt) return false;
+        const submittedDate = new Date(response.submittedAt);
+        return submittedDate >= startOfWeek;
+      });
+
+      // Get unique survey IDs to avoid duplicate fetches
+      const uniqueSurveyIds = [
+        ...new Set(weeklyResponses.map((r) => r.surveyId)),
+      ];
+
+      // Fetch all surveys in parallel
+      const surveyPromises = uniqueSurveyIds.map((surveyId) =>
+        getSurveyById(surveyId).catch((err) => {
+          console.error(`Error fetching survey ${surveyId}:`, err);
+          return null;
+        })
+      );
+
+      const surveys = await Promise.all(surveyPromises);
+
+      // Create a map of surveyId to rewardPoints
+      const surveyPointsMap = new Map<string, number>();
+      surveys.forEach((survey) => {
+        if (survey) {
+          surveyPointsMap.set(survey._id, survey.rewardPoints || 0);
+        }
+      });
+
+      // Calculate total points
+      const totalPoints = weeklyResponses.reduce((sum, response) => {
+        const points = surveyPointsMap.get(response.surveyId) || 0;
+        return sum + points;
+      }, 0);
+
+      setWeeklyPoints(totalPoints);
+    } catch (err) {
+      console.error("Error calculating weekly points:", err);
+      setWeeklyPoints(0);
+    } finally {
+      setLoadingWeeklyPoints(false);
+    }
   }, []);
+
+  const loadStreak = useCallback(async (userId: string) => {
+    try {
+      setLoadingStreak(true);
+      const streak = await calculateStreak(userId);
+      setCurrentStreak(streak);
+
+      // Also update user in storage with calculated streak
+      const userData = await getUser();
+      if (userData) {
+        const updatedUser = { ...userData, streakDays: streak };
+        await storeUser(updatedUser);
+        setUser(updatedUser);
+      }
+    } catch (err) {
+      console.error("Error calculating streak:", err);
+      setCurrentStreak(0);
+    } finally {
+      setLoadingStreak(false);
+    }
+  }, []);
+
+  const loadUser = useCallback(async () => {
+    const userData = await getUser();
+    setUser(userData);
+    setImageError(false); // Reset image error when user changes
+
+    // Calculate weekly points and streak if user exists
+    if (userData?._id) {
+      await Promise.all([
+        calculateWeeklyPoints(userData._id),
+        loadStreak(userData._id),
+      ]);
+    }
+  }, [calculateWeeklyPoints, loadStreak]);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  // Reload user data when screen comes into focus (e.g., after profile update)
+  useFocusEffect(
+    useCallback(() => {
+      loadUser();
+    }, [loadUser])
+  );
 
   const handleLogout = async () => {
     console.log("handleLogout called - showing alert");
@@ -169,7 +277,7 @@ export default function ResearcherProfile() {
     ];
     return levels[level - 1] || "Level 1: Beginner";
   };
-
+  const imageUrl = getImageUrl(user?.image || "");
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -182,26 +290,14 @@ export default function ResearcherProfile() {
           {/* User Info Card */}
           <View style={styles.userCard}>
             <View style={styles.avatarContainer}>
-              {user?.image && !imageError ? (
+              {user?.image ? (
                 <Image
-                  source={{ uri: getImageUrl(user.image) || undefined }}
+                  source={{ uri: imageUrl }}
                   style={styles.avatarImage}
-                  onError={(errorEvent) => {
-                    const error = errorEvent.nativeEvent?.error || errorEvent;
-                    console.error("Error loading profile image:", {
-                      error: error,
-                      errorMessage: error?.message || String(error),
-                      errorCode: errorEvent.nativeEvent?.errorCode,
-                      fullEvent: errorEvent,
-                    });
-                    console.log(
-                      "Image URL attempted:",
-                      getImageUrl(user.image)
-                    );
+                  onError={() => {
                     setImageError(true);
                   }}
                   onLoad={() => {
-                    console.log("Profile image loaded successfully");
                     setImageError(false);
                   }}
                 />
@@ -223,17 +319,24 @@ export default function ResearcherProfile() {
             </View>
           </View>
 
-          {/* Stats Section */}
-          <Text style={styles.sectionTitle}>Your Stats</Text>
+          {/* Status Section */}
+          <Text style={styles.sectionTitle}>Your Status</Text>
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Points</Text>
               <Text style={styles.statValue}>{user?.points || 0} pts</Text>
-              <Text style={styles.statSubtext}>+40 this week</Text>
+              <Text style={styles.statSubtext}>
+                {loadingWeeklyPoints
+                  ? "Calculating..."
+                  : `+${weeklyPoints} this week`}
+              </Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Streak</Text>
-              <Text style={styles.statValue}>{user?.streakDays || 0} days</Text>
+              <Text style={styles.statValue}>
+                {loadingStreak ? "..." : currentStreak || user?.streakDays || 0}{" "}
+                days
+              </Text>
               <Text style={styles.statSubtext}>
                 {getLevelName(user?.level)}
               </Text>

@@ -187,3 +187,15 @@ export const updateSurvey = async (
     throw error;
   }
 };
+
+/**
+ * Delete a survey
+ */
+export const deleteSurvey = async (surveyId: string): Promise<void> => {
+  try {
+    await instance.delete(`/survey/${surveyId}`);
+  } catch (error) {
+    console.error("Error deleting survey:", error);
+    throw error;
+  }
+};
