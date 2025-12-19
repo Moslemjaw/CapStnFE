@@ -2,81 +2,245 @@ import {
   StyleSheet,
   Text,
   View,
+  ScrollView,
   TouchableOpacity,
+  Image,
+  ActivityIndicator,
 } from "react-native";
-import React from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useEffect, useState } from "react";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { getSurveyById } from "@/api/surveys";
+import { Survey } from "@/api/surveys";
 
 export default function SurveyAnswerSuccess() {
   const router = useRouter();
-  const { 
-    surveyId, 
-    requiredAnswered, 
-    optionalAnswered, 
-    pointsEarned 
+  const insets = useSafeAreaInsets();
+  const {
+    surveyId,
+    requiredAnswered,
+    optionalAnswered,
+    pointsEarned,
+    durationMs,
+    totalQuestions,
+    totalRequired,
+    totalOptional,
   } = useLocalSearchParams<{
     surveyId: string;
     requiredAnswered: string;
     optionalAnswered: string;
     pointsEarned: string;
-  }>;
+    durationMs: string;
+    totalQuestions: string;
+    totalRequired: string;
+    totalOptional: string;
+  }>();
 
-  const handleGoToSurveys = () => {
+  const [survey, setSurvey] = useState<Survey | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (surveyId) {
+      loadSurveyData();
+    }
+  }, [surveyId]);
+
+  const loadSurveyData = async () => {
+    if (!surveyId) return;
+    try {
+      const surveyData = await getSurveyById(surveyId);
+      setSurvey(surveyData);
+    } catch (err) {
+      console.error("Error loading survey:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDuration = (ms: string): string => {
+    const duration = parseInt(ms) || 0;
+    const seconds = Math.floor(duration / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const calculatePercentage = (part: number, total: number): number => {
+    if (total === 0) return 0;
+    return Math.round((part / total) * 100);
+  };
+
+  const reqAnswered = parseInt(requiredAnswered) || 0;
+  const optAnswered = parseInt(optionalAnswered) || 0;
+  const totalAns = reqAnswered + optAnswered;
+  const totalQ = parseInt(totalQuestions) || 0;
+  const totalReq = parseInt(totalRequired) || 0;
+  const totalOpt = parseInt(totalOptional) || 0;
+
+  const optionalPercentage = calculatePercentage(optAnswered, totalOpt);
+  const totalPercentage = calculatePercentage(totalAns, totalQ);
+
+  const handleFindMoreSurveys = () => {
     router.replace("/(protected)/(researcher)/(tabs)/surveys" as any);
   };
 
+  const handleViewResponses = () => {
+    if (surveyId) {
+      router.push({
+        pathname: "/(protected)/(researcher)/survey-view",
+        params: { surveyId },
+      } as any);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#4A63D8" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Success Icon */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="checkmark-circle" size={80} color="#10B981" />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {/* Success Icon */}
+          <View style={styles.iconContainer}>
+            <LinearGradient
+              colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.iconGradient}
+            >
+              <Ionicons name="checkmark" size={60} color="#FFFFFF" />
+            </LinearGradient>
           </View>
+
+          {/* Title */}
+          <Text style={styles.title}>Survey Submitted!</Text>
+
+          {/* Thank You Message */}
+          <Text style={styles.thankYouText}>
+            Thank you for sharing your insights.
+            {survey?.description
+              ? ` ${survey.description.slice(0, 50)}...`
+              : " Your response helps us understand better."}
+          </Text>
+
+          {/* Points Earned Card */}
+          <View style={styles.pointsCard}>
+            <LinearGradient
+              colors={["#FF6FAE", "#8A4DE8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.pointsCardGradient}
+            >
+              <View style={styles.coinsIconContainer}>
+                <View style={styles.coinStack}>
+                  <View style={[styles.coin, styles.coin1]} />
+                  <View style={[styles.coin, styles.coin2]} />
+                  <View style={[styles.coin, styles.coin3]} />
+                </View>
+              </View>
+              <Text style={styles.pointsLabel}>POINTS EARNED</Text>
+              <Text style={styles.pointsValue}>+{pointsEarned || 0}</Text>
+              <Text style={styles.pointsSubtext}>Added to your account</Text>
+            </LinearGradient>
+          </View>
+
+          {/* Completion Stats Card */}
+          <View style={styles.statsCard}>
+            <View style={styles.statsHeader}>
+              <Ionicons name="bar-chart-outline" size={20} color="#4A63D8" />
+              <Text style={styles.statsTitle}>Your Completion Stats</Text>
+            </View>
+
+            <View style={styles.statsItem}>
+              <Ionicons name="time-outline" size={20} color="#8A4DE8" />
+              <Text style={styles.statsLabel}>Time Spent</Text>
+              <Text style={styles.statsValue}>{formatDuration(durationMs || "0")}</Text>
+            </View>
+
+            <View style={styles.statsItem}>
+              <Ionicons name="close-circle" size={20} color="#EF4444" />
+              <Text style={styles.statsLabel}>Required Questions</Text>
+              <View style={styles.statsValueContainer}>
+                <Text style={styles.statsValue}>
+                  {reqAnswered}/{totalReq}
+                </Text>
+                {reqAnswered === totalReq && (
+                  <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                )}
+              </View>
+            </View>
+
+            <View style={styles.statsItem}>
+              <Ionicons name="ellipse-outline" size={20} color="#4A63D8" />
+              <Text style={styles.statsLabel}>Optional Questions</Text>
+              <View style={styles.statsValueContainer}>
+                <Text style={styles.statsValue}>
+                  {optAnswered}/{totalOpt}
+                </Text>
+                <Text style={styles.statsPercentage}>{optionalPercentage}%</Text>
+              </View>
+            </View>
+
+            <View style={styles.statsItem}>
+              <Ionicons name="layers-outline" size={20} color="#8A4DE8" />
+              <Text style={styles.statsLabel}>Total Answered</Text>
+              <View style={styles.statsValueContainer}>
+                <Text style={styles.statsValue}>
+                  {totalAns}/{totalQ}
+                </Text>
+                <Text style={styles.statsPercentage}>{totalPercentage}%</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Great Job Card */}
+          <View style={styles.greatJobCard}>
+            <Ionicons name="trophy" size={32} color="#4A63D8" />
+            <View style={styles.greatJobTextContainer}>
+              <Text style={styles.greatJobTitle}>Great Job!</Text>
+              <Text style={styles.greatJobText}>
+                You've answered {totalPercentage}% of all questions. Your detailed responses are valuable!
+              </Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleFindMoreSurveys}
+          >
+            <LinearGradient
+              colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.primaryButtonGradient}
+            >
+              <Text style={styles.primaryButtonText}>Find More Surveys</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={handleViewResponses}
+          >
+            <Ionicons name="eye-outline" size={20} color="#222222" />
+            <Text style={styles.secondaryButtonText}>View My Responses</Text>
+          </TouchableOpacity>
+
+          {/* Spacer for bottom nav */}
+          <View style={styles.bottomSpacer} />
         </View>
-
-        {/* Success Message */}
-        <Text style={styles.title}>Survey Completed!</Text>
-        <Text style={styles.subtitle}>
-          Thank you for completing the survey. Your responses have been recorded.
-        </Text>
-
-        {/* Response Details */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Response Summary</Text>
-          
-          <View style={styles.detailsItem}>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
-            <Text style={styles.detailsLabel}>Required Questions Answered:</Text>
-            <Text style={styles.detailsValue}>{requiredAnswered || 0}</Text>
-          </View>
-
-          <View style={styles.detailsItem}>
-            <Ionicons name="help-circle-outline" size={20} color="#6B7280" />
-            <Text style={styles.detailsLabel}>Optional Questions Answered:</Text>
-            <Text style={styles.detailsValue}>{optionalAnswered || 0}</Text>
-          </View>
-
-          <View style={[styles.detailsItem, styles.pointsItem]}>
-            <Ionicons name="star" size={20} color="#F59E0B" />
-            <Text style={styles.detailsLabel}>Points Earned:</Text>
-            <Text style={[styles.detailsValue, styles.pointsValue]}>
-              {pointsEarned || 0} pts
-            </Text>
-          </View>
-        </View>
-
-        {/* Action Button */}
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleGoToSurveys}
-        >
-          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-          <Text style={styles.buttonText}>Back to Surveys</Text>
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -84,102 +248,239 @@ export default function SurveyAnswerSuccess() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
+    padding: 24,
+    alignItems: "center",
+  },
+  centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
   },
   iconContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
+    marginTop: 16,
   },
-  iconCircle: {
+  iconGradient: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "#D1FAE5",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
     marginBottom: 12,
     textAlign: "center",
   },
-  subtitle: {
+  thankYouText: {
     fontSize: 16,
-    color: "#6B7280",
+    color: "#505050",
     textAlign: "center",
-    marginBottom: 32,
+    marginBottom: 24,
     lineHeight: 24,
+    paddingHorizontal: 20,
   },
-  detailsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 24,
+  pointsCard: {
     width: "100%",
-    marginBottom: 32,
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  pointsCardGradient: {
+    padding: 24,
+    alignItems: "center",
+  },
+  coinsIconContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  coinStack: {
+    position: "relative",
+    width: 40,
+    height: 32,
+  },
+  coin: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  coin1: {
+    top: 0,
+    left: 0,
+    zIndex: 3,
+  },
+  coin2: {
+    top: 4,
+    left: 8,
+    zIndex: 2,
+    opacity: 0.9,
+  },
+  coin3: {
+    top: 8,
+    left: 16,
+    zIndex: 1,
+    opacity: 0.8,
+  },
+  pointsLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    marginTop: 12,
+    letterSpacing: 1,
+  },
+  pointsValue: {
+    fontSize: 48,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginTop: 8,
+  },
+  pointsSubtext: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    opacity: 0.9,
+    marginTop: 4,
+  },
+  statsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    width: "100%",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
-  detailsTitle: {
+  statsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
+  statsTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 20,
-    textAlign: "center",
+    color: "#222222",
   },
-  detailsItem: {
+  statsItem: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
     gap: 12,
   },
-  pointsItem: {
-    marginTop: 8,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  detailsLabel: {
+  statsLabel: {
     flex: 1,
-    fontSize: 16,
-    color: "#6B7280",
+    fontSize: 14,
+    color: "#505050",
     fontWeight: "500",
   },
-  detailsValue: {
+  statsValueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  statsValue: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
   },
-  pointsValue: {
-    fontSize: 20,
-    color: "#F59E0B",
+  statsPercentage: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8A4DE8",
   },
-  button: {
+  greatJobCard: {
+    backgroundColor: "#F3F0F7",
+    borderRadius: 16,
+    padding: 20,
+    width: "100%",
+    marginBottom: 24,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  greatJobTextContainer: {
+    flex: 1,
+  },
+  greatJobTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 4,
+  },
+  greatJobText: {
+    fontSize: 14,
+    color: "#505050",
+    lineHeight: 20,
+  },
+  primaryButton: {
+    width: "100%",
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 12,
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  primaryButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#3B82F6",
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    width: "100%",
+    paddingVertical: 18,
     gap: 8,
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
+  primaryButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
     color: "#FFFFFF",
+  },
+  secondaryButton: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 20,
+    paddingVertical: 18,
+    gap: 8,
+    marginBottom: 24,
+  },
+  secondaryButtonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#222222",
+  },
+  bottomSpacer: {
+    height: 20,
   },
 });

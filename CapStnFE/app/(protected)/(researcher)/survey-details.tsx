@@ -18,9 +18,11 @@ import { getQuestionsBySurveyId } from "@/api/questions";
 import { getResponsesBySurveyId, Response } from "@/api/responses";
 import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 export default function SurveyDetails() {
   const router = useRouter();
+  const bottomNavHeight = useBottomNavHeight();
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -268,7 +270,7 @@ export default function SurveyDetails() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.previewButton]}

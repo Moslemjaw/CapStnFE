@@ -18,9 +18,11 @@ import { getSurveyById, publishSurvey, unpublishSurvey, updateSurvey } from "@/a
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 export default function SurveyPreview() {
   const router = useRouter();
+  const bottomNavHeight = useBottomNavHeight();
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -288,25 +290,107 @@ export default function SurveyPreview() {
                   </Text>
                 </View>
 
-                {question.options && question.options.length > 0 && (
-                  <View style={styles.optionsContainer}>
-                    <Text style={styles.optionsLabel}>Options:</Text>
-                    {question.options.map((option, optIndex) => (
-                      <View key={optIndex} style={styles.optionItem}>
-                        <Ionicons
-                          name={
-                            question.type === "single_choice"
-                              ? "radio-button-on"
-                              : "checkbox-outline"
-                          }
-                          size={16}
-                          color="#6B7280"
-                        />
-                        <Text style={styles.optionText}>{option}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {question.options && question.options.length > 0 ? (
+                  question.options.length >= 6 ? (
+                    <View style={styles.optionsContainerWithScroll}>
+                      <ScrollView 
+                        horizontal
+                        style={styles.optionsScrollView}
+                        contentContainerStyle={styles.optionsScrollContent}
+                        nestedScrollEnabled={true}
+                        showsHorizontalScrollIndicator={false}
+                      >
+                        {question.options.map((option, optIndex) => {
+                          const isMultiple =
+                            question.type === "multiple_choice" ||
+                            question.type === "checkbox";
+
+                          return (
+                            <View
+                              key={optIndex}
+                              style={[
+                                styles.optionButton,
+                                styles.optionButtonHorizontal,
+                              ]}
+                            >
+                              <Ionicons
+                                name={
+                                  isMultiple
+                                    ? "checkbox-outline"
+                                    : "radio-button-off"
+                                }
+                                size={20}
+                                color="#9CA3AF"
+                              />
+                              <Text style={styles.optionButtonText}>
+                                {option}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  ) : question.options.length >= 2 ? (
+                    <View style={styles.optionsContainerRow}>
+                      {question.options.map((option, optIndex) => {
+                        const isMultiple =
+                          question.type === "multiple_choice" ||
+                          question.type === "checkbox";
+
+                        return (
+                          <View
+                            key={optIndex}
+                            style={[
+                              styles.optionButton,
+                              styles.optionButtonHorizontal,
+                            ]}
+                          >
+                            <Ionicons
+                              name={
+                                isMultiple
+                                  ? "checkbox-outline"
+                                  : "radio-button-off"
+                              }
+                              size={20}
+                              color="#9CA3AF"
+                            />
+                            <Text style={styles.optionButtonText}>
+                              {option}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View style={styles.optionsContainer}>
+                      {question.options.map((option, optIndex) => {
+                        const isMultiple =
+                          question.type === "multiple_choice" ||
+                          question.type === "checkbox";
+
+                        return (
+                          <View
+                            key={optIndex}
+                            style={styles.optionButton}
+                          >
+                            <Ionicons
+                              name={
+                                isMultiple
+                                  ? "checkbox-outline"
+                                  : "radio-button-off"
+                              }
+                              size={20}
+                              color="#9CA3AF"
+                            />
+                            <Text style={styles.optionButtonText}>
+                              {option}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )
+                ) : null}
               </View>
             ))
           )}
@@ -314,7 +398,7 @@ export default function SurveyPreview() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.archiveButton]}
@@ -529,16 +613,18 @@ const styles = StyleSheet.create({
   },
   questionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
   questionHeader: {
@@ -550,23 +636,23 @@ const styles = StyleSheet.create({
   questionNumber: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#3B82F6",
+    color: "#4A63D8",
   },
   requiredBadge: {
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 12,
-    backgroundColor: "#FEF3C7",
+    backgroundColor: "#EEF5FF",
   },
   requiredText: {
     fontSize: 10,
     fontWeight: "600",
-    color: "#D97706",
+    color: "#4A63D8",
   },
   questionText: {
     fontSize: 16,
-    fontWeight: "500",
-    color: "#111827",
+    fontWeight: "600",
+    color: "#222222",
     marginBottom: 12,
     lineHeight: 24,
   },
@@ -579,26 +665,46 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   optionsContainer: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    marginTop: 12,
+    gap: 10,
   },
-  optionsLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
+  optionsContainerRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    gap: 10,
   },
-  optionItem: {
+  optionsContainerWithScroll: {
+    marginTop: 12,
+  },
+  optionsScrollView: {
+    maxHeight: 80,
+  },
+  optionsScrollContent: {
+    gap: 10,
+    paddingRight: 10,
+  },
+  optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  optionText: {
+  optionButtonHorizontal: {
+    flexShrink: 0,
+  },
+  optionButtonText: {
     fontSize: 14,
-    color: "#6B7280",
+    color: "#222222",
+    marginLeft: 12,
+    flex: 1,
   },
   footer: {
     padding: 24,

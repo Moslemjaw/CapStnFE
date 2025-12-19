@@ -5,16 +5,17 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
+  Image,
 } from "react-native";
 import React, { useEffect, useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { getPublishedSurveys } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { getResponsesBySurveyId, getResponsesByUserId } from "@/api/responses";
@@ -24,25 +25,29 @@ import User from "@/types/User";
 
 type QuestionCountFilter = "all" | "1-5" | "6-10" | "11-15" | "16+";
 type MaxTimeFilter = "all" | "1-5" | "5-10" | "10-15" | "15-30" | "30+";
+type StatusFilter = "all" | "open" | "answered";
+
+interface UserStats {
+  surveysAnswered: number;
+  totalTimeSpent: number; // in minutes
+}
 
 export default function ResearcherSurveys() {
   const router = useRouter();
-  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>(
-    []
-  );
-  const [availableSurveys, setAvailableSurveys] = useState<
-    SurveyWithMetadata[]
-  >([]);
+  const bottomNavHeight = useBottomNavHeight();
+  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>([]);
+  const [availableSurveys, setAvailableSurveys] = useState<SurveyWithMetadata[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [questionCountFilter, setQuestionCountFilter] =
-    useState<QuestionCountFilter>("all");
+  const [questionCountFilter, setQuestionCountFilter] = useState<QuestionCountFilter>("all");
   const [maxTimeFilter, setMaxTimeFilter] = useState<MaxTimeFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [userStats, setUserStats] = useState<UserStats>({ surveysAnswered: 0, totalTimeSpent: 0 });
   const [showQuestionDropdown, setShowQuestionDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
-  const [showAnswered, setShowAnswered] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   // Load user on mount
   useEffect(() => {
@@ -53,35 +58,46 @@ export default function ResearcherSurveys() {
     loadUser();
   }, []);
 
-  // Load surveys when user is available
+  // Load surveys and stats when user is available
   useEffect(() => {
     if (user) {
       loadSurveys();
+      loadUserStats();
     }
   }, [user]);
+
+  const loadUserStats = async () => {
+    if (!user?._id) return;
+    try {
+      const responses = await getResponsesByUserId(user._id);
+      const uniqueSurveys = new Set(responses.map((r) => r.surveyId));
+      const totalTimeMs = responses.reduce((sum, r) => sum + (r.durationMs || 0), 0);
+      const totalTimeMinutes = Math.floor(totalTimeMs / 60000);
+      
+      setUserStats({
+        surveysAnswered: uniqueSurveys.size,
+        totalTimeSpent: totalTimeMinutes,
+      });
+    } catch (err) {
+      console.error("Error loading user stats:", err);
+    }
+  };
 
   const loadSurveys = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch user responses to check which surveys are answered
       let userResponses: any[] = [];
       if (user?._id) {
         try {
           userResponses = await getResponsesByUserId(user._id);
         } catch (err) {
           console.error("Error fetching user responses:", err);
-          // Continue without user responses if fetch fails
         }
       }
 
-      // Load featured surveys first
       const featured = await loadFeaturedSurveys(userResponses);
-      // Then load available surveys (which will exclude featured)
-      await loadAvailableSurveys(
-        featured.map((s) => s._id),
-        userResponses
-      );
+      await loadAvailableSurveys(featured.map((s) => s._id), userResponses);
     } catch (err: any) {
       console.error("Error loading surveys:", err);
       setError(err.message || "Failed to load surveys");
@@ -90,24 +106,16 @@ export default function ResearcherSurveys() {
     }
   };
 
-  const loadFeaturedSurveys = async (
-    userResponses: any[] = []
-  ): Promise<SurveyWithMetadata[]> => {
-    // Fetch all published surveys (including user's own)
+  const loadFeaturedSurveys = async (userResponses: any[] = []): Promise<SurveyWithMetadata[]> => {
     const publishedSurveys = await getPublishedSurveys();
-
-    // Get start of current week (7 days ago)
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     oneWeekAgo.setHours(0, 0, 0, 0);
 
-    // Fetch response count for this week only
     const surveysWithCounts = await Promise.all(
       publishedSurveys.map(async (survey) => {
         try {
           const responses = await getResponsesBySurveyId(survey._id);
-
-          // Count only responses from this week
           const responsesThisWeek = responses.filter((response) => {
             if (!response.submittedAt) return false;
             const submittedDate = new Date(response.submittedAt);
@@ -119,49 +127,28 @@ export default function ResearcherSurveys() {
             responseCount: responsesThisWeek.length,
           };
         } catch (err) {
-          console.error(
-            `Error fetching responses for survey ${survey._id}:`,
-            err
-          );
-          return {
-            ...survey,
-            responseCount: 0,
-          };
+          return { ...survey, responseCount: 0 };
         }
       })
     );
 
-    // Sort by weekly response count and take top 5
     const topSurveys = surveysWithCounts
       .sort((a, b) => (b.responseCount || 0) - (a.responseCount || 0))
       .slice(0, 5);
 
-    // Fetch question count and check if answered for each survey
     const surveysWithMetadata = await Promise.all(
       topSurveys.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return {
             ...survey,
             questionCount: questions.length,
             isAnswered,
           };
         } catch (err) {
-          console.error(
-            `Error fetching questions for survey ${survey._id}:`,
-            err
-          );
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
-          return {
-            ...survey,
-            questionCount: 0,
-            isAnswered,
-          };
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          return { ...survey, questionCount: 0, isAnswered };
         }
       })
     );
@@ -170,62 +157,32 @@ export default function ResearcherSurveys() {
     return surveysWithMetadata;
   };
 
-  const loadAvailableSurveys = async (
-    featuredIds: string[] = [],
-    userResponses: any[] = []
-  ) => {
-    if (!user?._id) {
-      console.log("No user ID, skipping loadAvailableSurveys");
-      return;
-    }
+  const loadAvailableSurveys = async (featuredIds: string[] = [], userResponses: any[] = []) => {
+    if (!user?._id) return;
 
-    // Fetch all published surveys
     const publishedSurveys = await getPublishedSurveys();
-    console.log("Total published surveys:", publishedSurveys.length);
-    console.log("Current user ID:", user._id);
+    const available = publishedSurveys.filter((survey) => survey.creatorId !== user._id);
 
-    // Filter out only surveys created by current user
-    // Keep all other published surveys (including featured ones for full list)
-    const available = publishedSurveys.filter(
-      (survey) => survey.creatorId !== user._id
-    );
-    console.log("Available surveys (not created by user):", available.length);
-
-    // Fetch question count and check if answered for each survey
     const surveysWithMetadata = await Promise.all(
       available.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return {
             ...survey,
             questionCount: questions.length,
             isAnswered,
           };
         } catch (err) {
-          console.error(
-            `Error fetching questions for survey ${survey._id}:`,
-            err
-          );
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
-          return {
-            ...survey,
-            questionCount: 0,
-            isAnswered,
-          };
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          return { ...survey, questionCount: 0, isAnswered };
         }
       })
     );
 
-    console.log("Available surveys with metadata:", surveysWithMetadata.length);
     setAvailableSurveys(surveysWithMetadata);
   };
 
-  // Reload available surveys when featured surveys change (for manual refresh)
   useEffect(() => {
     if (featuredSurveys.length > 0 && user) {
       const loadData = async () => {
@@ -244,18 +201,17 @@ export default function ResearcherSurveys() {
     }
   }, [featuredSurveys.length, user?._id]);
 
-  // Filter surveys
   const filterSurveys = (surveys: SurveyWithMetadata[]) => {
     let filtered = [...surveys];
 
-    // Apply search filter
     if (searchQuery.trim()) {
-      filtered = filtered.filter((survey) =>
-        survey.title.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (survey) =>
+          survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (survey.description && survey.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
-    // Apply question count filter
     if (questionCountFilter !== "all") {
       filtered = filtered.filter((survey) => {
         const count = survey.questionCount || 0;
@@ -274,7 +230,6 @@ export default function ResearcherSurveys() {
       });
     }
 
-    // Apply max time filter
     if (maxTimeFilter !== "all") {
       filtered = filtered.filter((survey) => {
         const minutes = survey.estimatedMinutes;
@@ -295,33 +250,30 @@ export default function ResearcherSurveys() {
       });
     }
 
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((survey) => {
+        if (statusFilter === "open") return !survey.isAnswered;
+        if (statusFilter === "answered") return survey.isAnswered;
+        return true;
+      });
+    }
+
     return filtered;
   };
 
   const filteredFeatured = useMemo(
     () => filterSurveys(featuredSurveys),
-    [featuredSurveys, searchQuery, questionCountFilter, maxTimeFilter]
+    [featuredSurveys, searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
   );
 
-  const filteredAvailable = useMemo(() => {
-    // First apply showAnswered filter
-    let surveys = availableSurveys;
-    if (!showAnswered) {
-      surveys = surveys.filter((survey) => !survey.isAnswered);
-    }
-    // Then apply other filters
-    return filterSurveys(surveys);
-  }, [
-    availableSurveys,
-    searchQuery,
-    questionCountFilter,
-    maxTimeFilter,
-    showAnswered,
-  ]);
+  const filteredAvailable = useMemo(
+    () => filterSurveys(availableSurveys),
+    [availableSurveys, searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
+  );
 
   const handleSurveyAction = (survey: SurveyWithMetadata) => {
     router.push({
-      pathname: "/(protected)/(researcher)/survey-view",
+      pathname: "/(protected)/(researcher)/survey-respondent-preview",
       params: { surveyId: survey._id },
     } as any);
   };
@@ -330,28 +282,23 @@ export default function ResearcherSurveys() {
     setSearchQuery("");
     setQuestionCountFilter("all");
     setMaxTimeFilter("all");
+    setStatusFilter("all");
   };
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     questionCountFilter !== "all" ||
-    maxTimeFilter !== "all";
+    maxTimeFilter !== "all" ||
+    statusFilter !== "all";
 
-  const maxTimeOptions: MaxTimeFilter[] = [
-    "all",
-    "1-5",
-    "5-10",
-    "10-15",
-    "15-30",
-    "30+",
-  ];
-  const questionOptions: QuestionCountFilter[] = [
-    "all",
-    "1-5",
-    "6-10",
-    "11-15",
-    "16+",
-  ];
+  const formatTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
 
   const getQuestionLabel = (value: QuestionCountFilter) => {
     return value === "all" ? "All" : value;
@@ -360,7 +307,7 @@ export default function ResearcherSurveys() {
   const getTimeLabel = (value: MaxTimeFilter) => {
     switch (value) {
       case "all":
-        return "All";
+        return "All Time";
       case "1-5":
         return "1-5 min";
       case "5-10":
@@ -372,271 +319,262 @@ export default function ResearcherSurveys() {
       case "30+":
         return "30+ min";
       default:
+        return "All Time";
+    }
+  };
+
+  const getStatusLabel = (value: StatusFilter) => {
+    switch (value) {
+      case "all":
+        return "All";
+      case "open":
+        return "Not Answered";
+      case "answered":
+        return "Only Answered";
+      default:
         return "All";
     }
   };
 
+  const maxTimeOptions: MaxTimeFilter[] = ["all", "1-5", "5-10", "10-15", "15-30", "30+"];
+  const questionOptions: QuestionCountFilter[] = ["all", "1-5", "6-10", "11-15", "16+"];
+  const statusOptions: StatusFilter[] = ["all", "open", "answered"];
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Surveys</Text>
-        <Text style={styles.subtitle}>Explore and answer surveys</Text>
-      </View>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.title}>Explore Surveys</Text>
+          <Text style={styles.subtitle}>Answer surveys, earn points, shape insights.</Text>
+        </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color="#6B7280"
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search surveys by title..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor="#9CA3AF"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery("")}>
-            <Ionicons name="close-circle" size={20} color="#6B7280" />
-          </TouchableOpacity>
-        )}
-      </View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color="#505050" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for surveys by title or description"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
 
-      {/* Filters - One Line with Dropdowns */}
-      <View style={styles.filtersContainer}>
-        <View style={styles.filtersRow}>
-          {/* Questions Dropdown */}
-          <View style={styles.dropdownContainer}>
-            <Text style={styles.filterLabel}>Questions:</Text>
+        {/* Filters Section */}
+        <View style={styles.filtersSection}>
+          {hasActiveFilters && (
+            <View style={styles.filtersHeader}>
+              <TouchableOpacity onPress={clearFilters}>
+                <Text style={styles.clearAllText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <View style={styles.filtersRow}>
             <TouchableOpacity
-              style={styles.dropdown}
+              style={styles.filterButton}
               onPress={() => {
+                setShowStatusDropdown(false);
                 setShowTimeDropdown(false);
                 setShowQuestionDropdown(!showQuestionDropdown);
               }}
             >
-              <Text style={styles.dropdownText}>
-                {getQuestionLabel(questionCountFilter)}
-              </Text>
-              <Ionicons
-                name={showQuestionDropdown ? "chevron-up" : "chevron-down"}
-                size={20}
-                color="#6B7280"
-              />
+              <Text style={styles.filterButtonText}>{getQuestionLabel(questionCountFilter)}</Text>
+              <Ionicons name="chevron-down" size={16} color="#505050" />
             </TouchableOpacity>
-            <Modal
-              visible={showQuestionDropdown}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowQuestionDropdown(false)}
-            >
-              <Pressable
-                style={styles.modalOverlay}
-                onPress={() => setShowQuestionDropdown(false)}
-              >
-                <View style={styles.dropdownMenu}>
-                  {questionOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option}
-                      style={[
-                        styles.dropdownItem,
-                        questionCountFilter === option &&
-                          styles.dropdownItemActive,
-                      ]}
-                      onPress={() => {
-                        setQuestionCountFilter(option);
-                        setShowQuestionDropdown(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownItemText,
-                          questionCountFilter === option &&
-                            styles.dropdownItemTextActive,
-                        ]}
-                      >
-                        {getQuestionLabel(option)}
-                      </Text>
-                      {questionCountFilter === option && (
-                        <Ionicons name="checkmark" size={20} color="#3B82F6" />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </Pressable>
-            </Modal>
-          </View>
-
-          {/* Max Time Dropdown */}
-          <View style={styles.dropdownContainer}>
-            <Text style={styles.filterLabel}>Max Time:</Text>
             <TouchableOpacity
-              style={styles.dropdown}
+              style={styles.filterButton}
               onPress={() => {
+                setShowStatusDropdown(false);
                 setShowQuestionDropdown(false);
                 setShowTimeDropdown(!showTimeDropdown);
               }}
             >
-              <Text style={styles.dropdownText}>
-                {getTimeLabel(maxTimeFilter)}
-              </Text>
-              <Ionicons
-                name={showTimeDropdown ? "chevron-up" : "chevron-down"}
-                size={20}
-                color="#6B7280"
-              />
+              <Text style={styles.filterButtonText}>{getTimeLabel(maxTimeFilter)}</Text>
+              <Ionicons name="chevron-down" size={16} color="#505050" />
             </TouchableOpacity>
-            <Modal
-              visible={showTimeDropdown}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowTimeDropdown(false)}
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => {
+                setShowTimeDropdown(false);
+                setShowQuestionDropdown(false);
+                setShowStatusDropdown(!showStatusDropdown);
+              }}
             >
-              <Pressable
-                style={styles.modalOverlay}
-                onPress={() => setShowTimeDropdown(false)}
-              >
-                <View style={styles.dropdownMenu}>
-                  {maxTimeOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option}
-                      style={[
-                        styles.dropdownItem,
-                        maxTimeFilter === option && styles.dropdownItemActive,
-                      ]}
-                      onPress={() => {
-                        setMaxTimeFilter(option);
-                        setShowTimeDropdown(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownItemText,
-                          maxTimeFilter === option &&
-                            styles.dropdownItemTextActive,
-                        ]}
-                      >
-                        {getTimeLabel(option)}
-                      </Text>
-                      {maxTimeFilter === option && (
-                        <Ionicons name="checkmark" size={20} color="#3B82F6" />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </Pressable>
-            </Modal>
+              <Text style={styles.filterButtonText}>{getStatusLabel(statusFilter)}</Text>
+              <Ionicons name="chevron-down" size={16} color="#505050" />
+            </TouchableOpacity>
           </View>
         </View>
-
-        {hasActiveFilters && (
-          <TouchableOpacity
-            onPress={clearFilters}
-            style={styles.clearAllButton}
-          >
-            <Text style={styles.clearAllText}>Clear All Filters</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
-      {/* Content */}
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading surveys...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={loadSurveys} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Featured Section */}
-          {filteredFeatured.length > 0 && (
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Featured Surveys</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.featuredListContent}
-              >
-                {filteredFeatured.map((survey) => (
-                  <View key={survey._id} style={styles.featuredCardContainer}>
-                    <SurveyCard
-                      survey={survey}
-                      onPress={handleSurveyAction}
-                      showResponseCount={true}
-                      currentUserId={user?._id}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
+      >
 
-          {/* Available Surveys Section */}
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Available Surveys</Text>
-              <TouchableOpacity
-                style={[
-                  styles.answeredFilterToggle,
-                  !showAnswered && styles.answeredFilterToggleActive,
-                ]}
-                onPress={() => setShowAnswered(!showAnswered)}
-              >
-                <Ionicons
-                  name={showAnswered ? "eye-off" : "eye"}
-                  size={18}
-                  color={!showAnswered ? "#8B5CF6" : "#6B7280"}
-                />
-                <Text
-                  style={[
-                    styles.answeredFilterText,
-                    !showAnswered && styles.answeredFilterTextActive,
-                  ]}
+        {/* Status Dropdown Modal */}
+        <Modal visible={showStatusDropdown} transparent animationType="fade" onRequestClose={() => setShowStatusDropdown(false)}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowStatusDropdown(false)}>
+            <View style={styles.dropdownMenu}>
+              {statusOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.dropdownItem, statusFilter === option && styles.dropdownItemActive]}
+                  onPress={() => {
+                    setStatusFilter(option);
+                    setShowStatusDropdown(false);
+                  }}
                 >
-                  {showAnswered ? "Hide Answered" : "Show Answered"}
-                </Text>
-              </TouchableOpacity>
+                  <Text style={[styles.dropdownItemText, statusFilter === option && styles.dropdownItemTextActive]}>
+                    {getStatusLabel(option)}
+                  </Text>
+                  {statusFilter === option && <Ionicons name="checkmark" size={20} color="#4A63D8" />}
+                </TouchableOpacity>
+              ))}
             </View>
-            {filteredAvailable.length === 0 ? (
-              <View style={styles.emptySection}>
-                <Ionicons
-                  name="document-text-outline"
-                  size={32}
-                  color="#9CA3AF"
-                />
-                <Text style={styles.emptySectionText}>
-                  {hasActiveFilters
-                    ? "No surveys match your filters"
-                    : "No available surveys"}
-                </Text>
+          </Pressable>
+        </Modal>
+
+        {/* Time Dropdown Modal */}
+        <Modal visible={showTimeDropdown} transparent animationType="fade" onRequestClose={() => setShowTimeDropdown(false)}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowTimeDropdown(false)}>
+            <View style={styles.dropdownMenu}>
+              {maxTimeOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.dropdownItem, maxTimeFilter === option && styles.dropdownItemActive]}
+                  onPress={() => {
+                    setMaxTimeFilter(option);
+                    setShowTimeDropdown(false);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, maxTimeFilter === option && styles.dropdownItemTextActive]}>
+                    {getTimeLabel(option)}
+                  </Text>
+                  {maxTimeFilter === option && <Ionicons name="checkmark" size={20} color="#4A63D8" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Modal>
+
+        {/* Question Dropdown Modal */}
+        <Modal visible={showQuestionDropdown} transparent animationType="fade" onRequestClose={() => setShowQuestionDropdown(false)}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowQuestionDropdown(false)}>
+            <View style={styles.dropdownMenu}>
+              {questionOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.dropdownItem, questionCountFilter === option && styles.dropdownItemActive]}
+                  onPress={() => {
+                    setQuestionCountFilter(option);
+                    setShowQuestionDropdown(false);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, questionCountFilter === option && styles.dropdownItemTextActive]}>
+                    {getQuestionLabel(option)}
+                  </Text>
+                  {questionCountFilter === option && <Ionicons name="checkmark" size={20} color="#4A63D8" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Modal>
+
+        {/* Stats Summary Card */}
+        <View style={styles.statsCard}>
+          <LinearGradient colors={["#EEF5FF", "#E8D5FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.statsGradient}>
+            <View style={styles.statsLeft}>
+              <View style={styles.statsIconContainer}>
+                <Ionicons name="checkmark-circle" size={24} color="#4A63D8" />
               </View>
-            ) : (
-              filteredAvailable.map((survey) => (
-                <SurveyCard
-                  key={survey._id}
-                  survey={survey}
-                  onPress={handleSurveyAction}
-                  currentUserId={user?._id}
-                />
-              ))
-            )}
+              <Text style={styles.statsNumber}>{userStats.surveysAnswered}</Text>
+              <Text style={styles.statsLabel}>Surveys answered</Text>
+            </View>
+            <View style={styles.statsDivider} />
+            <View style={styles.statsRight}>
+              <View style={styles.statsIconContainer}>
+                <Ionicons name="time" size={24} color="#8A4DE8" />
+              </View>
+              <Text style={styles.statsNumber}>{formatTime(userStats.totalTimeSpent)}</Text>
+              <Text style={styles.statsLabel}>Total Time Spent</Text>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Content */}
+        {loading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#4A63D8" />
+            <Text style={styles.loadingText}>Loading surveys...</Text>
           </View>
-        </ScrollView>
-      )}
+        ) : error ? (
+          <View style={styles.centerContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={loadSurveys} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.content}>
+            {/* Featured This Week Section */}
+            {filteredFeatured.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Featured This Week</Text>
+                  <View style={styles.top5Badge}>
+                    <Ionicons name="star" size={12} color="#FFFFFF" />
+                    <Text style={styles.top5Text}>Top 5</Text>
+                  </View>
+                </View>
+                {/* Large Featured Card */}
+                {filteredFeatured[0] && (
+                  <View style={styles.largeFeaturedCard}>
+                    <SurveyCard survey={filteredFeatured[0]} onPress={handleSurveyAction} isLarge={true} />
+                  </View>
+                )}
+                {/* 2x2 Grid of Smaller Cards */}
+                {filteredFeatured.length > 1 && (
+                  <View style={styles.featuredGrid}>
+                    {filteredFeatured.slice(1, 5).map((survey) => (
+                      <View key={survey._id} style={styles.smallFeaturedCard}>
+                        <SurveyCard survey={survey} onPress={handleSurveyAction} isSmall={true} />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* All Surveys Section */}
+            <View style={styles.allSurveysSection}>
+              <Text style={styles.sectionTitle}>All Surveys</Text>
+              {filteredAvailable.length === 0 ? (
+                <View style={styles.emptySection}>
+                  <Ionicons name="document-text-outline" size={32} color="#9CA3AF" />
+                  <Text style={styles.emptySectionText}>
+                    {hasActiveFilters ? "No surveys match your filters" : "No available surveys"}
+                  </Text>
+                </View>
+              ) : (
+                filteredAvailable.map((survey) => (
+                  <View key={survey._id} style={styles.allSurveyCard}>
+                    <SurveyCard survey={survey} onPress={handleSurveyAction} isAllSurvey={true} />
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -645,89 +583,72 @@ export default function ResearcherSurveys() {
 interface SurveyCardProps {
   survey: SurveyWithMetadata;
   onPress: (survey: SurveyWithMetadata) => void;
-  showResponseCount?: boolean;
-  currentUserId?: string;
+  isLarge?: boolean;
+  isSmall?: boolean;
+  isAllSurvey?: boolean;
 }
 
-const SurveyCard: React.FC<SurveyCardProps> = ({
-  survey,
-  onPress,
-  showResponseCount = false,
-  currentUserId,
-}) => {
-  const isOwnSurvey = !!(currentUserId && survey.creatorId === currentUserId);
+const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress, isLarge = false, isSmall = false, isAllSurvey = false }) => {
+  const getPointsTagColor = () => {
+    const points = survey.rewardPoints || 0;
+    if (points >= 100) return ["#FF6FAE", "#D13DB8"]; // Pink to Magenta
+    if (points >= 80) return ["#8A4DE8", "#A23DD8"]; // Violet to Purple
+    if (points >= 60) return ["#5FA9F5", "#4A63D8"]; // Sky Blue to Indigo
+    return ["#2BB6E9", "#35E0E6"]; // Teal to Cyan
+  };
+
+  const formatResponseCount = (count: number): string => {
+    if (count >= 100) return "100+";
+    return count.toString();
+  };
 
   return (
-    <TouchableOpacity
-      style={[styles.card, isOwnSurvey && styles.cardOwned]}
-      onPress={() => {
-        if (!isOwnSurvey) {
-          onPress(survey);
-        }
-      }}
-      activeOpacity={isOwnSurvey ? 1 : 0.7}
-      disabled={isOwnSurvey}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{survey.title}</Text>
-        {isOwnSurvey && (
-          <View style={styles.ownBadge}>
-            <Text style={styles.ownBadgeText}>Your Survey</Text>
-          </View>
-        )}
-      </View>
-
+    <TouchableOpacity style={[styles.card, isLarge && styles.largeCard, isSmall && styles.smallCard]} onPress={() => onPress(survey)}>
+      {survey.isAnswered && isAllSurvey && (
+        <View style={styles.answeredTag}>
+          <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+          <Text style={styles.answeredTagText}>Answered</Text>
+        </View>
+      )}
+      {!survey.isAnswered && (isLarge || isSmall) && (
+        <View style={styles.pointsTag}>
+          <LinearGradient colors={getPointsTagColor()} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.pointsTagGradient}>
+            <Text style={styles.pointsTagText}>+{survey.rewardPoints || 0}</Text>
+          </LinearGradient>
+        </View>
+      )}
+      <Text style={[styles.cardTitle, isLarge && styles.largeCardTitle]} numberOfLines={isSmall ? 2 : undefined}>
+        {survey.title}
+      </Text>
       {survey.description && (
-        <Text style={styles.cardDescription} numberOfLines={2}>
+        <Text style={styles.cardDescription} numberOfLines={isSmall ? 2 : 3}>
           {survey.description}
         </Text>
       )}
-
       <View style={styles.cardDetails}>
         <View style={styles.detailItem}>
-          <Ionicons name="time-outline" size={16} color="#6B7280" />
+          <Ionicons name="people-outline" size={16} color="#4A63D8" />
+          <Text style={styles.detailText}>
+            {formatResponseCount(survey.responseCount || 0)} answers
+          </Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Ionicons name="document-text-outline" size={16} color="#4A63D8" />
+          <Text style={styles.detailText}>{survey.questionCount || 0} questions</Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Ionicons name="time-outline" size={16} color="#8A4DE8" />
           <Text style={styles.detailText}>{survey.estimatedMinutes} min</Text>
         </View>
-
-        <View style={styles.detailItem}>
-          <Ionicons name="list-outline" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>
-            {survey.questionCount || 0} questions
-          </Text>
-        </View>
-
-        {showResponseCount && (
-          <View style={styles.detailItem}>
-            <Ionicons name="people-outline" size={16} color="#8B5CF6" />
-            <Text style={[styles.detailText, styles.responseText]}>
-              {survey.responseCount || 0} responses
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.detailItem}>
-          <Ionicons name="star-outline" size={16} color="#F59E0B" />
-          <Text style={[styles.detailText, styles.pointsText]}>
-            {survey.rewardPoints} pts
-          </Text>
-        </View>
       </View>
-
-      <View style={styles.cardFooter}>
-        {!isOwnSurvey && (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => onPress(survey)}
-          >
-            <Text style={styles.actionButtonText}>View</Text>
-          </TouchableOpacity>
-        )}
-        {survey.isAnswered && !isOwnSurvey && (
-          <View style={styles.answeredChip}>
-            <Text style={styles.answeredChipText}>Answered</Text>
-          </View>
-        )}
-      </View>
+      <TouchableOpacity
+        style={styles.viewButton}
+        onPress={() => onPress(survey)}
+      >
+        <LinearGradient colors={["#5FA9F5", "#4A63D8"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.viewButtonGradient}>
+          <Text style={styles.viewButtonText}>View</Text>
+        </LinearGradient>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 };
@@ -735,21 +656,60 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
+  },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 0,
   },
   header: {
     padding: 24,
     paddingBottom: 16,
   },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  logo: {
+    width: 32,
+    height: 32,
+    marginRight: 8,
+  },
+  titleImage: {
+    height: 24,
+    width: 80,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: "#6B7280",
+    color: "#505050",
   },
   searchContainer: {
     flexDirection: "row",
@@ -757,53 +717,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     marginHorizontal: 24,
     marginBottom: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#111827",
+    color: "#222222",
   },
-  filtersContainer: {
+  filtersSection: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    marginBottom: 0,
+    paddingBottom: 24,
+  },
+  filtersHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  filtersLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#505050",
+    letterSpacing: 0.5,
+  },
+  clearAllText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#4A63D8",
   },
   filtersRow: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 12,
+    gap: 12,
   },
-  dropdownContainer: {
+  filterButton: {
     flex: 1,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  dropdown: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  dropdownText: {
+  filterButtonText: {
     fontSize: 14,
-    color: "#111827",
     fontWeight: "500",
+    color: "#222222",
   },
   modalOverlay: {
     flex: 1,
@@ -817,10 +786,7 @@ const styles = StyleSheet.create({
     minWidth: 200,
     maxHeight: 300,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 5,
@@ -843,25 +809,57 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   dropdownItemTextActive: {
-    color: "#3B82F6",
+    color: "#4A63D8",
     fontWeight: "600",
   },
-  clearAllButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginTop: 4,
+  statsCard: {
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  clearAllText: {
+  statsGradient: {
+    flexDirection: "row",
+    padding: 20,
+  },
+  statsLeft: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statsRight: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statsDivider: {
+    width: 1,
+    backgroundColor: "rgba(74, 99, 216, 0.2)",
+    marginHorizontal: 20,
+  },
+  statsIconContainer: {
+    marginBottom: 8,
+  },
+  statsNumber: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 4,
+  },
+  statsLabel: {
     fontSize: 12,
-    color: "#3B82F6",
-    fontWeight: "600",
+    color: "#505050",
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
+    minHeight: 200,
   },
   loadingText: {
     marginTop: 16,
@@ -878,35 +876,156 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#4A63D8",
     borderRadius: 8,
   },
   retryButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",
   },
-  scrollView: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 24,
-    paddingTop: 0,
+  content: {
+    paddingBottom: 24,
   },
   sectionContainer: {
-    marginBottom: 24,
+    marginBottom: 32,
+  },
+  allSurveysSection: {
+    marginTop: 8,
+    marginBottom: 32,
+    paddingHorizontal: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
+    marginRight: 12,
+  },
+  top5Badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FF6FAE",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  top5Text: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  largeFeaturedCard: {
+    marginBottom: 16,
+  },
+  featuredGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  smallFeaturedCard: {
+    width: "48%",
+  },
+  allSurveyCard: {
+    marginBottom: 16,
+    marginHorizontal: 0,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  largeCard: {
+    padding: 20,
+  },
+  smallCard: {
+    padding: 12,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 8,
+  },
+  largeCardTitle: {
+    fontSize: 22,
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: "#505050",
     marginBottom: 12,
+    lineHeight: 20,
   },
-  featuredListContent: {
-    paddingRight: 24,
+  cardDetails: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
+    marginBottom: 16,
   },
-  featuredCardContainer: {
-    width: 300,
-    marginRight: 16,
+  detailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  detailText: {
+    fontSize: 12,
+    color: "#505050",
+  },
+  pointsTag: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  pointsTagGradient: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  pointsTagText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  answeredTag: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10B981",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  answeredTagText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  viewButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  viewButtonGradient: {
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   emptySection: {
     alignItems: "center",
@@ -917,137 +1036,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardOwned: {
-    opacity: 0.7,
-    borderWidth: 2,
-    borderColor: "#3B82F6",
-    backgroundColor: "#F0F9FF",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-    marginRight: 8,
-  },
-  ownBadge: {
-    backgroundColor: "#3B82F6",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  ownBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  cardDetails: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 12,
-  },
-  detailItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  detailText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  pointsText: {
-    color: "#F59E0B",
-    fontWeight: "600",
-  },
-  cardFooter: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  actionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    backgroundColor: "#3B82F6",
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  answeredChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: "#10B981",
-  },
-  answeredChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  responseText: {
-    color: "#8B5CF6",
-    fontWeight: "600",
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  answeredFilterToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#F3F4F6",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-  },
-  answeredFilterToggleActive: {
-    backgroundColor: "#EDE9FE",
-    borderColor: "#C4B5FD",
-  },
-  answeredFilterText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  answeredFilterTextActive: {
-    color: "#8B5CF6",
-    fontWeight: "700",
   },
 });

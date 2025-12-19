@@ -30,12 +30,14 @@ import { getImageUrl } from "@/utils/imageUtils";
 import { getResponsesByUserId } from "@/api/responses";
 import { getSurveyById } from "@/api/surveys";
 import { calculateStreak } from "@/utils/userProgress";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 export default function ResearcherProfile() {
   const [user, setUser] = useState<User | null>(null);
   const { setIsAuthenticated } = useContext(AuthContext);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const bottomNavHeight = useBottomNavHeight();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -328,12 +330,19 @@ export default function ResearcherProfile() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Profile</Text>
+        </View>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Profile</Text>
 
           {/* User Info Card */}
           <View style={styles.userCard}>
@@ -874,8 +883,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9FAFB",
   },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  header: {
+    padding: 24,
+    paddingBottom: 16,
+  },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 0,
   },
   content: {
     flex: 1,
@@ -885,7 +920,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 24,
   },
   userCard: {
     backgroundColor: "#FFFFFF",

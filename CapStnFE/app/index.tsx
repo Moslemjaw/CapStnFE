@@ -23,28 +23,27 @@ import { login } from "@/api/auth";
 import { storeToken, storeUser } from "@/api/storage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = SCREEN_WIDTH * 0.5; // Smaller cards - 50% of screen width
 
-const CAROUSEL_CARDS = [
+const FEATURE_CARDS = [
   {
-    emoji: "⚡",
-    title: "Real-time Data",
-    description: "Get instant insights from your survey responses as they come in.",
+    icon: "trophy-outline",
+    headline: "Answer surveys. Earn points.",
+    body: "Earn points for every question you answer",
   },
   {
-    emoji: "📊",
-    title: "Advanced Analytics",
-    description: "Powerful data visualizations that reveal patterns and trends.",
+    icon: "analytics-outline",
+    headline: "Know yourself better",
+    body: "Gain insights about who you are",
   },
   {
-    emoji: "🔒",
-    title: "Secure Insights",
-    description: "Your data is protected with enterprise-grade security measures.",
+    icon: "create-outline",
+    headline: "Create surveys in minutes",
+    body: "Design and publish quickly",
   },
   {
-    emoji: "📋",
-    title: "Customizable Reports",
-    description: "Create and customize reports tailored to your specific needs.",
+    icon: "shield-checkmark-outline",
+    headline: "Powered by sightAI",
+    body: "Validates surveys and responses",
   },
 ];
 
@@ -64,7 +63,7 @@ export default function Index() {
     const startAutoSlide = () => {
       autoSlideTimerRef.current = setInterval(() => {
         setCurrentCardIndex((prevIndex) => {
-          const nextIndex = (prevIndex + 1) % CAROUSEL_CARDS.length;
+          const nextIndex = (prevIndex + 1) % FEATURE_CARDS.length;
           scrollViewRef.current?.scrollTo({
             x: nextIndex * SCREEN_WIDTH,
             animated: true,
@@ -87,7 +86,7 @@ export default function Index() {
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / SCREEN_WIDTH);
-    if (index !== currentCardIndex && index >= 0 && index < CAROUSEL_CARDS.length) {
+    if (index !== currentCardIndex && index >= 0 && index < FEATURE_CARDS.length) {
       setCurrentCardIndex(index);
       // Reset auto-slide timer when user manually swipes
       if (autoSlideTimerRef.current) {
@@ -95,7 +94,7 @@ export default function Index() {
       }
       autoSlideTimerRef.current = setInterval(() => {
         setCurrentCardIndex((prevIndex) => {
-          const nextIndex = (prevIndex + 1) % CAROUSEL_CARDS.length;
+          const nextIndex = (prevIndex + 1) % FEATURE_CARDS.length;
           scrollViewRef.current?.scrollTo({
             x: nextIndex * SCREEN_WIDTH,
             animated: true,
@@ -151,9 +150,12 @@ export default function Index() {
   // Show loading while checking authentication
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#3B82F6" />
-      </View>
+      <LinearGradient
+        colors={["#EEF5FF", "#F9F6FE"]}
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <ActivityIndicator size="large" color="#4A63D8" />
+      </LinearGradient>
     );
   }
 
@@ -163,6 +165,10 @@ export default function Index() {
   }
 
   return (
+    <LinearGradient
+      colors={["#EEF5FF", "#F9F6FE"]}
+      style={styles.gradientContainer}
+    >
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -173,16 +179,8 @@ export default function Index() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.contentContainer}>
-          {/* Decorative Circles */}
-          <View style={styles.decorativeCircle1} />
-          <View style={styles.decorativeCircle2} />
-          <View style={styles.decorativeCircle3} />
-
           {/* Branding Section */}
           <View style={styles.brandingSection}>
-            {/* Small decorative circle above logo */}
-            <View style={styles.smallDecorativeCircle} />
-            
             {/* Main Logo */}
             <View style={styles.logoContainer}>
               <Image
@@ -192,12 +190,16 @@ export default function Index() {
               />
             </View>
 
-            {/* Tagline */}
-            <Text style={styles.tagline}>See insights clearly.</Text>
+              {/* Title */}
+              <Image
+                source={require("@/assets/title.png")}
+                style={styles.appTitle}
+                resizeMode="contain"
+              />
           </View>
 
-          {/* Carousel Section */}
-          <View style={styles.carouselSection}>
+            {/* Feature Callout Section */}
+            <View style={styles.featureSection}>
             <ScrollView
               ref={scrollViewRef}
               horizontal
@@ -209,38 +211,37 @@ export default function Index() {
               style={styles.carouselScrollView}
               contentContainerStyle={styles.carouselContent}
             >
-              {CAROUSEL_CARDS.map((card, index) => (
-                <View key={index} style={styles.carouselCardWrapper}>
-                  <View style={[styles.carouselCard, { width: CARD_WIDTH }]}>
-                    <View style={styles.cardPlaceholderContainer}>
-                      <Text style={styles.cardEmoji}>{card.emoji}</Text>
-                    </View>
-                    <Text style={styles.cardTitle}>{card.title}</Text>
+                {FEATURE_CARDS.map((card, index) => (
+                  <View key={index} style={styles.featureCardWrapper}>
+                    <View style={styles.featureCard}>
+                      <Ionicons
+                        name={card.icon as any}
+                        size={32}
+                        color="#4A63D8"
+                        style={styles.icon}
+                      />
+                      <Text style={styles.featureHeadline}>{card.headline}</Text>
+                      <Text style={styles.featureBody}>{card.body}</Text>
                   </View>
                 </View>
               ))}
             </ScrollView>
 
-            {/* Carousel Indicators */}
+              {/* Pagination Dots */}
             <View style={styles.indicatorsContainer}>
-              {CAROUSEL_CARDS.map((_, index) => (
+                {FEATURE_CARDS.map((_, index) => {
+                  const isActive = index === currentCardIndex;
+                  
+                  return (
                 <View
                   key={index}
                   style={[
                     styles.indicator,
-                    index === currentCardIndex && styles.indicatorActive,
+                        isActive && styles.indicatorActive,
                   ]}
-                >
-                  {index === currentCardIndex && (
-                    <LinearGradient
-                      colors={["#60A5FA", "#34D399"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.indicatorGradient}
                     />
-                  )}
-                </View>
-              ))}
+                  );
+                })}
             </View>
           </View>
 
@@ -257,11 +258,10 @@ export default function Index() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="example@email.com"
-                placeholderTextColor="#9CA3AF"
+                  placeholder="example@sight.ai"
+                  placeholderTextColor="#969696"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -271,12 +271,11 @@ export default function Index() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
                   placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#969696"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -290,7 +289,7 @@ export default function Index() {
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color="#6B7280"
+                      color="#969696"
                   />
                 </TouchableOpacity>
               </View>
@@ -302,7 +301,7 @@ export default function Index() {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={["#60A5FA", "#34D399"]}
+                  colors={["#5FA9F5", "#4A63D8"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[
@@ -323,7 +322,7 @@ export default function Index() {
                   style={styles.signUpLink}
                   onPress={() => router.navigate("/(auth)/register")}
                 >
-                  Sign up
+                    Sign Up
                 </Text>
               </Text>
             </View>
@@ -331,89 +330,49 @@ export default function Index() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: "center",
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 40,
-    position: "relative",
-  },
-  decorativeCircle1: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(96, 165, 250, 0.1)",
-    top: 40,
-    left: -40,
-  },
-  decorativeCircle2: {
-    position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(96, 165, 250, 0.08)",
-    top: 200,
-    right: -20,
-  },
-  decorativeCircle3: {
-    position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(96, 165, 250, 0.06)",
-    bottom: 100,
-    left: -30,
+    justifyContent: "center",
   },
   brandingSection: {
     alignItems: "center",
-    marginBottom: 32,
-    position: "relative",
-  },
-  smallDecorativeCircle: {
-    position: "absolute",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(96, 165, 250, 0.12)",
-    top: -10,
-    right: SCREEN_WIDTH / 2 - 30,
+    marginBottom: 30,
   },
   logoContainer: {
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 8,
+    marginBottom: 20,
   },
   logo: {
-    width: 160,
-    height: 160,
+    width: 210,
+    height: 210,
   },
-  appName: {
-    fontSize: 48,
-    fontWeight: "700",
-    color: "#111827",
-    letterSpacing: 2,
-    marginBottom: 8,
+  appTitle: {
+    height: 30,
+    width: 120,
+    paddingHorizontal: 8,
+    marginTop: 12,
   },
-  tagline: {
-    fontSize: 20,
-    color: "#6B7280",
-    fontWeight: "700",
-  },
-  carouselSection: {
-    marginBottom: 32,
+  featureSection: {
+    marginBottom: 40,
+    marginTop: -20,
     alignItems: "center",
   },
   carouselScrollView: {
@@ -423,39 +382,43 @@ const styles = StyleSheet.create({
   carouselContent: {
     alignItems: "center",
   },
-  carouselCardWrapper: {
+  featureCardWrapper: {
     width: SCREEN_WIDTH,
     alignItems: "center",
     justifyContent: "center",
   },
-  carouselCard: {
-    backgroundColor: "rgba(96, 165, 250, 0.08)",
-    borderRadius: 24,
-    padding: 20,
+  featureCard: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 180,
+    paddingHorizontal: 40,
+    paddingVertical: 24,
+    backgroundColor: "rgba(238, 245, 255, 0.3)",
+    borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
   },
-  cardPlaceholderContainer: {
-    marginBottom: 12,
-    width: "100%",
-    height: 120,
-    alignItems: "center",
-    justifyContent: "center",
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  cardPlaceholder: {
-    fontSize: 16,
-    color: "#6B7280",
-    fontWeight: "500",
+  icon: {
+    marginBottom: 16,
   },
-  cardEmoji: {
-    fontSize: 64,
-  },
-  cardTitle: {
-    fontSize: 22,
+  featureHeadline: {
+    fontSize: 20,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
     textAlign: "center",
+    marginBottom: 12,
+  },
+  featureBody: {
+    fontSize: 16,
+    color: "#505050",
+    textAlign: "center",
+    lineHeight: 24,
   },
   indicatorsContainer: {
     flexDirection: "row",
@@ -467,35 +430,21 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
+    backgroundColor: "#C8C8C8",
   },
   indicatorActive: {
-    borderWidth: 0,
-    width: 24,
-  },
-  indicatorGradient: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 4,
+    backgroundColor: "#4A63D8",
   },
   formSection: {
     width: "100%",
   },
   inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
+    marginBottom: 16,
   },
   input: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#DCDCDC",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -507,7 +456,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#DCDCDC",
     borderRadius: 12,
     paddingHorizontal: 16,
   },
@@ -521,7 +470,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   loginButton: {
-    borderRadius: 24,
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -541,11 +490,12 @@ const styles = StyleSheet.create({
   },
   bottomLinkText: {
     fontSize: 14,
-    color: "#6B7280",
+    color: "#969696",
   },
   signUpLink: {
-    color: "#3B82F6",
+    color: "#4A63D8",
     fontWeight: "500",
+    textDecorationLine: "underline",
   },
   errorContainer: {
     backgroundColor: "#FEE2E2",

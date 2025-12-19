@@ -28,6 +28,7 @@ import {
 } from "@/api/questions";
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 interface LocalQuestion {
   text: string;
@@ -43,6 +44,7 @@ interface LocalQuestion {
 
 export default function CreateSurvey() {
   const router = useRouter();
+  const bottomNavHeight = useBottomNavHeight();
   const { surveyId } = useLocalSearchParams<{ surveyId?: string }>();
   const [user, setUser] = useState<User | null>(null);
   const [title, setTitle] = useState("");
@@ -570,7 +572,7 @@ export default function CreateSurvey() {
         </ScrollView>
 
         {/* Action Buttons */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
           <TouchableOpacity
             style={[styles.actionButtonFooter, styles.archiveButton]}
             onPress={handleArchive}

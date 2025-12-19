@@ -12,6 +12,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import {
   getSurveysByCreatorId,
   publishSurvey,
@@ -35,6 +36,7 @@ interface Statistics {
 
 export default function ResearcherResearch() {
   const router = useRouter();
+  const bottomNavHeight = useBottomNavHeight();
   const [user, setUser] = useState<User | null>(null);
   const [surveys, setSurveys] = useState<SurveyWithResponseCount[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
@@ -221,21 +223,24 @@ export default function ResearcherResearch() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Header */}
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
         <View style={styles.header}>
           <Text style={styles.title}>Research</Text>
           <Text style={styles.subtitle}>
             Manage your surveys and create new ones
           </Text>
         </View>
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
 
         {/* Total Surveys and Active Surveys (2 boxes at the beginning) */}
         <View style={styles.topStatsContainer}>
@@ -470,6 +475,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9FAFB",
   },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
@@ -485,6 +509,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 0,
     paddingBottom: 24,
   },
   header: {

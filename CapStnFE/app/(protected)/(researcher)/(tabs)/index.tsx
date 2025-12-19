@@ -1,68 +1,47 @@
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from "react-native";
-import React, { useEffect, useState } from "react";
+import { StyleSheet, Text, View, ScrollView, Image } from "react-native";
+import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { testAI } from "@/api/ai";
+import { LinearGradient } from "expo-linear-gradient";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 export default function ResearcherHome() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [aiConnected, setAiConnected] = useState(false);
-
-  useEffect(() => {
-    // Test AI connection on mount
-    const checkAIConnection = async () => {
-      setIsLoading(true);
-      try {
-        await testAI();
-        setAiConnected(true);
-      } catch (error) {
-        console.error("AI connection test failed:", error);
-        setAiConnected(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAIConnection();
-  }, []);
+  const bottomNavHeight = useBottomNavHeight();
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
         <View style={styles.header}>
-          <Text style={styles.title}>Home</Text>
-          <Text style={styles.subtitle}>Latest updates and insights</Text>
-        </View>
-
-        <View style={styles.content}>
-          <View style={styles.placeholderCard}>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#3B82F6" />
-                <Text style={styles.loadingText}>Connecting to AI...</Text>
-              </View>
-            ) : (
-              <>
-                <View style={styles.statusContainer}>
-                  <View
-                    style={[
-                      styles.statusIndicator,
-                      { backgroundColor: aiConnected ? "#10B981" : "#EF4444" },
-                    ]}
-                  />
-                  <Text style={styles.statusText}>
-                    AI API: {aiConnected ? "Connected" : "Disconnected"}
-                  </Text>
-                </View>
-                <Text style={styles.placeholderText}>
-                  This is where your latest updates and insights will appear.
-                </Text>
-                <Text style={styles.placeholderSubtext}>
-                  Stay tuned for AI-powered analysis of your survey data, recent
-                  responses, and important notifications.
-                </Text>
-              </>
-            )}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("@/assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
           </View>
+          <Text style={styles.title}>Discover Insights</Text>
+          <Text style={styles.subtitle}>Real data, real people, real patterns</Text>
+          <LinearGradient
+            colors={["#5FA9F5", "#8A4DE8"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.divider}
+          />
+        </View>
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
+      >
+        <View style={styles.content}>
+          {/* Content will be added here later */}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -72,82 +51,68 @@ export default function ResearcherHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
+  },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 0,
   },
   header: {
     padding: 24,
     paddingBottom: 16,
   },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  logo: {
+    width: 32,
+    height: 32,
+    marginRight: 8,
+  },
+  titleImage: {
+    height: 24,
+    width: 80,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: "#6B7280",
+    color: "#505050",
+    marginBottom: 16,
+  },
+  divider: {
+    height: 2,
+    borderRadius: 1,
   },
   content: {
     padding: 24,
     gap: 16,
-  },
-  placeholderCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 16,
-    minHeight: 200,
-    justifyContent: "center",
-  },
-  loadingContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#6B7280",
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  statusIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  placeholderText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  placeholderSubtext: {
-    fontSize: 14,
-    color: "#6B7280",
-    lineHeight: 20,
-    textAlign: "center",
   },
 });

@@ -1,0 +1,529 @@
+# Sight — UXPilot Master Design Prompt
+
+## 1. Product Overview
+
+Sight is a modern surveys and data analysis application. Users can:
+
+* Answer surveys to earn points
+* Create and publish surveys
+* Analyze survey data using **SightAI** (core hero feature)
+* Discover insights from aggregated and cross-referenced data
+
+The product must feel:
+
+* Intelligent, AI-driven, and trustworthy
+* Fast-paced and intuitive
+* Rich yet minimalist (no visual clutter)
+* Modern consumer-tech quality (Gemini / ChatGPT level polish)
+
+---
+
+## 2. Brand & Design Language
+
+### 2.1 Visual Personality
+
+* Abstract, fluid, intelligent
+* Soft gradients, smooth transitions
+* Rounded geometry (cards, buttons, modals)
+* Depth through subtle shadows and gradient layering
+* No literal charts/icons as decoration — data is implied, not illustrated
+
+### 2.2 Color Palette (Inspired by Logo)
+
+Use these colors as inspiration across the app. Do not introduce new brand colors.
+
+* Cyan / Aqua: `#35E0E6`
+* Teal Blue: `#2BB6E9`
+* Sky Blue: `#5FA9F5`
+* Indigo Blue: `#4A63D8`
+* Violet: `#8A4DE8`
+* Purple: `#A23DD8`
+* Magenta: `#D13DB8`
+* Pink: `#FF6FAE`
+
+#### Usage Guidance
+
+* Backgrounds: white or very light blue-tinted white
+* Primary actions: gradients using 2–3 adjacent colors
+* Accents: pink / magenta / cyan
+* SightAI: dark background with vibrant gradients from the full palette
+
+---
+
+## 3. Typography
+
+* Clean, modern sans-serif
+* High legibility
+* Strong hierarchy
+
+### Hierarchy
+
+* App Name / Page Title: Bold
+* Section Titles: Semibold
+* Body Text: Regular
+* Metadata (time, points, counts): Medium, muted color
+
+---
+
+## 4. Global UI Patterns
+
+### 4.1 Buttons
+
+* Primary: Gradient fill, rounded
+* Secondary: Outline or subtle tinted background
+* Destructive (archive/logout): soft red tint
+
+### 4.2 Cards
+
+* Rounded corners
+* Light shadow
+* Clear separation of content
+* Use cards heavily for summaries and insights
+
+### 4.3 Points System
+
+* Always visible where relevant
+* Represented as:
+
+  * Small badge with gradient fill
+  * Icon + numeric value
+* Points gained per survey clearly shown
+
+### 4.4 Bottom Navigation Bar (Global)
+
+Persistent across all main pages:
+
+* Home
+* Surveys
+* Research
+* SightAI (center, larger, logo icon)
+* Profile
+
+---
+
+## 5. Landing Page (Login Entry)
+
+### Layout Structure
+
+1. **Top Section**
+
+   * Sight logo
+   * App name “Sight” below logo
+
+2. **Value Proposition Carousel (4 slides)**
+
+   * Slide 1: Create surveys in minutes
+   * Slide 2: Earn points by answering surveys
+   * Slide 3: AI-powered data analysis
+   * Slide 4: Discover insights that matter
+
+3. **Authentication Section**
+
+   * Email input
+   * Password input
+   * Primary Login button
+   * Secondary Signup button
+
+### Visual Style
+
+* Light background
+* Gradient highlights behind carousel content
+* Smooth slide transitions
+
+---
+
+## 6. Sign Up Page
+
+### Fields
+
+* Profile picture (optional)
+* Name
+* Email
+* Password
+* Retype password
+* Agree to terms & conditions (checkbox)
+* Sign up button
+
+### Notes
+
+* Clear validation states
+* Minimal friction
+* Friendly, welcoming tone
+
+---
+
+## 7. Survey Answering Onboarding
+
+### 7.1 Onboarding Survey Page
+
+Purpose: collect basic info and teach survey answering flow.
+
+#### Questions
+
+1. Date of birth
+
+   * Digits-only input
+   * Allowed range: 1920 → (current year − 18)
+
+2. Location
+
+   * Radio button list
+   * Inner scroll view
+   * Search bar
+
+3. Employment status
+
+   * Single choice
+
+### UX
+
+* Progress indicator
+* Required vs optional clearly marked
+* Points gained shown per question
+
+---
+
+## 7.2 Onboarding Survey Success Page
+
+* Success confirmation
+* Friendly message
+* Indication user is ready to use the app
+* Points earned summary
+
+---
+
+## 8. Main App Pages
+
+## 8.1 Home
+
+### Content
+
+* Insight summary cards, e.g.:
+
+  * “This week, 20% of college students drive Hondas”
+  * “10 out of 43 bodybuilders prefer chicken over meat”
+
+### Each Card
+
+* Insight text
+* Survey reference (view survey)
+* Subtle gradient accent
+
+---
+
+## 8.2 Surveys Page
+
+### Top Section
+
+* Search bar (title & description)
+* Filters:
+
+  * Number of questions
+  * Time to answer
+
+### Stats Summary
+
+* Surveys answered
+* Total time spent answering
+
+### Featured Surveys
+
+* Top 5 featured surveys of the week
+
+### Survey List Item
+
+* Title
+* Description
+* Creator name
+* Number of questions
+* Estimated time
+* Points available
+* Answered / Not answered indicator
+
+---
+
+## 8.2.1 Survey Preview Page
+
+### If Not Answered
+
+* View questions
+* Required vs optional labels
+* Time to solve
+* Answer button
+
+### If Already Answered
+
+* View own answers only
+* Disabled actions
+
+---
+
+## 8.2.2 Survey Answering Page
+
+### Core Layout Rule (IMPORTANT)
+
+* **All questions are stacked on a single scrollable page**
+* Users scroll vertically to view and answer questions
+* **No per-question pages, slides, or step-based flows**
+
+### Question Presentation
+
+* Each question appears as a card stacked vertically
+* Clear spacing between questions
+* Required questions visibly marked
+
+### Question Types
+
+* Written (text)
+* Written (digits-only toggle)
+* Choice:
+
+  * Single choice
+  * Multiple choice
+  * If >6 options: inner scroll + search
+
+### UI Behavior
+
+* Inline validation (no blocking steps)
+* Progress indicator reflects answered vs total questions (not steps)
+* Submit button fixed at bottom or appears after last question
+
+---
+
+## 8.2.3 Survey Submit Success Page
+
+* Confirmation message
+* Required vs optional questions answered
+* Time spent
+* Points earned
+
+---
+
+## 8.3 Research Page
+
+### Overview Stats
+
+* Surveys created
+* Surveys published
+* Surveys archived
+* Total responses received
+
+### Actions
+
+* Create survey button
+
+### Created Surveys List
+
+Each survey has:
+
+* View questions
+* Analyze (SightAI)
+* Archive or Publish (depending on state)
+
+---
+
+## 8.3.1 Survey Creation Page
+
+### Required
+
+* Title
+
+### Optional
+
+* Description
+
+### Question Builder
+
+For each question:
+
+* Question text
+* Type:
+
+  * Written (default)
+  * Choice
+* Written options:
+
+  * Digits-only toggle
+* Choice options:
+
+  * Minimum two options
+  * Add more options
+  * Single or multiple choice
+* Required toggle (on by default)
+
+### Actions
+
+* Archive
+* Preview
+
+(Title + at least one question required)
+
+---
+
+## 8.3.2 Survey Preview (Creator)
+
+* View survey as users see it
+* Actions:
+
+  * Edit
+  * Archive
+  * Publish
+
+---
+
+## 8.3.3 Archive Success Page
+
+* Confirmation message
+* Summary:
+
+  * Number of questions
+  * Estimated time to solve
+
+---
+
+## 8.3.4 Publish Success Page
+
+* Same layout as archive success
+* Publishing confirmation
+
+---
+
+## 9. SightAI (Dark Mode Hero)
+
+### Visual Style
+
+* Dark background
+* Vibrant gradients from full palette
+* Elevated, premium feel
+
+### Content
+
+* Surveys already analyzed
+* Mass analysis button (analyze other users’ surveys)
+* Personal insights:
+
+  * Cross-referenced analysis from answered surveys
+
+### Analysis States
+
+* Analyzing in background
+* Strong visual indicator for:
+
+  * In progress
+  * Completed
+* Re-analyze option when new responses are available
+
+### Stats
+
+* Number of analysis reports generated
+
+---
+
+## 9.1 Data Analysis Report Page
+
+### Purpose
+
+Display the finalized AI-generated analysis for a survey.
+
+### Layout
+
+* Header with survey title
+* Metadata row:
+
+  * Number of responses
+  * Last analyzed date
+  * Analysis version (e.g. v1, v2)
+
+### Report Sections (Stacked)
+
+* Key Insights (highlight cards)
+* Trends & Patterns
+* Notable Statistics
+* Outliers or surprising findings
+
+### Visualization Style
+
+* Text-first insights
+* Minimal abstract visuals or bars (non-interactive)
+* Gradient accents only (no heavy charts)
+
+### Actions
+
+* Re-analyze survey (if new responses exist)
+* View original survey
+
+### UX Notes
+
+* Content scrolls vertically
+* Emphasis on clarity and readability
+* Insights feel authoritative and confident
+
+---
+
+---
+
+## 10. Profile Page
+
+### Top Section
+
+* Avatar
+* Name
+* Email
+* Age
+* Country
+* Employment status
+
+### Summary Stats
+
+* Surveys answered
+* Time spent answering
+* Surveys created
+* Analysis generated
+
+### Navigation
+
+* Tapping any stat leads to its detailed page
+
+### Actions
+
+* Privacy Policy
+* Terms & Conditions
+* Logout
+
+---
+
+## 10.1 Policy Modals (Privacy Policy & Terms)
+
+### Modal Type
+
+* Full-height bottom sheet on mobile
+* Centered modal on desktop
+
+### Content Structure
+
+* Title (Privacy Policy / Terms & Conditions)
+* Scrollable text content area
+* Last updated date (metadata)
+
+### Actions
+
+* Primary button: Close / I Understand
+
+### UX Rules
+
+* Content is read-only
+* No checkboxes or decisions inside modal
+* Modal can be dismissed via close icon or swipe down
+
+---
+
+---
+
+## 11. Final Notes for UXPilot
+
+* Do NOT add new features
+* Do NOT invent backend logic
+* Prioritize clarity and speed
+* Everything should feel immediately understandable
+* Light mode for all pages except SightAI
+* Use gradients thoughtfully — rich but controlled

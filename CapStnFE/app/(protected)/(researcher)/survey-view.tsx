@@ -14,6 +14,7 @@ import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { getSurveyById } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import {
@@ -26,9 +27,11 @@ import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 import { updateUserProgress } from "@/utils/userProgress";
 import { getUser } from "@/api/storage";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 export default function SurveyView() {
   const router = useRouter();
+  const bottomNavHeight = useBottomNavHeight();
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -40,6 +43,7 @@ export default function SurveyView() {
   const [hasAnswered, setHasAnswered] = useState(false);
   const [checkingAnswered, setCheckingAnswered] = useState(true);
   const [userResponse, setUserResponse] = useState<Response | null>(null);
+  const [optionSearchQueries, setOptionSearchQueries] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (surveyId) {
@@ -112,6 +116,27 @@ export default function SurveyView() {
       ...prev,
       [questionId]: value,
     }));
+  };
+
+  const handleOptionSearchChange = (questionId: string, query: string) => {
+    setOptionSearchQueries((prev) => ({
+      ...prev,
+      [questionId]: query,
+    }));
+  };
+
+  const getFilteredOptions = (questionId: string, options: string[]): string[] => {
+    const searchQuery = optionSearchQueries[questionId]?.toLowerCase() || "";
+    if (!searchQuery) return options;
+    return options.filter((option) =>
+      option.toLowerCase().includes(searchQuery)
+    );
+  };
+
+  const getProgress = (): number => {
+    if (questions.length === 0) return 0;
+    const answeredCount = questions.filter((q) => answers[q._id]).length;
+    return answeredCount / questions.length;
   };
 
   const handleOptionSelect = (
@@ -241,6 +266,10 @@ export default function SurveyView() {
           requiredAnswered: requiredAnswered.toString(),
           optionalAnswered: optionalAnswered.toString(),
           pointsEarned: survey.rewardPoints.toString(),
+          durationMs: durationMs.toString(),
+          totalQuestions: questions.length.toString(),
+          totalRequired: questions.filter((q) => q.isRequired).length.toString(),
+          totalOptional: questions.filter((q) => !q.isRequired).length.toString(),
         },
       } as any);
     } catch (err: any) {
@@ -294,7 +323,7 @@ export default function SurveyView() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color="#4A63D8" />
           <Text style={styles.loadingText}>Loading survey...</Text>
         </View>
       </SafeAreaView>
@@ -311,7 +340,14 @@ export default function SurveyView() {
             onPress={() => router.back()}
             style={styles.retryButton}
           >
-            <Text style={styles.retryButtonText}>Go Back</Text>
+            <LinearGradient
+              colors={["#5FA9F5", "#4A63D8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.retryButtonGradient}
+            >
+              <Text style={styles.retryButtonText}>Go Back</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -337,28 +373,17 @@ export default function SurveyView() {
               <Text style={styles.description}>{survey.description}</Text>
             )}
 
-            <View style={styles.metadata}>
-              <View style={styles.metadataItem}>
-                <Ionicons name="time-outline" size={18} color="#6B7280" />
-                <Text style={styles.metadataText}>
-                  {survey.estimatedMinutes} min
+            {/* Progress Bar */}
+            {!hasAnswered && (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${getProgress() * 100}%` }]} />
+                </View>
+                <Text style={styles.progressText}>
+                  {questions.filter((q) => answers[q._id]).length} / {questions.length} answered
                 </Text>
               </View>
-
-              <View style={styles.metadataItem}>
-                <Ionicons name="list-outline" size={18} color="#6B7280" />
-                <Text style={styles.metadataText}>
-                  {questions.length} questions
-                </Text>
-              </View>
-
-              <View style={styles.metadataItem}>
-                <Ionicons name="star-outline" size={18} color="#F59E0B" />
-                <Text style={[styles.metadataText, styles.pointsText]}>
-                  {survey.rewardPoints} pts
-                </Text>
-              </View>
-            </View>
+            )}
 
             {/* Already Completed Banner */}
             {hasAnswered && userResponse && (
@@ -446,59 +471,149 @@ export default function SurveyView() {
                       editable={!hasAnswered}
                     />
                   ) : question.options && question.options.length > 0 ? (
-                    <View style={styles.optionsContainer}>
-                      {question.options.map((option, optIndex) => {
-                        const isSelected = isOptionSelected(
-                          question._id,
-                          option,
-                          question.type
-                        );
-                        const isMultiple =
-                          question.type === "multiple_choice" ||
-                          question.type === "checkbox";
-
-                        return (
-                          <TouchableOpacity
-                            key={optIndex}
-                            style={[
-                              styles.optionButton,
-                              isSelected && styles.optionButtonSelected,
-                              hasAnswered && styles.optionButtonReadOnly,
-                            ]}
-                            onPress={() =>
-                              handleOptionSelect(
+                    question.options.length >= 6 ? (
+                      <View style={styles.optionsContainerWithSearch}>
+                        <View style={styles.searchContainer}>
+                          <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+                          <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search options..."
+                            placeholderTextColor="#9CA3AF"
+                            value={optionSearchQueries[question._id] || ""}
+                            onChangeText={(text) => handleOptionSearchChange(question._id, text)}
+                            editable={!hasAnswered}
+                          />
+                          {optionSearchQueries[question._id] && (
+                            <TouchableOpacity
+                              onPress={() => handleOptionSearchChange(question._id, "")}
+                              style={styles.clearSearchButton}
+                            >
+                              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        <ScrollView 
+                          style={styles.optionsScrollView}
+                          nestedScrollEnabled={true}
+                          showsVerticalScrollIndicator={false}
+                        >
+                          <View style={[styles.optionsContainer, styles.optionsContainerTwoColumns]}>
+                            {getFilteredOptions(question._id, question.options).map((option, optIndex) => {
+                              const isSelected = isOptionSelected(
                                 question._id,
                                 option,
                                 question.type
-                              )
-                            }
-                            disabled={hasAnswered}
-                          >
-                            <Ionicons
-                              name={
-                                isMultiple
-                                  ? isSelected
-                                    ? "checkbox"
-                                    : "checkbox-outline"
-                                  : isSelected
-                                  ? "radio-button-on"
-                                  : "radio-button-off"
-                              }
-                              size={20}
-                              color={isSelected ? "#3B82F6" : "#6B7280"}
-                            />
-                            <Text
+                              );
+                              const isMultiple =
+                                question.type === "multiple_choice" ||
+                                question.type === "checkbox";
+
+                              return (
+                                <TouchableOpacity
+                                  key={optIndex}
+                                  style={[
+                                    styles.optionButton,
+                                    styles.optionButtonTwoColumns,
+                                    isSelected && styles.optionButtonSelected,
+                                    hasAnswered && styles.optionButtonReadOnly,
+                                  ]}
+                                  onPress={() =>
+                                    handleOptionSelect(
+                                      question._id,
+                                      option,
+                                      question.type
+                                    )
+                                  }
+                                  disabled={hasAnswered}
+                                >
+                                  <Ionicons
+                                    name={
+                                      isMultiple
+                                        ? isSelected
+                                          ? "checkbox"
+                                          : "checkbox-outline"
+                                        : isSelected
+                                        ? "radio-button-on"
+                                        : "radio-button-off"
+                                    }
+                                    size={20}
+                                    color={isSelected ? "#4A63D8" : "#9CA3AF"}
+                                  />
+                                  <Text
+                                    style={[
+                                      styles.optionButtonText,
+                                      isSelected && styles.optionButtonTextSelected,
+                                    ]}
+                                  >
+                                    {option}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    ) : (
+                      <View style={[
+                        styles.optionsContainer, 
+                        question.options && question.options.length >= 2 && styles.optionsContainerTwoColumns
+                      ]}>
+                        {question.options.map((option, optIndex) => {
+                          const isSelected = isOptionSelected(
+                            question._id,
+                            option,
+                            question.type
+                          );
+                          const isMultiple =
+                            question.type === "multiple_choice" ||
+                            question.type === "checkbox";
+
+                          const shouldUseTwoColumns = question.options && question.options.length >= 2;
+
+                          return (
+                            <TouchableOpacity
+                              key={optIndex}
                               style={[
-                                styles.optionButtonText,
-                                isSelected && styles.optionButtonTextSelected,
+                                styles.optionButton,
+                                shouldUseTwoColumns && styles.optionButtonTwoColumns,
+                                isSelected && styles.optionButtonSelected,
+                                hasAnswered && styles.optionButtonReadOnly,
                               ]}
+                              onPress={() =>
+                                handleOptionSelect(
+                                  question._id,
+                                  option,
+                                  question.type
+                                )
+                              }
+                              disabled={hasAnswered}
                             >
-                              {option}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                              <Ionicons
+                                name={
+                                  isMultiple
+                                    ? isSelected
+                                      ? "checkbox"
+                                      : "checkbox-outline"
+                                    : isSelected
+                                    ? "radio-button-on"
+                                    : "radio-button-off"
+                                }
+                                size={20}
+                                color={isSelected ? "#4A63D8" : "#9CA3AF"}
+                              />
+                              <Text
+                                style={[
+                                  styles.optionButtonText,
+                                  isSelected && styles.optionButtonTextSelected,
+                                ]}
+                              >
+                                {option}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )
                   ) : null}
                 </View>
               ))
@@ -507,7 +622,7 @@ export default function SurveyView() {
         </ScrollView>
 
         {/* Submit Button */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
           <TouchableOpacity
             style={[
               styles.answerButton,
@@ -516,13 +631,20 @@ export default function SurveyView() {
             onPress={handleSubmit}
             disabled={submitting || hasAnswered}
           >
-            {submitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.answerButtonText}>
-                {hasAnswered ? "Already Answered" : "Submit"}
-              </Text>
-            )}
+            <LinearGradient
+              colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.answerButtonGradient}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.answerButtonText}>
+                  {hasAnswered ? "Already Answered" : "Submit Survey"}
+                </Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -533,7 +655,7 @@ export default function SurveyView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
   },
   keyboardView: {
     flex: 1,
@@ -557,14 +679,19 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  retryButtonGradient: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
   retryButtonText: {
     color: "#FFFFFF",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 16,
   },
   scrollView: {
     flex: 1,
@@ -578,32 +705,35 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
     marginBottom: 12,
   },
   description: {
     fontSize: 16,
-    color: "#6B7280",
+    color: "#505050",
     lineHeight: 24,
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  metadata: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
+  progressContainer: {
+    marginTop: 16,
+    marginBottom: 8,
   },
-  metadataItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  progressBar: {
+    height: 8,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 8,
   },
-  metadataText: {
-    fontSize: 14,
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#4A63D8",
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 12,
     color: "#6B7280",
-  },
-  pointsText: {
-    color: "#F59E0B",
-    fontWeight: "600",
+    fontWeight: "500",
   },
   questionsSection: {
     marginBottom: 24,
@@ -611,7 +741,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
     marginBottom: 16,
   },
   emptyQuestions: {
@@ -626,16 +756,18 @@ const styles = StyleSheet.create({
   },
   questionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
   questionHeader: {
@@ -647,23 +779,23 @@ const styles = StyleSheet.create({
   questionNumber: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#3B82F6",
+    color: "#4A63D8",
   },
   requiredBadge: {
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 12,
-    backgroundColor: "#FEF3C7",
+    backgroundColor: "#EEF5FF",
   },
   requiredText: {
     fontSize: 10,
     fontWeight: "600",
-    color: "#D97706",
+    color: "#4A63D8",
   },
   questionText: {
     fontSize: 16,
-    fontWeight: "500",
-    color: "#111827",
+    fontWeight: "600",
+    color: "#222222",
     marginBottom: 12,
     lineHeight: 24,
   },
@@ -688,53 +820,103 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     marginTop: 12,
+    gap: 10,
+  },
+  optionsContainerTwoColumns: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  optionsContainerWithSearch: {
+    marginTop: 12,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    minHeight: 44,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#222222",
+    paddingVertical: 10,
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  optionsScrollView: {
+    maxHeight: 200,
   },
   optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  optionButtonTwoColumns: {
+    flexBasis: "48%",
+    flexGrow: 0,
+    flexShrink: 0,
   },
   optionButtonSelected: {
-    borderColor: "#3B82F6",
-    backgroundColor: "#EFF6FF",
+    borderColor: "#4A63D8",
+    backgroundColor: "#EEF5FF",
   },
   optionButtonText: {
-    fontSize: 16,
-    color: "#374151",
+    fontSize: 14,
+    color: "#222222",
     marginLeft: 12,
     flex: 1,
   },
   optionButtonTextSelected: {
-    color: "#1E40AF",
-    fontWeight: "500",
+    color: "#4A63D8",
+    fontWeight: "600",
   },
   footer: {
     padding: 24,
     paddingTop: 16,
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderTopColor: "#F3F4F6",
   },
   answerButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#3B82F6",
-    minHeight: 48,
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   answerButtonDisabled: {
     opacity: 0.6,
   },
+  answerButtonGradient: {
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
+  },
   answerButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
     color: "#FFFFFF",
   },
   completedBanner: {
@@ -780,7 +962,7 @@ const styles = StyleSheet.create({
   },
   textInputReadOnly: {
     backgroundColor: "#F3F4F6",
-    color: "#374151",
+    color: "#505050",
   },
   optionButtonReadOnly: {
     opacity: 0.7,
