@@ -8,6 +8,7 @@ import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function SurveyPublishSuccess() {
   const router = useRouter();
@@ -27,9 +28,14 @@ export default function SurveyPublishSuccess() {
       <View style={styles.content}>
         {/* Success Icon */}
         <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="checkmark-circle" size={80} color="#10B981" />
-          </View>
+          <LinearGradient
+            colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.iconGradient}
+          >
+            <Ionicons name="checkmark" size={60} color="#FFFFFF" />
+          </LinearGradient>
         </View>
 
         {/* Success Message */}
@@ -43,19 +49,19 @@ export default function SurveyPublishSuccess() {
           <Text style={styles.overviewTitle}>Survey Overview</Text>
           
           <View style={styles.overviewItem}>
-            <Ionicons name="list-outline" size={20} color="#3B82F6" />
+            <Ionicons name="list-outline" size={20} color="#4A63D8" />
             <Text style={styles.overviewLabel}>Questions:</Text>
             <Text style={styles.overviewValue}>{questionCount || 0}</Text>
           </View>
 
           <View style={styles.overviewItem}>
-            <Ionicons name="star-outline" size={20} color="#F59E0B" />
+            <Ionicons name="star-outline" size={20} color="#8A4DE8" />
             <Text style={styles.overviewLabel}>Points:</Text>
             <Text style={styles.overviewValue}>{points || 0} pts</Text>
           </View>
 
           <View style={styles.overviewItem}>
-            <Ionicons name="time-outline" size={20} color="#6B7280" />
+            <Ionicons name="time-outline" size={20} color="#2BB6E9" />
             <Text style={styles.overviewLabel}>Estimated Time:</Text>
             <Text style={styles.overviewValue}>{estimatedMinutes || 0} min</Text>
           </View>
@@ -77,7 +83,7 @@ export default function SurveyPublishSuccess() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
   },
   content: {
     flex: 1,
@@ -88,13 +94,17 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: 32,
   },
-  iconCircle: {
+  iconGradient: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "#D1FAE5",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   title: {
     fontSize: 28,
@@ -150,19 +160,26 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   button: {
+    borderRadius: 16,
+    overflow: "hidden",
+    width: "100%",
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  buttonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#3B82F6",
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 12,
-    width: "100%",
     gap: 8,
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
   },
 });

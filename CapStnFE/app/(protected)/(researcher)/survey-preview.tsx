@@ -185,7 +185,7 @@ export default function SurveyPreview() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color="#4A63D8" />
           <Text style={styles.loadingText}>Loading preview...</Text>
         </View>
       </SafeAreaView>
@@ -218,7 +218,7 @@ export default function SurveyPreview() {
       >
         {/* Preview Badge */}
         <View style={styles.previewBadge}>
-          <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+          <Ionicons name="eye-outline" size={18} color="#2BB6E9" />
           <Text style={styles.previewBadgeText}>Preview</Text>
         </View>
 
@@ -234,22 +234,22 @@ export default function SurveyPreview() {
               style={styles.metadataItem}
               onPress={openTimeEditModal}
             >
-              <Ionicons name="time-outline" size={18} color="#6B7280" />
+              <Ionicons name="time-outline" size={18} color="#4B5563" />
               <Text style={styles.metadataText}>
                 {survey.estimatedMinutes} min
               </Text>
-              <Ionicons name="pencil" size={14} color="#3B82F6" style={styles.editIcon} />
+              <Ionicons name="pencil" size={14} color="#2BB6E9" style={styles.editIcon} />
             </TouchableOpacity>
 
             <View style={styles.metadataItem}>
-              <Ionicons name="list-outline" size={18} color="#6B7280" />
+              <Ionicons name="list-outline" size={18} color="#4B5563" />
               <Text style={styles.metadataText}>
                 {questions.length} questions
               </Text>
             </View>
 
             <View style={styles.metadataItem}>
-              <Ionicons name="star-outline" size={18} color="#F59E0B" />
+              <Ionicons name="star-outline" size={18} color="#8A4DE8" />
               <Text style={[styles.metadataText, styles.pointsText]}>
                 {survey.rewardPoints} pts
               </Text>
@@ -294,84 +294,61 @@ export default function SurveyPreview() {
                   question.options.length >= 6 ? (
                     <View style={styles.optionsContainerWithScroll}>
                       <ScrollView 
-                        horizontal
                         style={styles.optionsScrollView}
-                        contentContainerStyle={styles.optionsScrollContent}
                         nestedScrollEnabled={true}
-                        showsHorizontalScrollIndicator={false}
+                        showsVerticalScrollIndicator={false}
                       >
-                        {question.options.map((option, optIndex) => {
-                          const isMultiple =
-                            question.type === "multiple_choice" ||
-                            question.type === "checkbox";
+                        <View style={[styles.optionsContainer, styles.optionsContainerTwoColumns]}>
+                          {question.options.map((option, optIndex) => {
+                            const isMultiple =
+                              question.type === "multiple_choice" ||
+                              question.type === "checkbox";
 
-                          return (
-                            <View
-                              key={optIndex}
-                              style={[
-                                styles.optionButton,
-                                styles.optionButtonHorizontal,
-                              ]}
-                            >
-                              <Ionicons
-                                name={
-                                  isMultiple
-                                    ? "checkbox-outline"
-                                    : "radio-button-off"
-                                }
-                                size={20}
-                                color="#9CA3AF"
-                              />
-                              <Text style={styles.optionButtonText}>
-                                {option}
-                              </Text>
-                            </View>
-                          );
-                        })}
+                            return (
+                              <View
+                                key={optIndex}
+                                style={[
+                                  styles.optionButton,
+                                  styles.optionButtonTwoColumns,
+                                ]}
+                              >
+                                <Ionicons
+                                  name={
+                                    isMultiple
+                                      ? "checkbox-outline"
+                                      : "radio-button-off"
+                                  }
+                                  size={20}
+                                  color="#9CA3AF"
+                                />
+                                <Text style={styles.optionButtonText}>
+                                  {option}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
                       </ScrollView>
                     </View>
-                  ) : question.options.length >= 2 ? (
-                    <View style={styles.optionsContainerRow}>
+                  ) : (
+                    <View style={[
+                      styles.optionsContainer, 
+                      question.options && question.options.length >= 2 && styles.optionsContainerTwoColumns
+                    ]}>
                       {question.options.map((option, optIndex) => {
                         const isMultiple =
                           question.type === "multiple_choice" ||
                           question.type === "checkbox";
+
+                        const shouldUseTwoColumns = question.options && question.options.length >= 2;
 
                         return (
                           <View
                             key={optIndex}
                             style={[
                               styles.optionButton,
-                              styles.optionButtonHorizontal,
+                              shouldUseTwoColumns && styles.optionButtonTwoColumns,
                             ]}
-                          >
-                            <Ionicons
-                              name={
-                                isMultiple
-                                  ? "checkbox-outline"
-                                  : "radio-button-off"
-                              }
-                              size={20}
-                              color="#9CA3AF"
-                            />
-                            <Text style={styles.optionButtonText}>
-                              {option}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ) : (
-                    <View style={styles.optionsContainer}>
-                      {question.options.map((option, optIndex) => {
-                        const isMultiple =
-                          question.type === "multiple_choice" ||
-                          question.type === "checkbox";
-
-                        return (
-                          <View
-                            key={optIndex}
-                            style={styles.optionButton}
                           >
                             <Ionicons
                               name={
@@ -398,7 +375,7 @@ export default function SurveyPreview() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.archiveButton]}
@@ -420,14 +397,21 @@ export default function SurveyPreview() {
             onPress={handlePublish}
             disabled={actionLoading || survey?.draft === "published"}
           >
-            {actionLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.publishButtonText}>Publish</Text>
-              </>
-            )}
+            <LinearGradient
+              colors={["#5FA9F5", "#4A63D8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.publishButtonGradient}
+            >
+              {actionLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.publishButtonText}>Publish</Text>
+                </>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -435,8 +419,15 @@ export default function SurveyPreview() {
             onPress={handleEdit}
             disabled={actionLoading}
           >
-            <Ionicons name="pencil-outline" size={18} color="#3B82F6" />
-            <Text style={styles.editButtonText}>Edit</Text>
+            <LinearGradient
+              colors={["#2BB6E9", "#35E0E6"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.editButtonGradient}
+            >
+              <Ionicons name="pencil-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.editButtonText}>Edit</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -501,7 +492,7 @@ export default function SurveyPreview() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
   },
   centerContainer: {
     flex: 1,
@@ -511,177 +502,206 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 14,
+    fontSize: 15,
     color: "#6B7280",
+    fontWeight: "500",
   },
   errorText: {
     marginTop: 16,
-    fontSize: 14,
+    fontSize: 15,
     color: "#EF4444",
     textAlign: "center",
+    fontWeight: "500",
   },
   retryButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
+    marginTop: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 20,
+    overflow: "hidden",
   },
   retryButtonText: {
     color: "#FFFFFF",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 16,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
+    paddingBottom: 32,
   },
   previewBadge: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
-    marginBottom: 16,
-    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: "#F0F9FF",
+    marginBottom: 20,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#E0F2FE",
   },
   previewBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#3B82F6",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2BB6E9",
+    letterSpacing: 0.3,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 28,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 12,
+    marginBottom: 14,
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
   description: {
     fontSize: 16,
     color: "#6B7280",
-    lineHeight: 24,
-    marginBottom: 16,
+    lineHeight: 26,
+    marginBottom: 20,
+    fontWeight: "400",
   },
   metadata: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 16,
+    gap: 12,
+    marginTop: 4,
   },
   metadataItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   editIcon: {
-    marginLeft: 4,
+    marginLeft: 6,
   },
   metadataText: {
     fontSize: 14,
-    color: "#6B7280",
-  },
-  pointsText: {
-    color: "#F59E0B",
+    color: "#4B5563",
     fontWeight: "600",
   },
+  pointsText: {
+    color: "#8A4DE8",
+    fontWeight: "700",
+  },
   questionsSection: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 16,
+    marginBottom: 20,
+    letterSpacing: -0.3,
   },
   emptyQuestions: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
   },
   emptyQuestionsText: {
-    marginTop: 8,
-    fontSize: 14,
+    marginTop: 12,
+    fontSize: 15,
     color: "#9CA3AF",
     textAlign: "center",
+    fontWeight: "500",
   },
   questionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    shadowColor: "#000",
+    shadowColor: "#4A63D8",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   questionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   questionNumber: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#4A63D8",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#5FA9F5",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   requiredBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    backgroundColor: "#EEF5FF",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
   },
   requiredText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#4A63D8",
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2BB6E9",
+    letterSpacing: 0.3,
   },
   questionText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#222222",
-    marginBottom: 12,
-    lineHeight: 24,
+    color: "#111827",
+    marginBottom: 16,
+    lineHeight: 26,
+    letterSpacing: -0.2,
   },
   questionType: {
-    marginBottom: 12,
+    marginBottom: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: "flex-start",
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
   },
   questionTypeText: {
     fontSize: 12,
     color: "#6B7280",
-    fontStyle: "italic",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   optionsContainer: {
     marginTop: 12,
     gap: 10,
   },
-  optionsContainerRow: {
-    marginTop: 12,
+  optionsContainerTwoColumns: {
     flexDirection: "row",
-    gap: 10,
+    flexWrap: "wrap",
   },
   optionsContainerWithScroll: {
     marginTop: 12,
   },
   optionsScrollView: {
-    maxHeight: 80,
-  },
-  optionsScrollContent: {
-    gap: 10,
-    paddingRight: 10,
+    maxHeight: 200,
   },
   optionButton: {
     flexDirection: "row",
@@ -697,7 +717,9 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  optionButtonHorizontal: {
+  optionButtonTwoColumns: {
+    flexBasis: "48%",
+    flexGrow: 0,
     flexShrink: 0,
   },
   optionButtonText: {
@@ -707,11 +729,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    padding: 24,
+    padding: 20,
     paddingTop: 16,
     backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
     borderTopColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
   },
   buttonRow: {
     flexDirection: "row",
@@ -722,116 +749,143 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 6,
+    gap: 8,
+    borderWidth: 1.5,
   },
   archiveButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#FAFBFC",
+    borderColor: "#E5E7EB",
   },
   archiveButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#6B7280",
   },
   publishButton: {
-    backgroundColor: "#10B981",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  publishButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    gap: 8,
   },
   publishButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#FFFFFF",
   },
   editButton: {
-    backgroundColor: "#EFF6FF",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  editButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    gap: 8,
   },
   editButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#3B82F6",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   modalContent: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 24,
     width: "100%",
     maxWidth: 400,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 12,
+    overflow: "hidden",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
+    padding: 24,
+    borderBottomWidth: 1.5,
     borderBottomColor: "#E5E7EB",
+    backgroundColor: "#FAFBFC",
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     color: "#111827",
+    letterSpacing: -0.3,
   },
   modalBody: {
-    padding: 20,
+    padding: 24,
   },
   modalLabel: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#374151",
-    marginBottom: 8,
+    marginBottom: 12,
+    letterSpacing: -0.2,
   },
   modalInput: {
     backgroundColor: "#F9FAFB",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
     color: "#111827",
+    fontWeight: "500",
   },
   modalFooter: {
     flexDirection: "row",
-    padding: 20,
-    borderTopWidth: 1,
+    padding: 24,
+    borderTopWidth: 1.5,
     borderTopColor: "#E5E7EB",
     gap: 12,
+    backgroundColor: "#FAFBFC",
   },
   modalCancelButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: "center",
     backgroundColor: "#F3F4F6",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
   modalCancelButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#374151",
   },
   modalSaveButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: "center",
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#4A63D8",
+    borderWidth: 1.5,
+    borderColor: "#4338CA",
   },
   modalSaveButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
   },
 });

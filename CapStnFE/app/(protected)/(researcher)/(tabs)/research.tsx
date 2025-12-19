@@ -235,7 +235,7 @@ export default function ResearcherResearch() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

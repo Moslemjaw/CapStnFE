@@ -171,17 +171,17 @@ export default function SurveyRespondentPreview() {
       {/* Header with close button */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color="#8A4DE8" />
+          <Ionicons name="close" size={22} color="#6B7280" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.moreButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color="#505050" />
+          <Ionicons name="ellipsis-vertical" size={22} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+        <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomNavHeight + 16 }}
+        contentContainerStyle={{ paddingBottom: bottomNavHeight + 8 }}
       >
         {/* Survey Overview */}
         <View style={styles.overviewSection}>
@@ -231,31 +231,84 @@ export default function SurveyRespondentPreview() {
                 <View style={styles.textResponseField}>
                   <Text style={styles.textResponseText}>Text response</Text>
                 </View>
-              ) : (
-                question.options && question.options.length > 6 ? (
-                  <ScrollView 
-                    style={styles.optionsScrollView}
-                    nestedScrollEnabled={true}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    <View style={[styles.optionsPreview, styles.optionsPreviewTwoColumns]}>
-                      {question.options.map((option, optIndex) => (
-                        <View key={optIndex} style={[styles.optionCard, styles.optionCardTwoColumns]}>
-                          <Text style={styles.optionText}>{option}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </ScrollView>
-                ) : (
-                  <View style={[styles.optionsPreview, question.options && question.options.length > 3 && styles.optionsPreviewTwoColumns]}>
-                    {question.options?.map((option, optIndex) => (
-                      <View key={optIndex} style={[styles.optionCard, question.options && question.options.length > 3 && styles.optionCardTwoColumns]}>
-                        <Text style={styles.optionText}>{option}</Text>
+              ) : question.options && question.options.length > 0 ? (
+                question.options.length >= 6 ? (
+                  <View style={styles.optionsContainerWithScroll}>
+                    <ScrollView 
+                      style={styles.optionsScrollView}
+                      nestedScrollEnabled={true}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      <View style={[styles.optionsContainer, styles.optionsContainerTwoColumns]}>
+                        {question.options.map((option, optIndex) => {
+                          const isMultiple =
+                            question.type === "multiple_choice" ||
+                            question.type === "checkbox";
+
+                          return (
+                            <View
+                              key={optIndex}
+                              style={[
+                                styles.optionButton,
+                                styles.optionButtonTwoColumns,
+                              ]}
+                            >
+                              <Ionicons
+                                name={
+                                  isMultiple
+                                    ? "checkbox-outline"
+                                    : "radio-button-off"
+                                }
+                                size={20}
+                                color="#9CA3AF"
+                              />
+                              <Text style={styles.optionButtonText}>
+                                {option}
+                              </Text>
+                            </View>
+                          );
+                        })}
                       </View>
-                    ))}
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <View style={[
+                    styles.optionsContainer, 
+                    question.options && question.options.length >= 2 && styles.optionsContainerTwoColumns
+                  ]}>
+                    {question.options.map((option, optIndex) => {
+                      const isMultiple =
+                        question.type === "multiple_choice" ||
+                        question.type === "checkbox";
+
+                      const shouldUseTwoColumns = question.options && question.options.length >= 2;
+
+                      return (
+                        <View
+                          key={optIndex}
+                          style={[
+                            styles.optionButton,
+                            shouldUseTwoColumns && styles.optionButtonTwoColumns,
+                          ]}
+                        >
+                          <Ionicons
+                            name={
+                              isMultiple
+                                ? "checkbox-outline"
+                                : "radio-button-off"
+                            }
+                            size={20}
+                            color="#9CA3AF"
+                          />
+                          <Text style={styles.optionButtonText}>
+                            {option}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
                 )
-              )}
+              ) : null}
             </View>
           ))}
         </View>
@@ -265,16 +318,16 @@ export default function SurveyRespondentPreview() {
       </ScrollView>
 
       {/* Fixed Survey Information */}
-      <View style={[styles.fixedInfoSection, { bottom: bottomNavHeight + 12 + 78 + 2 }]}>
+      <View style={[styles.fixedInfoSection, { bottom: bottomNavHeight + 8 + 78 + 2 + 16 }]}>
         <LinearGradient
-          colors={["#F9F6FE", "#F5F2F9"]}
+          colors={["#F0F9FF", "#EFF6FF", "#F0F9FF"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.infoSectionGradient}
         >
           <View style={styles.infoHeader}>
             <View style={styles.infoIconContainer}>
-              <Ionicons name="information-circle" size={11} color="#FFFFFF" />
+              <Ionicons name="information-circle" size={12} color="#FFFFFF" />
             </View>
             <Text style={styles.infoSectionTitle}>Survey Information</Text>
           </View>
@@ -300,7 +353,7 @@ export default function SurveyRespondentPreview() {
       </View>
 
       {/* Fixed Start Survey Button */}
-      <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight + 12 }]}>
+      <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight + 8 }]}>
         <TouchableOpacity style={styles.startButton} onPress={handleStartSurvey}>
           <LinearGradient
             colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
@@ -327,15 +380,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    paddingVertical: 16,
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#FAFBFC",
   },
   closeButton: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
   },
   moreButton: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
   },
   scrollView: {
     flex: 1,
@@ -348,257 +406,309 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 14,
+    fontSize: 15,
     color: "#6B7280",
+    fontWeight: "500",
   },
   errorText: {
     marginTop: 16,
-    fontSize: 14,
+    fontSize: 15,
     color: "#EF4444",
     textAlign: "center",
+    fontWeight: "500",
   },
   retryButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#4A63D8",
-    borderRadius: 8,
+    marginTop: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 20,
+    overflow: "hidden",
   },
   retryButtonText: {
     color: "#FFFFFF",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 16,
   },
   overviewSection: {
-    padding: 24,
+    padding: 20,
+    paddingBottom: 24,
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#E5E7EB",
   },
   surveyTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
-    color: "#222222",
-    marginBottom: 12,
+    color: "#111827",
+    marginBottom: 14,
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
   surveyDescription: {
     fontSize: 16,
-    color: "#505050",
-    lineHeight: 24,
-    marginBottom: 20,
+    color: "#6B7280",
+    lineHeight: 26,
+    marginBottom: 24,
+    fontWeight: "400",
   },
   creatorInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    marginTop: 8,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
   creatorAvatar: {
-    marginRight: 12,
+    marginRight: 14,
   },
   creatorImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
   },
   creatorAvatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#EEF5FF",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#BAE6FD",
   },
   creatorInitials: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     color: "#4A63D8",
+    letterSpacing: 0.5,
   },
   creatorDetails: {
     flex: 1,
   },
   creatorName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#222222",
-    marginBottom: 2,
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+    letterSpacing: -0.2,
   },
   creatorLabel: {
     fontSize: 14,
-    color: "#505050",
+    color: "#6B7280",
+    fontWeight: "500",
   },
   questionsSection: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    marginBottom: 32,
+    marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#222222",
-    marginBottom: 16,
+    color: "#111827",
+    marginBottom: 20,
+    letterSpacing: -0.3,
   },
   questionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   questionText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#222222",
-    marginBottom: 12,
+    color: "#111827",
+    marginBottom: 16,
+    lineHeight: 26,
+    letterSpacing: -0.2,
   },
   textResponseField: {
     backgroundColor: "#F9FAFB",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
+    minHeight: 60,
   },
   textResponseText: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#9CA3AF",
+    fontWeight: "500",
+    fontStyle: "italic",
   },
-  optionsPreview: {
+  optionsContainer: {
+    marginTop: 12,
     gap: 10,
   },
-  optionsPreviewTwoColumns: {
+  optionsContainerTwoColumns: {
     flexDirection: "row",
     flexWrap: "wrap",
+  },
+  optionsContainerWithScroll: {
+    marginTop: 12,
   },
   optionsScrollView: {
     maxHeight: 200,
   },
-  optionCard: {
-    backgroundColor: "#FFFFFF",
+  optionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  optionCardTwoColumns: {
+  optionButtonTwoColumns: {
     flexBasis: "48%",
     flexGrow: 0,
     flexShrink: 0,
   },
-  optionText: {
+  optionButtonText: {
     fontSize: 14,
     color: "#222222",
+    marginLeft: 12,
+    flex: 1,
   },
   viewMoreButton: {
-    marginTop: 4,
+    marginTop: 8,
   },
   viewMoreText: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#4A63D8",
-    fontWeight: "600",
+    fontWeight: "700",
   },
   fixedInfoSection: {
     position: "absolute",
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     zIndex: 10,
     marginBottom: 0,
     marginTop: 0,
   },
   infoSectionGradient: {
-    borderRadius: 18,
-    padding: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    borderRadius: 22,
+    padding: 18,
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
   infoHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    marginBottom: 14,
+    gap: 10,
+    marginBottom: 16,
   },
   infoIconContainer: {
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: "#4A63D8",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   infoGrid: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
   infoItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   infoNumber: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#222222",
-    marginBottom: 4,
+    color: "#111827",
+    marginBottom: 6,
+    letterSpacing: -0.3,
   },
   infoLabel: {
-    fontSize: 9,
-    color: "#505050",
+    fontSize: 10,
+    color: "#6B7280",
     textAlign: "center",
-    fontWeight: "500",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   bottomSpacer: {
-    height: 250,
+    height: 119,
   },
   fixedButtonContainer: {
     position: "absolute",
     left: 0,
     right: 0,
     backgroundColor: "transparent",
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     alignItems: "center",
   },
   startButton: {
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: "hidden",
     shadowColor: "#4A63D8",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
     width: "100%",
     maxWidth: 400,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   startButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 18,
-    gap: 8,
+    paddingVertical: 20,
+    gap: 10,
+    minHeight: 58,
   },
   startButtonText: {
     fontSize: 18,
     fontWeight: "700",
     color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
   infoSectionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#222222",
+    color: "#111827",
+    letterSpacing: -0.2,
   },
 });
 

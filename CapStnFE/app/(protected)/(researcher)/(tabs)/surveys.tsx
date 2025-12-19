@@ -272,10 +272,19 @@ export default function ResearcherSurveys() {
   );
 
   const handleSurveyAction = (survey: SurveyWithMetadata) => {
-    router.push({
-      pathname: "/(protected)/(researcher)/survey-respondent-preview",
-      params: { surveyId: survey._id },
-    } as any);
+    // If user has already answered, go directly to view page showing their answers
+    if (survey.isAnswered) {
+      router.push({
+        pathname: "/(protected)/(researcher)/survey-view",
+        params: { surveyId: survey._id },
+      } as any);
+    } else {
+      // Otherwise, go to preview page
+      router.push({
+        pathname: "/(protected)/(researcher)/survey-respondent-preview",
+        params: { surveyId: survey._id },
+      } as any);
+    }
   };
 
   const clearFilters = () => {
@@ -416,7 +425,7 @@ export default function ResearcherSurveys() {
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false} 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
       >
 
         {/* Status Dropdown Modal */}

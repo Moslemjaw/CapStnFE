@@ -270,7 +270,7 @@ export default function SurveyDetails() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.previewButton]}

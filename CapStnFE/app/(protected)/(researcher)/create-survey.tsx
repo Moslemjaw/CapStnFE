@@ -572,7 +572,7 @@ export default function CreateSurvey() {
         </ScrollView>
 
         {/* Action Buttons */}
-        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
+        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
           <TouchableOpacity
             style={[styles.actionButtonFooter, styles.archiveButton]}
             onPress={handleArchive}

@@ -363,7 +363,11 @@ export default function SurveyView() {
       >
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            hasAnswered && userResponse && styles.scrollContentWithCompleted,
+            !hasAnswered && styles.scrollContentWithSubmit,
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Survey Header */}
@@ -382,39 +386,6 @@ export default function SurveyView() {
                 <Text style={styles.progressText}>
                   {questions.filter((q) => answers[q._id]).length} / {questions.length} answered
                 </Text>
-              </View>
-            )}
-
-            {/* Already Completed Banner */}
-            {hasAnswered && userResponse && (
-              <View style={styles.completedBanner}>
-                <View style={styles.completedHeader}>
-                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                  <View style={styles.completedTextContainer}>
-                    <Text style={styles.completedTitle}>Survey Completed</Text>
-                    <Text style={styles.completedSubtext}>
-                      Viewing your response from{" "}
-                      {new Date(
-                        userResponse.submittedAt || ""
-                      ).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.completedStats}>
-                  <View style={styles.completedStat}>
-                    <Ionicons name="time-outline" size={14} color="#6B7280" />
-                    <Text style={styles.completedStatText}>
-                      Took {Math.round((userResponse.durationMs || 0) / 60000)}{" "}
-                      min
-                    </Text>
-                  </View>
-                  <View style={styles.completedStat}>
-                    <Ionicons name="trophy" size={14} color="#F59E0B" />
-                    <Text style={styles.completedStatText}>
-                      +{survey.rewardPoints} pts earned
-                    </Text>
-                  </View>
-                </View>
               </View>
             )}
           </View>
@@ -619,34 +590,72 @@ export default function SurveyView() {
               ))
             )}
           </View>
+
+          {/* Spacer for fixed completed section */}
+          {hasAnswered && userResponse && <View style={styles.bottomSpacer} />}
+          {/* Spacer for submit button */}
+          {!hasAnswered && <View style={styles.bottomSpacerSubmit} />}
         </ScrollView>
 
-        {/* Submit Button */}
-        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 16 }]}>
-          <TouchableOpacity
-            style={[
-              styles.answerButton,
-              (submitting || hasAnswered) && styles.answerButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={submitting || hasAnswered}
-          >
+        {/* Submit Button - Only show if survey hasn't been answered */}
+        {!hasAnswered && (
+          <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight }]}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <LinearGradient
+                colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submitButtonGradient}
+              >
+                <Text style={styles.submitButtonText}>Submit Survey</Text>
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Fixed Survey Completed Section - Only show if survey has been answered */}
+        {hasAnswered && userResponse && (
+          <View style={[styles.fixedCompletedSection, { bottom: bottomNavHeight }]}>
             <LinearGradient
-              colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
+              colors={["#F0F9FF", "#EFF6FF", "#F0F9FF"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.answerButtonGradient}
+              style={styles.completedSectionGradient}
             >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.answerButtonText}>
-                  {hasAnswered ? "Already Answered" : "Submit Survey"}
+              <View style={styles.completedInfoHeader}>
+                <View style={styles.completedIconContainer}>
+                  <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
+                </View>
+                <Text style={styles.completedSectionTitle}>
+                  Survey completed on {new Date(userResponse.submittedAt || "").toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
                 </Text>
-              )}
+              </View>
+              <View style={styles.completedInfoGrid}>
+                <View style={styles.completedInfoItem}>
+                  <Text style={styles.completedInfoNumber}>
+                    {Math.round((userResponse.durationMs || 0) / 60000)}
+                  </Text>
+                  <Text style={styles.completedInfoLabel}>Minutes</Text>
+                </View>
+                <View style={styles.completedInfoItem}>
+                  <Text style={styles.completedInfoNumber}>+{survey.rewardPoints}</Text>
+                  <Text style={styles.completedInfoLabel}>Points</Text>
+                </View>
+                <View style={styles.completedInfoItem}>
+                  <Text style={styles.completedInfoNumber}>
+                    {questions.filter((q) => answers[q._id]).length}
+                  </Text>
+                  <Text style={styles.completedInfoLabel}>Answered</Text>
+                </View>
+              </View>
             </LinearGradient>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -888,77 +897,128 @@ const styles = StyleSheet.create({
     color: "#4A63D8",
     fontWeight: "600",
   },
-  footer: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+  fixedButtonContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    alignItems: "center",
   },
-  answerButton: {
-    borderRadius: 20,
+  submitButton: {
+    borderRadius: 24,
     overflow: "hidden",
     shadowColor: "#4A63D8",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  answerButtonDisabled: {
-    opacity: 0.6,
-  },
-  answerButtonGradient: {
-    paddingVertical: 18,
-    paddingHorizontal: 24,
+  submitButtonGradient: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 56,
+    paddingVertical: 20,
+    gap: 10,
+    minHeight: 58,
   },
-  answerButtonText: {
+  submitButtonText: {
     fontSize: 18,
     fontWeight: "700",
     color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
-  completedBanner: {
-    backgroundColor: "#ECFDF5",
-    borderWidth: 1,
-    borderColor: "#10B981",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
+  fixedCompletedSection: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 5,
+    zIndex: 10,
   },
-  completedHeader: {
+  completedSectionGradient: {
+    borderRadius: 22,
+    padding: 14,
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+  },
+  completedInfoHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 16,
   },
-  completedTextContainer: {
-    flex: 1,
+  completedIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#10B981",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  completedTitle: {
-    fontSize: 16,
+  completedSectionTitle: {
+    fontSize: 15,
     fontWeight: "700",
-    color: "#065F46",
-    marginBottom: 2,
+    color: "#111827",
+    letterSpacing: -0.2,
   },
-  completedSubtext: {
-    fontSize: 13,
-    color: "#047857",
-  },
-  completedStats: {
+  completedInfoGrid: {
     flexDirection: "row",
-    gap: 16,
+    gap: 10,
   },
-  completedStat: {
-    flexDirection: "row",
+  completedInfoItem: {
+    flex: 1,
     alignItems: "center",
-    gap: 6,
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  completedStatText: {
-    fontSize: 12,
+  completedInfoNumber: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  completedInfoLabel: {
+    fontSize: 10,
     color: "#6B7280",
-    fontWeight: "500",
+    textAlign: "center",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  bottomSpacer: {
+    height: 119,
+  },
+  scrollContentWithCompleted: {
+    paddingBottom: 102,
+  },
+  scrollContentWithSubmit: {
+    paddingBottom: 70,
+  },
+  bottomSpacerSubmit: {
+    height: 70,
   },
   textInputReadOnly: {
     backgroundColor: "#F3F4F6",

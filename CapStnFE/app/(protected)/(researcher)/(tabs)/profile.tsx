@@ -340,7 +340,7 @@ export default function ResearcherProfile() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
       >
         <View style={styles.content}>
 
