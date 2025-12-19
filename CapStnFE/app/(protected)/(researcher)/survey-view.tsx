@@ -11,7 +11,7 @@ import {
   Platform,
   Image,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -45,6 +45,8 @@ export default function SurveyView() {
   const [checkingAnswered, setCheckingAnswered] = useState(true);
   const [userResponse, setUserResponse] = useState<Response | null>(null);
   const [optionSearchQueries, setOptionSearchQueries] = useState<Record<string, string>>({});
+  const scrollViewRef = useRef<ScrollView>(null);
+  const questionYPositions = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (surveyId) {
@@ -112,6 +114,33 @@ export default function SurveyView() {
     }
   };
 
+  const scrollToNextQuestion = (currentQuestionId: string) => {
+    if (hasAnswered) return; // Don't auto-scroll if already answered
+    
+    const currentIndex = questions.findIndex((q) => q._id === currentQuestionId);
+    if (currentIndex === -1 || currentIndex === questions.length - 1) return;
+
+    // Find next unanswered question
+    let nextIndex = currentIndex + 1;
+    while (nextIndex < questions.length && answers[questions[nextIndex]._id]) {
+      nextIndex++;
+    }
+
+    if (nextIndex < questions.length) {
+      const nextQuestion = questions[nextIndex];
+      const nextQuestionY = questionYPositions.current[nextQuestion._id];
+      
+      if (nextQuestionY !== undefined && scrollViewRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({
+            y: nextQuestionY - 20, // Offset to show question header
+            animated: true,
+          });
+        }, 300); // Small delay for smooth transition
+      }
+    }
+  };
+
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers((prev) => ({
       ...prev,
@@ -146,13 +175,14 @@ export default function SurveyView() {
     questionType: Question["type"]
   ) => {
     if (questionType === "single_choice" || questionType === "dropdown") {
-      // Single selection
+      // Single selection - auto-scroll to next question
       handleAnswerChange(questionId, option);
+      scrollToNextQuestion(questionId);
     } else if (
       questionType === "multiple_choice" ||
       questionType === "checkbox"
     ) {
-      // Multiple selection - toggle option
+      // Multiple selection - toggle option (no auto-scroll for multiple choice)
       const currentAnswer = answers[questionId] || "";
       const selectedOptions = currentAnswer ? currentAnswer.split(",") : [];
       const optionIndex = selectedOptions.indexOf(option);
@@ -417,7 +447,15 @@ export default function SurveyView() {
               </View>
             ) : (
               questions.map((question, index) => (
-                <View key={question._id} style={styles.questionCard}>
+                <View
+                  key={question._id}
+                  onLayout={(event) => {
+                    const { y } = event.nativeEvent.layout;
+                    // Y position relative to ScrollView content - this works directly with scrollTo
+                    questionYPositions.current[question._id] = y;
+                  }}
+                  style={styles.questionCard}
+                >
                   <View style={styles.questionHeader}>
                     <Text style={styles.questionNumber}>
                       Question {index + 1}
@@ -446,6 +484,12 @@ export default function SurveyView() {
                       onChangeText={(text) =>
                         handleAnswerChange(question._id, text)
                       }
+                      onBlur={() => {
+                        // Auto-scroll to next question when user finishes typing
+                        if (answers[question._id] && !hasAnswered) {
+                          scrollToNextQuestion(question._id);
+                        }
+                      }}
                       multiline
                       numberOfLines={4}
                       textAlignVertical="top"
