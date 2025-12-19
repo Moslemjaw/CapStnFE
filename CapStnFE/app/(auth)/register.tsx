@@ -109,14 +109,15 @@ export default function Register() {
   };
 
   return (
-    <LinearGradient
-      colors={["#EEF5FF", "#F9F6FE"]}
-      style={styles.gradientContainer}
-    >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={["#EEF5FF", "#F9F6FE"]}
+        style={styles.gradientContainer}
       >
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -698,12 +699,16 @@ export default function Register() {
           </Pressable>
         </SafeAreaView>
       </Modal>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   gradientContainer: {
     flex: 1,
   },

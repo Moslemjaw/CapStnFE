@@ -3,11 +3,11 @@ import {
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
 } from "react-native";
 import React from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ChoosePath() {
   const router = useRouter();

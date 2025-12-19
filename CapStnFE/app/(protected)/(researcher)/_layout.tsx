@@ -10,41 +10,29 @@ export default function ResearcherLayout() {
         <Stack.Screen
           name="survey-view"
           options={{
-            headerShown: true,
-            title: "Survey Details",
+            headerShown: false,
             presentation: "card",
-            headerBackTitle: "back",
-            headerBackTitleVisible: true,
           }}
         />
         <Stack.Screen
           name="survey-details"
           options={{
-            headerShown: true,
-            title: "Survey Details",
+            headerShown: false,
             presentation: "card",
-            headerBackTitle: "back",
-            headerBackTitleVisible: true,
           }}
         />
         <Stack.Screen
           name="create-survey"
           options={{
-            headerShown: true,
-            title: "Create New Survey",
+            headerShown: false,
             presentation: "card",
-            headerBackTitle: "back",
-            headerBackTitleVisible: true,
           }}
         />
         <Stack.Screen
           name="survey-preview"
           options={{
-            headerShown: true,
-            title: "Survey Preview",
+            headerShown: false,
             presentation: "card",
-            headerBackTitle: "back",
-            headerBackTitleVisible: true,
           }}
         />
         <Stack.Screen
@@ -64,21 +52,15 @@ export default function ResearcherLayout() {
         <Stack.Screen
           name="survey-publish-success"
           options={{
-            headerShown: true,
-            title: "Success",
+            headerShown: false,
             presentation: "card",
-            headerBackTitle: "back",
-            headerBackTitleVisible: true,
           }}
         />
         <Stack.Screen
           name="survey-archive-success"
           options={{
-            headerShown: true,
-            title: "Success",
+            headerShown: false,
             presentation: "card",
-            headerBackTitle: "back",
-            headerBackTitleVisible: true,
           }}
         />
       </Stack>

@@ -17,6 +17,7 @@ import { Redirect, useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AuthContext from "@/context/AuthContext";
 import UserInfo from "@/types/UserInfo";
 import { login } from "@/api/auth";
@@ -150,12 +151,14 @@ export default function Index() {
   // Show loading while checking authentication
   if (isLoading) {
     return (
-      <LinearGradient
-        colors={["#EEF5FF", "#F9F6FE"]}
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      >
-        <ActivityIndicator size="large" color="#4A63D8" />
-      </LinearGradient>
+      <SafeAreaView style={{ flex: 1 }}>
+        <LinearGradient
+          colors={["#EEF5FF", "#F9F6FE"]}
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ActivityIndicator size="large" color="#4A63D8" />
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
@@ -165,14 +168,15 @@ export default function Index() {
   }
 
   return (
-    <LinearGradient
-      colors={["#EEF5FF", "#F9F6FE"]}
-      style={styles.gradientContainer}
-    >
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={["#EEF5FF", "#F9F6FE"]}
+        style={styles.gradientContainer}
+      >
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -330,11 +334,15 @@ export default function Index() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-    </LinearGradient>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   gradientContainer: {
     flex: 1,
   },

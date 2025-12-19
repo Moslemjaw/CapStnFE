@@ -5,11 +5,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  SafeAreaView,
 } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
