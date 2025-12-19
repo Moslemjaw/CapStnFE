@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
 } from "react-native";
 import React, { useEffect, useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -226,6 +227,9 @@ export default function ResearcherResearch() {
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
           <Text style={styles.title}>Research</Text>
           <Text style={styles.subtitle}>
             Manage your surveys and create new ones
@@ -516,15 +520,26 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 16,
   },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: "#6B7280",
+    color: "#505050",
   },
   topStatsContainer: {
     flexDirection: "row",

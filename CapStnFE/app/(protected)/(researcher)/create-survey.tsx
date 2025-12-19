@@ -12,6 +12,7 @@ import {
   Modal,
   Pressable,
   Switch,
+  Image,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -448,6 +449,16 @@ export default function CreateSurvey() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.headerTitle}>{isEditMode ? "Edit Survey" : "Create Survey"}</Text>
+          <Text style={styles.headerSubtitle}>Build your survey with questions and options</Text>
+        </View>
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
@@ -871,6 +882,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
+  },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  header: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#505050",
   },
   keyboardView: {
     flex: 1,

@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -356,6 +357,16 @@ export default function SurveyView() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.headerTitle}>Answer Survey</Text>
+          <Text style={styles.headerSubtitle}>{survey.title}</Text>
+        </View>
+      </View>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -370,9 +381,8 @@ export default function SurveyView() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Survey Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>{survey.title}</Text>
+          {/* Survey Info */}
+          <View style={styles.surveyInfo}>
             {survey.description && (
               <Text style={styles.description}>{survey.description}</Text>
             )}
@@ -708,18 +718,57 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 24,
   },
-  header: {
-    marginBottom: 24,
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  title: {
-    fontSize: 28,
+  header: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
+  },
+  headerTitle: {
+    fontSize: 32,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#505050",
+  },
+  surveyInfo: {
+    padding: 24,
+    paddingBottom: 16,
   },
   description: {
     fontSize: 16,
-    color: "#505050",
+    color: "#6B7280",
     lineHeight: 24,
     marginBottom: 20,
   },

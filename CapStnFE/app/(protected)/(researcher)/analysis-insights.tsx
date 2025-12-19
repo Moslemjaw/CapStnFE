@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Share,
+  Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -437,29 +438,49 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 24,
   },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
   header: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  backButton: {
-    marginRight: 16,
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
   },
-  headerTextContainer: {
-    flex: 1,
-  },
-  shareButton: {
-    marginLeft: 16,
-  },
-  title: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
+    color: "#222222",
+    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 14,
-    color: "#6B7280",
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#505050",
   },
   successBadge: {
     flexDirection: "row",

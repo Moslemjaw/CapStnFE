@@ -168,17 +168,17 @@ export default function SurveyRespondentPreview() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with close button */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-          <Ionicons name="close" size={22} color="#6B7280" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.moreButton}>
-          <Ionicons name="ellipsis-vertical" size={22} color="#6B7280" />
-        </TouchableOpacity>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.headerTitle}>Survey Preview</Text>
+          <Text style={styles.headerSubtitle}>Review before answering</Text>
+        </View>
       </View>
-
-        <ScrollView 
+      <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomNavHeight + 8 }}
@@ -375,15 +375,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  topBar: {
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  header: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  logoContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1.5,
-    borderBottomColor: "#E5E7EB",
-    backgroundColor: "#FAFBFC",
+    marginBottom: 16,
+  },
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#505050",
   },
   closeButton: {
     padding: 6,

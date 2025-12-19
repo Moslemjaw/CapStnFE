@@ -333,7 +333,11 @@ export default function ResearcherProfile() {
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
           <Text style={styles.title}>Profile</Text>
+          <Text style={styles.subtitle}>Manage your account and settings</Text>
         </View>
       </View>
 
@@ -906,6 +910,17 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 16,
   },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
+  },
   scrollView: {
     flex: 1,
   },
@@ -917,9 +932,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#505050",
   },
   userCard: {
     backgroundColor: "#FFFFFF",

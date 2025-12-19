@@ -152,12 +152,12 @@ export default function Index() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1 }}>
-        <LinearGradient
-          colors={["#EEF5FF", "#F9F6FE"]}
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <ActivityIndicator size="large" color="#4A63D8" />
-        </LinearGradient>
+      <LinearGradient
+        colors={["#EEF5FF", "#F9F6FE"]}
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <ActivityIndicator size="large" color="#4A63D8" />
+      </LinearGradient>
       </SafeAreaView>
     );
   }
@@ -169,14 +169,14 @@ export default function Index() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={["#EEF5FF", "#F9F6FE"]}
-        style={styles.gradientContainer}
-      >
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
+    <LinearGradient
+      colors={["#EEF5FF", "#F9F6FE"]}
+      style={styles.gradientContainer}
+    >
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -334,7 +334,7 @@ export default function Index() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-      </LinearGradient>
+    </LinearGradient>
     </SafeAreaView>
   );
 }

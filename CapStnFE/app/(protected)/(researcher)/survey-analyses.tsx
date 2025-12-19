@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -207,6 +208,16 @@ export default function SurveyAnalyses() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.headerTitle}>Survey Analyses</Text>
+          <Text style={styles.headerSubtitle}>{survey.title}</Text>
+        </View>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -215,19 +226,6 @@ export default function SurveyAnalyses() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#111827" />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Survey Analyses</Text>
-            <Text style={styles.subtitle}>{survey.title}</Text>
-          </View>
-        </View>
 
         {/* Survey Info Card */}
         <View style={styles.infoCard}>
@@ -378,32 +376,55 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
   },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  header: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#505050",
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 24,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#6B7280",
   },
   infoCard: {
     backgroundColor: "#FFFFFF",

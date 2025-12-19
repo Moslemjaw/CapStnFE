@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Image,
 } from "react-native";
 import React, { useEffect, useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -309,22 +310,17 @@ export default function MassAnalyses() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#111827" />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Mass Analyses</Text>
-            <Text style={styles.subtitle}>
-              Select surveys to analyze together
-            </Text>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
+          <Text style={styles.headerTitle}>Mass Analyses</Text>
+          <Text style={styles.headerSubtitle}>Select surveys to analyze together</Text>
         </View>
+      </View>
+      <View style={styles.content}>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -714,27 +710,49 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
   },
+  fixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
     padding: 24,
     paddingBottom: 16,
   },
-  backButton: {
-    marginRight: 16,
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  headerTextContainer: {
-    flex: 1,
+  titleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
   },
-  title: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
+    color: "#222222",
+    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 14,
-    color: "#6B7280",
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#505050",
   },
   searchContainer: {
     flexDirection: "row",

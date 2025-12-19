@@ -110,14 +110,14 @@ export default function Register() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={["#EEF5FF", "#F9F6FE"]}
-        style={styles.gradientContainer}
+    <LinearGradient
+      colors={["#EEF5FF", "#F9F6FE"]}
+      style={styles.gradientContainer}
+    >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -699,8 +699,8 @@ export default function Register() {
           </Pressable>
         </SafeAreaView>
       </Modal>
-        </KeyboardAvoidingView>
-      </LinearGradient>
+      </KeyboardAvoidingView>
+    </LinearGradient>
     </SafeAreaView>
   );
 }

@@ -14,11 +14,6 @@ export default function ResearcherHome() {
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <Image
-              source={require("@/assets/logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Image
               source={require("@/assets/title.png")}
               style={styles.titleImage}
               resizeMode="contain"
@@ -87,14 +82,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  logo: {
-    width: 32,
-    height: 32,
-    marginRight: 8,
-  },
   titleImage: {
-    height: 24,
-    width: 80,
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
   },
   title: {
     fontSize: 32,

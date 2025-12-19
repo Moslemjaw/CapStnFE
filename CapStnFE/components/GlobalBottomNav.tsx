@@ -8,7 +8,10 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
+  withRepeat,
+  withSequence,
   Easing,
+  interpolateColor,
 } from "react-native-reanimated";
 
 export default function GlobalBottomNav() {
@@ -52,14 +55,52 @@ export default function GlobalBottomNav() {
   const activeTab = getActiveTab();
   const isSightAIActive = activeTab === "sightai";
 
+  // Animate background color for dark mode
+  const navBgColor = useSharedValue(isSightAIActive ? 1 : 0);
+
+  useEffect(() => {
+    navBgColor.value = withTiming(isSightAIActive ? 1 : 0, {
+      duration: 600,
+      easing: Easing.out(Easing.ease),
+    });
+  }, [isSightAIActive]);
+
+  const animatedNavStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      navBgColor.value,
+      [0, 1],
+      ["#FFFFFF", "#1E1E2E"]
+    ),
+    borderTopColor: interpolateColor(
+      navBgColor.value,
+      [0, 1],
+      ["#E5E7EB", "#2D2D3E"]
+    ),
+  }));
+
+  const getNavLabelColor = (isActive: boolean) => {
+    if (isSightAIActive) {
+      return isActive ? "#FFFFFF" : "#9CA3AF";
+    }
+    return isActive ? "#4A63D8" : "#9CA3AF";
+  };
+
+  const getIconColor = (isActive: boolean) => {
+    if (isSightAIActive) {
+      return isActive ? "#FFFFFF" : "#9CA3AF";
+    }
+    return isActive ? "#4A63D8" : "#9CA3AF";
+  };
+
   const handleNavigation = (route: string) => {
     router.push(route as any);
   };
 
   return (
-    <View
+    <Animated.View
       style={[
         styles.bottomNav,
+        animatedNavStyle,
         {
           paddingBottom: Math.max(insets.bottom, 5),
           height: 60 + Math.max(insets.bottom, 5),
@@ -73,12 +114,14 @@ export default function GlobalBottomNav() {
         <Ionicons
           name={activeTab === "home" ? "home" : "home-outline"}
           size={24}
-          color={activeTab === "home" ? "#4A63D8" : "#9CA3AF"}
+          color={getIconColor(activeTab === "home")}
         />
         <Text
           style={[
             styles.navLabel,
             activeTab === "home" && styles.navLabelActive,
+            isSightAIActive && styles.navLabelDark,
+            isSightAIActive && activeTab === "home" && styles.navLabelActiveDark,
           ]}
         >
           Home
@@ -96,12 +139,14 @@ export default function GlobalBottomNav() {
               : "document-text-outline"
           }
           size={24}
-          color={activeTab === "surveys" ? "#4A63D8" : "#9CA3AF"}
+          color={getIconColor(activeTab === "surveys")}
         />
         <Text
           style={[
             styles.navLabel,
             activeTab === "surveys" && styles.navLabelActive,
+            isSightAIActive && styles.navLabelDark,
+            isSightAIActive && activeTab === "surveys" && styles.navLabelActiveDark,
           ]}
         >
           Surveys
@@ -119,12 +164,14 @@ export default function GlobalBottomNav() {
         <Ionicons
           name={activeTab === "research" ? "bulb" : "bulb-outline"}
           size={24}
-          color={activeTab === "research" ? "#4A63D8" : "#9CA3AF"}
+          color={getIconColor(activeTab === "research")}
         />
         <Text
           style={[
             styles.navLabel,
             activeTab === "research" && styles.navLabelActive,
+            isSightAIActive && styles.navLabelDark,
+            isSightAIActive && activeTab === "research" && styles.navLabelActiveDark,
           ]}
         >
           Research
@@ -138,18 +185,20 @@ export default function GlobalBottomNav() {
         <Ionicons
           name={activeTab === "profile" ? "person" : "person-outline"}
           size={24}
-          color={activeTab === "profile" ? "#4A63D8" : "#9CA3AF"}
+          color={getIconColor(activeTab === "profile")}
         />
         <Text
           style={[
             styles.navLabel,
             activeTab === "profile" && styles.navLabelActive,
+            isSightAIActive && styles.navLabelDark,
+            isSightAIActive && activeTab === "profile" && styles.navLabelActiveDark,
           ]}
         >
           Profile
         </Text>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -276,6 +325,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     }
 
     if (!isFocused) {
+      // When not focused: stop continuous animations, use interval-based
       shadowOpacity.value = withTiming(0, {
         duration: 300,
         easing: Easing.in(Easing.ease),
@@ -284,6 +334,8 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
         duration: 300,
         easing: Easing.in(Easing.ease),
       });
+      jellyScaleX.value = withSpring(1, { damping: 15, stiffness: 150 });
+      jellyScaleY.value = withSpring(1, { damping: 15, stiffness: 150 });
 
       const schedule1 = setTimeout(() => triggerCombinedEffect(false), 5000);
       timeoutsRef.current.push(schedule1);
@@ -298,40 +350,58 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
         triggerCombinedEffect(false);
       }, 60000);
     } else {
-      jellyScaleX.value = 1;
-      jellyScaleY.value = 1;
-      triggerJellyEffect(true, false, true);
+      // When focused: permanent continuous "alive" animations
+      // Use sequence to ensure continuous pulsing without pausing at rest state
+      // Start from mid-point and continuously animate between extremes
+      
+      // Continuous jelly breathing effect - never pauses, always pulsing
+      // X and Y are out of phase for natural jelly effect
+      jellyScaleX.value = withRepeat(
+        withSequence(
+          withTiming(0.98, {
+            duration: 1750,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(1.02, {
+            duration: 1750,
+            easing: Easing.inOut(Easing.ease),
+          })
+        ),
+        -1,
+        false
+      );
+      jellyScaleY.value = withRepeat(
+        withSequence(
+          withTiming(1.02, {
+            duration: 1750,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(0.98, {
+            duration: 1750,
+            easing: Easing.inOut(Easing.ease),
+          })
+        ),
+        -1,
+        false
+      );
 
-      shadowOpacity.value = withTiming(0.4, {
-        duration: 500,
-        easing: Easing.out(Easing.ease),
-      });
-      shadowRadius.value = withTiming(15, {
-        duration: 500,
-        easing: Easing.out(Easing.ease),
-      });
-
-      glowIntervalRef.current = setInterval(() => {
-        shadowOpacity.value = withTiming(0.7, {
-          duration: 600,
-          easing: Easing.out(Easing.ease),
-        });
-        shadowRadius.value = withTiming(25, {
-          duration: 600,
-          easing: Easing.out(Easing.ease),
-        });
-
-        setTimeout(() => {
-          shadowOpacity.value = withTiming(0.4, {
-            duration: 1000,
-            easing: Easing.in(Easing.ease),
-          });
-          shadowRadius.value = withTiming(15, {
-            duration: 1000,
-            easing: Easing.in(Easing.ease),
-          });
-        }, 600);
-      }, 13000);
+      // Continuous glow pulse (breathing glow)
+      shadowOpacity.value = withRepeat(
+        withTiming(0.6, {
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        -1,
+        true
+      );
+      shadowRadius.value = withRepeat(
+        withTiming(20, {
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        -1,
+        true
+      );
     }
 
     return () => {
@@ -393,9 +463,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
 const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
     paddingTop: 5,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -422,6 +490,12 @@ const styles = StyleSheet.create({
   },
   navLabelActive: {
     color: "#4A63D8",
+  },
+  navLabelDark: {
+    color: "#9CA3AF",
+  },
+  navLabelActiveDark: {
+    color: "#FFFFFF",
   },
   sightaiButtonContainer: {
     top: -5,
