@@ -310,73 +310,145 @@ export default function SurveyDetails() {
         onRequestClose={() => setShowPreviewModal(false)}
       >
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Survey Preview</Text>
-            <TouchableOpacity
-              onPress={() => setShowPreviewModal(false)}
-              style={styles.closeButton}
-            >
-              <Ionicons name="close" size={24} color="#6B7280" />
-            </TouchableOpacity>
+          {/* Fixed Header Section */}
+          <View style={styles.modalFixedHeader}>
+            <View style={styles.modalHeaderContent}>
+              <View style={styles.modalLogoContainer}>
+                <Image source={require("@/assets/title.png")} style={styles.modalTitleImage} resizeMode="contain" />
+              </View>
+              <View style={styles.modalHeaderTitleRow}>
+                <Text style={styles.modalHeaderTitle}>{survey?.title || "Survey"}</Text>
+                <TouchableOpacity
+                  onPress={() => setShowPreviewModal(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.modalHeaderSubtitle}>Survey preview</Text>
+            </View>
           </View>
 
           <ScrollView
             style={styles.modalScrollView}
             contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.previewHeader}>
-              <Text style={styles.previewTitle}>{survey.title}</Text>
-              {survey.description && (
-                <Text style={styles.previewDescription}>
-                  {survey.description}
-                </Text>
+            {/* Survey Info */}
+            <View style={styles.modalSurveyInfo}>
+              {survey?.description && (
+                <Text style={styles.modalDescription}>{survey.description}</Text>
               )}
             </View>
 
-            <View style={styles.previewQuestions}>
-              {questions.map((question, index) => (
-                <View key={question._id} style={styles.previewQuestionCard}>
-                  <View style={styles.questionHeader}>
-                    <Text style={styles.questionNumber}>
-                      Question {index + 1}
-                    </Text>
-                    {question.isRequired && (
-                      <View style={styles.requiredBadge}>
-                        <Text style={styles.requiredText}>Required</Text>
-                      </View>
-                    )}
-                  </View>
+            {/* Questions Section */}
+            <View style={styles.modalQuestionsSection}>
+              <Text style={styles.modalSectionTitle}>Questions</Text>
 
-                  <Text style={styles.questionText}>{question.text}</Text>
-
-                  <View style={styles.questionType}>
-                    <Text style={styles.questionTypeText}>
-                      Type: {getQuestionTypeLabel(question.type)}
-                    </Text>
-                  </View>
-
-                  {question.options && question.options.length > 0 && (
-                    <View style={styles.optionsContainer}>
-                      <Text style={styles.optionsLabel}>Options:</Text>
-                      {question.options.map((option, optIndex) => (
-                        <View key={optIndex} style={styles.optionItem}>
-                          <Ionicons
-                            name={
-                              question.type === "single_choice" ||
-                              question.type === "dropdown"
-                                ? "radio-button-on"
-                                : "checkbox-outline"
-                            }
-                            size={16}
-                            color="#6B7280"
-                          />
-                          <Text style={styles.optionText}>{option}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
+              {questions.length === 0 ? (
+                <View style={styles.modalEmptyQuestions}>
+                  <Ionicons name="help-circle-outline" size={32} color="#9CA3AF" />
+                  <Text style={styles.modalEmptyQuestionsText}>
+                    No questions available for this survey
+                  </Text>
                 </View>
-              ))}
+              ) : (
+                questions.map((question, index) => (
+                  <View key={question._id} style={styles.modalQuestionCard}>
+                    <View style={styles.modalQuestionHeader}>
+                      <Text style={styles.modalQuestionNumber}>
+                        Question {index + 1}
+                      </Text>
+                      {question.isRequired && (
+                        <View style={styles.modalRequiredBadge}>
+                          <Text style={styles.modalRequiredText}>Required</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.modalQuestionText}>{question.text}</Text>
+
+                    {question.options && question.options.length > 0 ? (
+                      question.options.length >= 6 ? (
+                        <View style={styles.modalOptionsContainerWithScroll}>
+                          <ScrollView 
+                            style={styles.modalOptionsScrollView}
+                            nestedScrollEnabled={true}
+                            showsVerticalScrollIndicator={false}
+                          >
+                            <View style={[styles.modalOptionsContainer, styles.modalOptionsContainerTwoColumns]}>
+                              {question.options.map((option, optIndex) => {
+                                const isMultiple =
+                                  question.type === "multiple_choice" ||
+                                  question.type === "checkbox";
+
+                                return (
+                                  <View
+                                    key={optIndex}
+                                    style={[
+                                      styles.modalOptionButton,
+                                      styles.modalOptionButtonTwoColumns,
+                                    ]}
+                                  >
+                                    <Ionicons
+                                      name={
+                                        isMultiple
+                                          ? "checkbox-outline"
+                                          : "radio-button-off"
+                                      }
+                                      size={20}
+                                      color="#9CA3AF"
+                                    />
+                                    <Text style={styles.modalOptionButtonText}>
+                                      {option}
+                                    </Text>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          </ScrollView>
+                        </View>
+                      ) : (
+                        <View style={[
+                          styles.modalOptionsContainer, 
+                          question.options && question.options.length >= 2 && styles.modalOptionsContainerTwoColumns
+                        ]}>
+                          {question.options.map((option, optIndex) => {
+                            const isMultiple =
+                              question.type === "multiple_choice" ||
+                              question.type === "checkbox";
+
+                            const shouldUseTwoColumns = question.options && question.options.length >= 2;
+
+                            return (
+                              <View
+                                key={optIndex}
+                                style={[
+                                  styles.modalOptionButton,
+                                  shouldUseTwoColumns && styles.modalOptionButtonTwoColumns,
+                                ]}
+                              >
+                                <Ionicons
+                                  name={
+                                    isMultiple
+                                      ? "checkbox-outline"
+                                      : "radio-button-off"
+                                  }
+                                  size={20}
+                                  color="#9CA3AF"
+                                />
+                                <Text style={styles.modalOptionButtonText}>
+                                  {option}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )
+                    ) : null}
+                  </View>
+                ))
+              )}
             </View>
           </ScrollView>
         </SafeAreaView>
@@ -864,24 +936,59 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
   },
-  modalHeader: {
+  modalFixedHeader: {
+    backgroundColor: "#FFFFFF",
+    zIndex: 10,
+    paddingBottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalHeaderContent: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  modalLogoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitleImage: {
+    height: 28,
+    width: 92,
+    marginLeft: -8,
+    marginTop: -4,
+  },
+  modalHeaderTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    marginBottom: 8,
   },
-  modalTitle: {
-    fontSize: 20,
+  modalHeaderTitle: {
+    fontSize: 32,
     fontWeight: "700",
-    color: "#111827",
+    color: "#222222",
   },
-  closeButton: {
+  modalCloseButton: {
     padding: 4,
+  },
+  modalHeaderSubtitle: {
+    fontSize: 16,
+    color: "#505050",
   },
   modalScrollView: {
     flex: 1,
@@ -889,33 +996,118 @@ const styles = StyleSheet.create({
   modalScrollContent: {
     padding: 24,
   },
-  previewHeader: {
-    marginBottom: 24,
+  modalSurveyInfo: {
+    padding: 24,
+    paddingBottom: 16,
   },
-  previewTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 12,
-  },
-  previewDescription: {
+  modalDescription: {
     fontSize: 16,
     color: "#6B7280",
     lineHeight: 24,
+    marginBottom: 20,
   },
-  previewQuestions: {
+  modalQuestionsSection: {
     marginBottom: 24,
   },
-  previewQuestionCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+  modalSectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#222222",
     marginBottom: 16,
+  },
+  modalEmptyQuestions: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  modalEmptyQuestionsText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#9CA3AF",
+    textAlign: "center",
+  },
+  modalQuestionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
+  },
+  modalQuestionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  modalQuestionNumber: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#4A63D8",
+  },
+  modalRequiredBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: "#EEF5FF",
+  },
+  modalRequiredText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#4A63D8",
+  },
+  modalQuestionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#222222",
+    marginBottom: 12,
+    lineHeight: 24,
+  },
+  modalOptionsContainer: {
+    marginTop: 12,
+    gap: 10,
+  },
+  modalOptionsContainerTwoColumns: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  modalOptionsContainerWithScroll: {
+    marginTop: 12,
+  },
+  modalOptionsScrollView: {
+    maxHeight: 200,
+  },
+  modalOptionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  modalOptionButtonTwoColumns: {
+    flexBasis: "48%",
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  modalOptionButtonText: {
+    fontSize: 14,
+    color: "#222222",
+    marginLeft: 12,
+    flex: 1,
   },
   questionHeader: {
     flexDirection: "row",

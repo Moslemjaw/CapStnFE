@@ -25,7 +25,6 @@ import Animated, {
   interpolateColor,
   runOnJS,
 } from "react-native-reanimated";
-import { SkeletonBox, SkeletonText, SkeletonCard } from "@/components/SkeletonLoader";
 import { getAllAnalyses, AnalysisResponse } from "@/api/ai";
 import { getResponsesByUserId } from "@/api/responses";
 import { getUser } from "@/api/storage";
@@ -433,129 +432,8 @@ export default function SightAI() {
     return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) !== 1 ? "s" : ""} ago`;
   };
 
-  // Skeleton loading component - complete redesign with premium polish
-  const renderSkeleton = () => (
-    <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.animatedBg, animatedBgStyle]}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <Animated.View style={animatedContentStyle}>
-            {/* Header Skeleton - using exact style objects */}
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <SkeletonBox width={92} height={28} borderRadius={4} darkMode={true} />
-              </View>
-              <SkeletonBox width="80%" height={16} borderRadius={4} darkMode={true} />
-            </View>
-
-            {/* AI Card Skeleton - gradient-like background with exact structure */}
-            <View style={styles.aiCardContainer}>
-              <View style={[styles.aiCard, { backgroundColor: "#1E1E3F" }]}>
-                <View style={styles.aiIconContainer}>
-                  <View style={styles.aiIconCircle}>
-                    <SkeletonBox width={32} height={32} borderRadius={16} darkMode={true} />
-                  </View>
-                </View>
-                <SkeletonBox 
-                  width="80%" 
-                  height={28} 
-                  borderRadius={4} 
-                  style={{ alignSelf: "center", marginBottom: 12 }} 
-                  darkMode={true} 
-                />
-                <SkeletonText 
-                  lines={2} 
-                  width="100%" 
-                  lineHeight={16} 
-                  style={{ marginBottom: 24 }} 
-                  darkMode={true} 
-                />
-                <View style={styles.massAnalyzeButton}>
-                  <SkeletonBox width="100%" height={50} borderRadius={12} darkMode={true} />
-                </View>
-              </View>
-            </View>
-
-            {/* Stats Skeleton - exact stat card structure */}
-            <View style={styles.statsContainer}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.statCard}>
-                  <SkeletonBox 
-                    width="60%" 
-                    height={24} 
-                    borderRadius={4} 
-                    style={{ marginBottom: 4 }} 
-                    darkMode={true} 
-                  />
-                  <SkeletonBox 
-                    width="50%" 
-                    height={14} 
-                    borderRadius={4} 
-                    darkMode={true} 
-                  />
-                </View>
-              ))}
-            </View>
-
-            {/* Personal Insights Section Skeleton - complete structure */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <SkeletonBox width={150} height={20} borderRadius={4} darkMode={true} />
-                <SkeletonBox width={100} height={14} borderRadius={4} darkMode={true} />
-              </View>
-              
-              {/* Analyze Button Skeleton */}
-              <View style={styles.analyzeAnsweredButton}>
-                <SkeletonBox width={20} height={20} borderRadius={10} darkMode={true} />
-                <SkeletonBox width={200} height={16} borderRadius={4} darkMode={true} />
-              </View>
-
-              {/* Insight Cards Skeleton - full structure matching actual cards */}
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.insightCard}>
-                  <View style={styles.insightCardHeader}>
-                    <View style={styles.insightCardHeaderLeft}>
-                      <View style={styles.insightIcon}>
-                        <SkeletonBox width={20} height={20} borderRadius={10} darkMode={true} />
-                      </View>
-                      <SkeletonBox width={80} height={12} borderRadius={4} darkMode={true} />
-                    </View>
-                    <View style={styles.shareButton}>
-                      <SkeletonBox width={20} height={20} borderRadius={10} darkMode={true} />
-                    </View>
-                  </View>
-                  <SkeletonBox 
-                    width="70%" 
-                    height={18} 
-                    borderRadius={4} 
-                    style={{ marginBottom: 8 }} 
-                    darkMode={true} 
-                  />
-                  <SkeletonText 
-                    lines={3} 
-                    width="100%" 
-                    lineHeight={14} 
-                    style={{ marginBottom: 12 }} 
-                    darkMode={true} 
-                  />
-                  <View style={styles.tagsContainer}>
-                    <SkeletonBox width={100} height={20} borderRadius={6} darkMode={true} />
-                    <SkeletonBox width={120} height={20} borderRadius={6} darkMode={true} />
-                    <SkeletonBox width={90} height={20} borderRadius={6} darkMode={true} />
-                  </View>
-                  <View style={styles.viewReportButton}>
-                    <SkeletonBox width={140} height={14} borderRadius={4} darkMode={true} />
-                  </View>
-                </View>
-              ))}
-            </View>
-          </Animated.View>
-        </ScrollView>
-      </Animated.View>
-    </SafeAreaView>
-  );
-
   if (loading) {
-    return renderSkeleton();
+    return null;
   }
 
   return (

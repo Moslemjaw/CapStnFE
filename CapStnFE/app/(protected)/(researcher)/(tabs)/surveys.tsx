@@ -22,7 +22,6 @@ import { getResponsesBySurveyId, getResponsesByUserId } from "@/api/responses";
 import { getUser } from "@/api/storage";
 import { SurveyWithMetadata } from "@/types/Survey";
 import User from "@/types/User";
-import { SkeletonBox, SkeletonText, SkeletonCard } from "@/components/SkeletonLoader";
 
 type QuestionCountFilter = "all" | "1-5" | "6-10" | "11-15" | "16+";
 type MaxTimeFilter = "all" | "1-5" | "5-10" | "10-15" | "15-30" | "30+";
@@ -519,48 +518,7 @@ export default function ResearcherSurveys() {
         </View>
 
         {/* Content */}
-        {loading ? (
-          <View style={styles.content}>
-            {/* Search Bar Skeleton */}
-            <View style={styles.searchContainer}>
-              <SkeletonBox width="100%" height={48} borderRadius={12} />
-            </View>
-
-            {/* Filter Chips Skeleton */}
-            <View style={styles.filterContainer}>
-              <SkeletonBox width={80} height={32} borderRadius={16} />
-              <SkeletonBox width={80} height={32} borderRadius={16} />
-              <SkeletonBox width={80} height={32} borderRadius={16} />
-            </View>
-
-            {/* Stats Card Skeleton */}
-            <View style={styles.statsCard}>
-              <SkeletonBox width="100%" height={100} borderRadius={16} />
-            </View>
-
-            {/* Featured Section Skeleton */}
-            <View style={styles.sectionContainer}>
-              <SkeletonBox width={150} height={20} borderRadius={4} style={{ marginBottom: 16 }} />
-              {/* Large Featured Card Skeleton */}
-              <SkeletonCard width="100%" height={200} style={{ marginBottom: 16 }} />
-              {/* 2x2 Grid Skeleton */}
-              <View style={styles.featuredGrid}>
-                <SkeletonCard width="48%" height={150} />
-                <SkeletonCard width="48%" height={150} />
-                <SkeletonCard width="48%" height={150} />
-                <SkeletonCard width="48%" height={150} />
-              </View>
-            </View>
-
-            {/* All Surveys Section Skeleton */}
-            <View style={styles.allSurveysSection}>
-              <SkeletonBox width={120} height={20} borderRadius={4} style={{ marginBottom: 16 }} />
-              {[1, 2, 3].map((i) => (
-                <SkeletonCard key={i} width="100%" height={120} style={{ marginBottom: 12 }} />
-              ))}
-            </View>
-          </View>
-        ) : error ? (
+        {loading ? null : error ? (
           <View style={styles.centerContainer}>
             <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
             <Text style={styles.errorText}>{error}</Text>

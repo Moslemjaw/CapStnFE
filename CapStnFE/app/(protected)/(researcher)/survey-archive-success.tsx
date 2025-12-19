@@ -4,12 +4,17 @@ import {
   View,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
 } from "react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { getSurveyById, publishSurvey } from "@/api/surveys";
+import { Survey } from "@/api/surveys";
 
 export default function SurveyArchiveSuccess() {
   const router = useRouter();
@@ -19,6 +24,58 @@ export default function SurveyArchiveSuccess() {
     points: string;
     estimatedMinutes: string;
   }>;
+  const [survey, setSurvey] = useState<Survey | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (surveyId) {
+      loadSurvey();
+    }
+  }, [surveyId]);
+
+  const loadSurvey = async () => {
+    if (!surveyId) return;
+    try {
+      const surveyData = await getSurveyById(surveyId);
+      setSurvey(surveyData);
+    } catch (err: any) {
+      console.error("Error loading survey:", err);
+    }
+  };
+
+  const handlePublishNow = async () => {
+    if (!surveyId) return;
+
+    setActionLoading(true);
+    try {
+      await publishSurvey(surveyId);
+      router.replace({
+        pathname: "/(protected)/(researcher)/survey-publish-success",
+        params: {
+          surveyId: surveyId,
+          questionCount: questionCount || "0",
+          points: points || "0",
+          estimatedMinutes: estimatedMinutes || "0",
+        },
+      } as any);
+    } catch (err: any) {
+      console.error("Error publishing survey:", err);
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || err.message || "Failed to publish survey. Please try again."
+      );
+      setActionLoading(false);
+    }
+  };
+
+  const handleEditSurvey = () => {
+    if (!surveyId) return;
+    router.push({
+      pathname: "/(protected)/(researcher)/create-survey",
+      params: { surveyId: surveyId },
+    } as any);
+  };
 
   const handleGoToResearch = () => {
     router.replace("/(protected)/(researcher)/(tabs)/research" as any);
@@ -30,71 +87,100 @@ export default function SurveyArchiveSuccess() {
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
             <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
           <Text style={styles.headerTitle}>Success</Text>
           <Text style={styles.headerSubtitle}>Your survey has been archived</Text>
         </View>
       </View>
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Success Icon */}
         <View style={styles.iconContainer}>
           <LinearGradient
-            colors={["#EEF5FF", "#E8D5FF"]}
+            colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.iconGradient}
           >
-            <Ionicons name="archive" size={60} color="#4A63D8" />
+            <Ionicons name="archive" size={60} color="#FFFFFF" />
           </LinearGradient>
         </View>
 
         {/* Success Message */}
         <Text style={styles.title}>Survey Archived!</Text>
         <Text style={styles.subtitle}>
-          Your survey has been successfully archived and is no longer visible to respondents.
+          Your survey has been successfully saved to your archives. You can publish it anytime.
         </Text>
 
-        {/* Survey Overview */}
-        <View style={styles.overviewCard}>
-          <Text style={styles.overviewTitle}>Survey Overview</Text>
+        {/* Survey Summary Card */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>SURVEY SUMMARY</Text>
+          <Text style={styles.surveyTitleText}>
+            {survey?.title || "Survey"}
+          </Text>
           
-          <View style={styles.overviewItem}>
-            <Ionicons name="list-outline" size={20} color="#4A63D8" />
-            <Text style={styles.overviewLabel}>Questions:</Text>
-            <Text style={styles.overviewValue}>{questionCount || 0}</Text>
-          </View>
+          <View style={styles.summaryModules}>
+            <View style={styles.summaryModule}>
+              <Ionicons name="list-outline" size={24} color="#4A63D8" />
+              <Text style={styles.moduleValue}>{questionCount || 0}</Text>
+              <Text style={styles.moduleLabel}>Questions</Text>
+            </View>
 
-          <View style={styles.overviewItem}>
-            <Ionicons name="star-outline" size={20} color="#8A4DE8" />
-            <Text style={styles.overviewLabel}>Points:</Text>
-            <Text style={styles.overviewValue}>{points || 0} pts</Text>
-          </View>
-
-          <View style={styles.overviewItem}>
-            <Ionicons name="time-outline" size={20} color="#2BB6E9" />
-            <Text style={styles.overviewLabel}>Estimated Time:</Text>
-            <Text style={styles.overviewValue}>{estimatedMinutes || 0} min</Text>
+            <View style={styles.summaryModule}>
+              <View style={styles.timeIconContainer}>
+                <Ionicons name="time-outline" size={20} color="#2BB6E9" />
+                <Ionicons name="pencil" size={10} color="#2BB6E9" style={styles.timeEditIcon} />
+              </View>
+              <Text style={styles.moduleValue}>~{estimatedMinutes || 0}</Text>
+              <Text style={styles.moduleLabel}>Minutes</Text>
+            </View>
           </View>
         </View>
 
-        {/* Action Button */}
+        {/* Action Buttons */}
         <TouchableOpacity
-          style={styles.button}
-          onPress={handleGoToResearch}
+          style={styles.publishButton}
+          onPress={handlePublishNow}
+          disabled={actionLoading}
         >
           <LinearGradient
-            colors={["#5FA9F5", "#4A63D8"]}
+            colors={["#A23DD8", "#D13DB8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.buttonGradient}
+            style={styles.publishButtonGradient}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-            <Text style={styles.buttonText}>Back to Research</Text>
+            {actionLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="cloud-upload-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.publishButtonText}>Publish Now</Text>
+              </>
+            )}
           </LinearGradient>
         </TouchableOpacity>
-      </View>
+
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={handleEditSurvey}
+          disabled={actionLoading}
+        >
+          <Ionicons name="pencil-outline" size={18} color="#6B7280" />
+          <Text style={styles.editButtonText}>Edit Survey</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backLink}
+          onPress={handleGoToResearch}
+          disabled={actionLoading}
+        >
+          <Text style={styles.backLinkText}>Back to Research</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -148,11 +234,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#505050",
   },
-  content: {
+  scrollView: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  },
+  scrollContent: {
     padding: 24,
+    alignItems: "center",
   },
   iconContainer: {
     marginBottom: 32,
@@ -165,7 +252,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     shadowColor: "#4A63D8",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
@@ -182,57 +269,85 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 32,
     lineHeight: 24,
+    paddingHorizontal: 8,
   },
-  overviewCard: {
-    backgroundColor: "#FFFFFF",
+  summaryCard: {
+    backgroundColor: "#F9FAFB",
     borderRadius: 16,
     padding: 24,
     width: "100%",
     marginBottom: 32,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  overviewTitle: {
-    fontSize: 18,
+  summaryTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  surveyTitleText: {
+    fontSize: 20,
     fontWeight: "700",
     color: "#111827",
     marginBottom: 20,
     textAlign: "center",
   },
-  overviewItem: {
+  summaryModules: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
     gap: 12,
   },
-  overviewLabel: {
+  summaryModule: {
     flex: 1,
-    fontSize: 16,
-    color: "#6B7280",
-    fontWeight: "500",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  overviewValue: {
-    fontSize: 16,
+  timeIconContainer: {
+    position: "relative",
+    marginBottom: 8,
+  },
+  timeEditIcon: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+  },
+  moduleValue: {
+    fontSize: 24,
     fontWeight: "700",
     color: "#111827",
+    marginBottom: 4,
   },
-  button: {
+  moduleLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  publishButton: {
     borderRadius: 16,
     overflow: "hidden",
     width: "100%",
-    shadowColor: "#4A63D8",
+    marginBottom: 12,
+    shadowColor: "#A23DD8",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 6,
   },
-  buttonGradient: {
+  publishButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -240,9 +355,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     gap: 8,
   },
-  buttonText: {
+  publishButtonText: {
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    width: "100%",
+    marginBottom: 16,
+    gap: 8,
+  },
+  editButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  backLink: {
+    paddingVertical: 12,
+  },
+  backLinkText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#4A63D8",
   },
 });

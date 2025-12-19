@@ -162,7 +162,7 @@ export default function GlobalBottomNav() {
         onPress={() => handleNavigation("/(protected)/(researcher)/(tabs)/research")}
       >
         <Ionicons
-          name={activeTab === "research" ? "bulb" : "bulb-outline"}
+          name={activeTab === "research" ? "glasses" : "glasses-outline"}
           size={24}
           color={getIconColor(activeTab === "research")}
         />

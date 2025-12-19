@@ -23,12 +23,14 @@ import {
 } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import AuthContext from "@/context/AuthContext";
 import { getUser, deleteToken, storeUser } from "@/api/storage";
 import User from "@/types/User";
 import { getImageUrl } from "@/utils/imageUtils";
 import { getResponsesByUserId } from "@/api/responses";
-import { getSurveyById } from "@/api/surveys";
+import { getSurveyById, getSurveysByCreatorId } from "@/api/surveys";
+import { getAllAnalyses } from "@/api/ai";
 import { calculateStreak } from "@/utils/userProgress";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
@@ -46,6 +48,13 @@ export default function ResearcherProfile() {
   const [loadingWeeklyPoints, setLoadingWeeklyPoints] = useState(false);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
   const [loadingStreak, setLoadingStreak] = useState(false);
+  
+  // Activity metrics
+  const [surveysAnswered, setSurveysAnswered] = useState<number>(0);
+  const [hoursSpent, setHoursSpent] = useState<number>(0);
+  const [surveysCreated, setSurveysCreated] = useState<number>(0);
+  const [aiAnalyses, setAiAnalyses] = useState<number>(0);
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   // Animation values
   const termsSlideAnim = useRef(new Animated.Value(0)).current;
@@ -212,19 +221,82 @@ export default function ResearcherProfile() {
     }
   }, []);
 
+  const loadActivityMetrics = useCallback(async (userId: string) => {
+    try {
+      setLoadingActivity(true);
+      
+      // Get all responses to calculate surveys answered and hours spent
+      const responses = await getResponsesByUserId(userId);
+      console.log("Profile: Total responses fetched:", responses.length);
+      
+      // Get surveys created by user (to exclude from "answered")
+      const createdSurveys = await getSurveysByCreatorId(userId);
+      const createdSurveyIds = new Set(createdSurveys.map((s) => s._id));
+      console.log("Profile: Surveys created by user:", createdSurveys.length);
+      
+      // Filter responses: exclude self-created surveys and spam
+      const validResponses = responses.filter((r) => {
+        const isNotSelfCreated = !createdSurveyIds.has(r.surveyId);
+        const isNotSpam = !r.isFlaggedSpam;
+        return isNotSelfCreated && isNotSpam;
+      });
+      console.log("Profile: Valid responses (excluding self-created and spam):", validResponses.length);
+      
+      // Calculate unique surveys answered (from valid responses only)
+      const uniqueSurveyIds = new Set(validResponses.map((r) => r.surveyId));
+      const surveysAnsweredCount = uniqueSurveyIds.size;
+      setSurveysAnswered(surveysAnsweredCount);
+      console.log("Profile: Surveys answered:", surveysAnsweredCount);
+      
+      // Calculate total hours spent (sum valid durationMs)
+      const totalMs = validResponses.reduce((sum, r) => {
+        const duration = r.durationMs || 0;
+        if (!r.durationMs) {
+          console.warn("Profile: Response missing durationMs:", r._id);
+        }
+        return sum + duration;
+      }, 0);
+      const totalHours = totalMs / 3600000; // Convert milliseconds to hours
+      const hoursSpentValue = parseFloat(totalHours.toFixed(1));
+      setHoursSpent(hoursSpentValue);
+      console.log("Profile: Hours spent:", hoursSpentValue, "hours (", totalMs, "ms)");
+      
+      // Surveys created
+      const surveysCreatedCount = createdSurveys.length;
+      setSurveysCreated(surveysCreatedCount);
+      console.log("Profile: Surveys created:", surveysCreatedCount);
+      
+      // Get AI analyses count
+      const analysesData = await getAllAnalyses();
+      // Use analyses.length as primary, count as fallback
+      const aiAnalysesCount = analysesData.analyses?.length || analysesData.count || 0;
+      setAiAnalyses(aiAnalysesCount);
+      console.log("Profile: AI analyses:", aiAnalysesCount, "(from analyses.length:", analysesData.analyses?.length, "or count:", analysesData.count, ")");
+    } catch (err) {
+      console.error("Error loading activity metrics:", err);
+      setSurveysAnswered(0);
+      setHoursSpent(0);
+      setSurveysCreated(0);
+      setAiAnalyses(0);
+    } finally {
+      setLoadingActivity(false);
+    }
+  }, []);
+
   const loadUser = useCallback(async () => {
     const userData = await getUser();
     setUser(userData);
     setImageError(false); // Reset image error when user changes
 
-    // Calculate total/weekly points and streak if user exists
+    // Calculate total/weekly points, streak, and activity metrics if user exists
     if (userData?._id) {
       await Promise.all([
         calculateTotalAndWeeklyPoints(userData._id),
         loadStreak(userData._id),
+        loadActivityMetrics(userData._id),
       ]);
     }
-  }, [calculateTotalAndWeeklyPoints, loadStreak]);
+  }, [calculateTotalAndWeeklyPoints, loadStreak, loadActivityMetrics]);
 
   useEffect(() => {
     loadUser();
@@ -332,12 +404,55 @@ export default function ResearcherProfile() {
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
+        {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
           <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>Manage your account and settings</Text>
+          <Text style={styles.subtitle}>View stats and manage your account.</Text>
+          
+          {/* User Information */}
+          <View style={styles.headerUserInfo}>
+            <View style={styles.avatarContainer}>
+              {user?.image && !imageError && imageUrl ? (
+                <View style={styles.avatarImageWrapper}>
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.avatarImage}
+                    onError={() => {
+                      setImageError(true);
+                    }}
+                    onLoad={() => {
+                      setImageError(false);
+                    }}
+                  />
+                  <View style={styles.verificationBadge}>
+                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.avatarImageWrapper}>
+                  <Image
+                    source={require("@/assets/logo.png")}
+                    style={styles.avatarImage}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.verificationBadge}>
+                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                  </View>
+                </View>
+              )}
+            </View>
+            <View style={styles.userInfoContainer}>
+              <Text style={styles.userName}>
+                {user?.name || "Researcher Name"}
+              </Text>
+              <Text style={styles.userEmail}>
+                {user?.email || "researcher@example.com"}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -347,125 +462,121 @@ export default function ResearcherProfile() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
       >
         <View style={styles.content}>
+          {/* Your Activity Section */}
+          <Text style={styles.sectionTitle}>Your Activity</Text>
+          <View style={styles.activityGrid}>
+            <View style={styles.activityCard}>
+              <Ionicons name="bag" size={24} color="#7DD3FC" />
+              <Text style={styles.activityValue}>
+                {loadingActivity ? "..." : surveysAnswered}
+              </Text>
+              <Text style={styles.activityLabel}>Surveys Answered</Text>
+            </View>
+            <View style={styles.activityCard}>
+              <Ionicons name="time" size={24} color="#4A63D8" />
+              <Text style={styles.activityValue}>
+                {loadingActivity ? "..." : hoursSpent.toFixed(1)}
+              </Text>
+              <Text style={styles.activityLabel}>Hours Spent</Text>
+            </View>
+            <View style={styles.activityCard}>
+              <Ionicons name="document-text" size={24} color="#8B5CF6" />
+              <Text style={styles.activityValue}>
+                {loadingActivity ? "..." : surveysCreated}
+              </Text>
+              <Text style={styles.activityLabel}>Surveys Created</Text>
+            </View>
+            <View style={styles.activityCard}>
+              <Ionicons name="code-slash" size={24} color="#FF6FAE" />
+              <Text style={styles.activityValue}>
+                {loadingActivity ? "..." : aiAnalyses}
+              </Text>
+              <Text style={styles.activityLabel}>AI Analyses</Text>
+            </View>
+          </View>
 
-          {/* User Info Card */}
-          <View style={styles.userCard}>
-            <View style={styles.avatarContainer}>
-              {user?.image && !imageError && imageUrl ? (
-                <Image
-                  source={{ uri: imageUrl }}
-                  style={styles.avatarImage}
-                  onError={() => {
-                    setImageError(true);
-                  }}
-                  onLoad={() => {
-                    setImageError(false);
-                  }}
-                />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {user?.name ? getInitials(user.name) : "AA"}
+          {/* Total Points Earned Section */}
+          <View style={styles.pointsCard}>
+            <LinearGradient
+              colors={["#8B5CF6", "#FF6FAE"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.pointsGradient}
+            >
+              <View style={styles.pointsContent}>
+                <View style={styles.pointsLeft}>
+                  <Text style={styles.pointsLabel}>Total Points Earned</Text>
+                  <Text style={styles.pointsValue}>
+                    {loadingWeeklyPoints ? "..." : totalPoints.toLocaleString()}
                   </Text>
+                  <Text style={styles.pointsNextReward}>
+                    Next reward: {levelInfo.nextThreshold.toLocaleString()} points
+                  </Text>
+                  <View style={styles.pointsProgressBar}>
+                    <View
+                      style={[
+                        styles.pointsProgressFill,
+                        { width: `${levelInfo.progressPercent}%` },
+                      ]}
+                    />
+                  </View>
                 </View>
-              )}
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>
-                {user?.name || "Researcher Name"}
-              </Text>
-              <Text style={styles.userEmail}>
-                {user?.email || "researcher@example.com"}
-              </Text>
-            </View>
-          </View>
-
-          {/* Status Section */}
-          <Text style={styles.sectionTitle}>Your Status</Text>
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Points</Text>
-              <Text style={styles.statValue}>
-                {loadingWeeklyPoints ? "..." : totalPoints} pts
-              </Text>
-              <Text style={styles.statSubtext}>
-                {loadingWeeklyPoints
-                  ? "Calculating..."
-                  : `+${weeklyPoints} this week`}
-              </Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Streak</Text>
-              <Text style={styles.statValue}>
-                {loadingStreak
-                  ? "..."
-                  : `${currentStreak || user?.streakDays || 0} ${
-                      (currentStreak || user?.streakDays || 0) === 1
-                        ? "day"
-                        : "days"
-                    }`}
-              </Text>
-              <Text style={styles.statSubtext}>Keep it going!</Text>
-            </View>
-          </View>
-
-          {/* Level Progress Section */}
-          <View style={styles.levelContainer}>
-            <View style={styles.levelHeader}>
-              <View style={styles.levelInfo}>
-                <Ionicons name="shield-checkmark" size={24} color="#8B5CF6" />
-                <View style={styles.levelTextContainer}>
-                  <Text style={styles.levelTitle}>
-                    Level {levelInfo.level}: {levelInfo.levelName}
-                  </Text>
-                  <Text style={styles.levelSubtext}>
-                    {levelInfo.isMaxLevel
-                      ? "Maximum level reached!"
-                      : `${levelInfo.progressPoints} / ${levelInfo.neededPoints} pts to next level`}
-                  </Text>
+                <View style={styles.pointsRight}>
+                  <Ionicons name="trophy" size={40} color="#FFFFFF" />
                 </View>
               </View>
-            </View>
-            <View style={styles.progressBarContainer}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  { width: `${levelInfo.progressPercent}%` },
-                ]}
-              />
-            </View>
+            </LinearGradient>
           </View>
 
-          {/* About Section */}
-          <Text style={styles.sectionTitle}>About SIGHT</Text>
-          <View style={styles.aboutSection}>
-            <Text style={styles.versionText}>Version 1.0.0</Text>
+          {/* Settings & Legal Section */}
+          <Text style={styles.sectionTitle}>Settings & Legal</Text>
+          <View style={styles.settingsCard}>
             <TouchableOpacity
-              style={styles.aboutItem}
-              activeOpacity={0.7}
-              onPress={() => setShowTermsModal(true)}
-            >
-              <Text style={styles.aboutText}>Terms & Conditions</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.aboutItem}
+              style={[styles.settingsItem, styles.settingsItemWithBorder]}
               activeOpacity={0.7}
               onPress={() => setShowPrivacyModal(true)}
             >
-              <Text style={styles.aboutText}>Privacy Policy</Text>
+              <View style={styles.settingsItemLeft}>
+                <Ionicons name="lock-closed" size={20} color="#6B7280" />
+                <Text style={styles.settingsItemText}>Privacy Policy</Text>
+              </View>
               <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.settingsItem, styles.settingsItemWithBorder]}
+              activeOpacity={0.7}
+              onPress={() => setShowTermsModal(true)}
+            >
+              <View style={styles.settingsItemLeft}>
+                <Ionicons name="document-text" size={20} color="#6B7280" />
+                <Text style={styles.settingsItemText}>Terms & Conditions</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.settingsItem}
+              activeOpacity={0.7}
+              onPress={handleLogout}
+            >
+              <View style={styles.settingsItemLeft}>
+                <View style={styles.logoutIconContainer}>
+                  <Ionicons name="add" size={16} color="#FFFFFF" />
+                </View>
+                <Text style={[styles.settingsItemText, styles.logoutText]}>Logout</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#EF4444" />
             </TouchableOpacity>
           </View>
 
-          {/* Log Out Button */}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.logoutText}>Log Out</Text>
-          </TouchableOpacity>
+          {/* Footer */}
+          <View style={styles.footer}>
+            <View style={styles.footerBranding}>
+              <Image source={require("@/assets/logo.png")} style={styles.footerLogo} resizeMode="contain" />
+              <Text style={styles.footerBrandText}>sight</Text>
+            </View>
+            <Text style={styles.footerVersion}>Version 1.3.4</Text>
+            <Text style={styles.footerCopyright}>© 2023 Sight. All rights reserved.</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -885,7 +996,7 @@ export default function ResearcherProfile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
   },
   fixedHeader: {
     backgroundColor: "#FFFFFF",
@@ -906,9 +1017,15 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 0,
+  },
   header: {
     padding: 24,
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   logoContainer: {
     flexDirection: "row",
@@ -921,16 +1038,6 @@ const styles = StyleSheet.create({
     marginLeft: -8,
     marginTop: -4,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 0,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-  },
   title: {
     fontSize: 32,
     fontWeight: "700",
@@ -940,223 +1047,253 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: "#505050",
+    marginBottom: 24,
   },
+  headerUserInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 24,
+    marginTop: 8,
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+  },
+  // User Information Card
   userCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 20,
+    padding: 24,
     marginBottom: 32,
     flexDirection: "row",
     alignItems: "center",
+    gap: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   avatarContainer: {
-    marginRight: 16,
+    marginRight: 0,
+  },
+  avatarImageWrapper: {
+    position: "relative",
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: "#E0F2FE",
-    borderWidth: 2,
-    borderColor: "#7DD3FC",
     justifyContent: "center",
     alignItems: "center",
   },
   avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2,
-    borderColor: "#7DD3FC",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
   },
   avatarText: {
-    fontSize: 20,
+    fontSize: 36,
     fontWeight: "600",
     color: "#0C4A6E",
   },
-  userInfo: {
+  verificationBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#7DD3FC",
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  userInfoContainer: {
     flex: 1,
+    justifyContent: "center",
   },
   userName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 4,
+    marginBottom: 8,
+    textAlign: "left",
   },
   userEmail: {
     fontSize: 14,
     color: "#6B7280",
-    marginBottom: 8,
+    textAlign: "left",
   },
-  roleTag: {
-    backgroundColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    alignSelf: "flex-start",
-  },
-  roleText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#374151",
-  },
+  // Section Title
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#111827",
     marginBottom: 16,
   },
-  statsContainer: {
+  // Activity Section
+  activityGrid: {
     flexDirection: "row",
-    gap: 12,
+    flexWrap: "wrap",
     marginBottom: 32,
+    gap: 12,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  statSubtext: {
-    fontSize: 12,
-    color: "#3B82F6",
-  },
-  levelContainer: {
+  activityCard: {
+    width: "47%",
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  activityValue: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#111827",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  activityLabel: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+  },
+  // Points Card
+  pointsCard: {
+    marginBottom: 32,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  pointsGradient: {
+    padding: 24,
+  },
+  pointsContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pointsLeft: {
+    flex: 1,
+  },
+  pointsLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    opacity: 0.9,
+    marginBottom: 8,
+  },
+  pointsValue: {
+    fontSize: 48,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 8,
+  },
+  pointsNextReward: {
+    fontSize: 12,
+    color: "#FFFFFF",
+    opacity: 0.9,
+    marginBottom: 12,
+  },
+  pointsProgressBar: {
+    height: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  pointsProgressFill: {
+    height: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 3,
+  },
+  pointsRight: {
+    marginLeft: 16,
+  },
+  // Settings Section
+  settingsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
     marginBottom: 32,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  levelHeader: {
-    marginBottom: 12,
-  },
-  levelInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  levelTextContainer: {
-    flex: 1,
-  },
-  levelTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  levelSubtext: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
     overflow: "hidden",
   },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#8B5CF6",
-    borderRadius: 4,
-  },
-  settingsSection: {
-    marginBottom: 32,
-  },
-  settingItem: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  settingsItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    padding: 16,
   },
-  settingLeft: {
+  settingsItemWithBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  settingsItemLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  settingText: {
+  settingsItemText: {
     fontSize: 16,
-    color: "#111827",
     fontWeight: "500",
-  },
-  aboutSection: {
-    marginBottom: 32,
-  },
-  versionText: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  aboutItem: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  aboutText: {
-    fontSize: 16,
     color: "#111827",
-    fontWeight: "500",
   },
-  logoutButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+  logoutIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
   logoutText: {
-    fontSize: 16,
-    fontWeight: "700",
     color: "#EF4444",
   },
+  // Footer
+  footer: {
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  footerBranding: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  footerLogo: {
+    width: 24,
+    height: 24,
+  },
+  footerBrandText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#8B5CF6",
+  },
+  footerVersion: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginBottom: 4,
+  },
+  footerCopyright: {
+    fontSize: 12,
+    color: "#9CA3AF",
+  },
+  // Popup Styles
   popupOverlayContainer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1000,

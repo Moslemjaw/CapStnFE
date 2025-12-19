@@ -15,6 +15,7 @@ import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { getSurveyById, publishSurvey, unpublishSurvey, updateSurvey } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { Survey } from "@/api/surveys";
@@ -218,7 +219,8 @@ export default function SurveyPreview() {
           <View style={styles.logoContainer}>
             <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
-          <Text style={styles.headerTitle}>{survey?.title || "Survey Preview"}</Text>
+          <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
+          <Text style={styles.headerSubtitle}>Survey preview</Text>
         </View>
       </View>
       <ScrollView
@@ -226,45 +228,29 @@ export default function SurveyPreview() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Preview Badge */}
-        <View style={styles.previewBadge}>
-          <Ionicons name="eye-outline" size={18} color="#2BB6E9" />
-          <Text style={styles.previewBadgeText}>Preview</Text>
+        {/* Preview Mode Banner */}
+        <View style={styles.previewBanner}>
+          <Ionicons name="eye-outline" size={20} color="#8A4DE8" />
+          <View style={styles.previewBannerTextContainer}>
+            <Text style={styles.previewBannerTitle}>Preview Mode</Text>
+            <Text style={styles.previewBannerSubtitle}>
+              This is how your survey will appear to respondents.
+            </Text>
+          </View>
         </View>
 
-        {/* Survey Info */}
-        <View style={styles.surveyInfo}>
-          <Text style={styles.title}>{survey.title}</Text>
-          {survey.description && (
-            <Text style={styles.description}>{survey.description}</Text>
-          )}
-
-          <View style={styles.metadata}>
-            <TouchableOpacity
-              style={styles.metadataItem}
-              onPress={openTimeEditModal}
-            >
-              <Ionicons name="time-outline" size={18} color="#4B5563" />
-              <Text style={styles.metadataText}>
-                {survey.estimatedMinutes} min
-              </Text>
-              <Ionicons name="pencil" size={14} color="#2BB6E9" style={styles.editIcon} />
-            </TouchableOpacity>
-
-            <View style={styles.metadataItem}>
-              <Ionicons name="list-outline" size={18} color="#4B5563" />
-              <Text style={styles.metadataText}>
-                {questions.length} questions
-              </Text>
-            </View>
-
-            <View style={styles.metadataItem}>
-              <Ionicons name="star-outline" size={18} color="#8A4DE8" />
-              <Text style={[styles.metadataText, styles.pointsText]}>
-                {survey.rewardPoints} pts
-              </Text>
-            </View>
+        {/* Survey Header */}
+        <View style={styles.surveyHeader}>
+          <View style={styles.surveyHeaderIcon}>
+            <Ionicons name="document-text-outline" size={32} color="#5FA9F5" />
           </View>
+          <Text style={styles.surveyTitle}>{survey.title}</Text>
+          <Text style={styles.surveyQuestionCount}>
+            {questions.length} {questions.length === 1 ? "question" : "questions"}
+          </Text>
+          {survey.description && (
+            <Text style={styles.surveyDescription}>{survey.description}</Text>
+          )}
         </View>
 
         {/* Questions Section */}
@@ -282,102 +268,48 @@ export default function SurveyPreview() {
             questions.map((question, index) => (
               <View key={question._id} style={styles.questionCard}>
                 <View style={styles.questionHeader}>
-                  <Text style={styles.questionNumber}>
-                    Question {index + 1}
-                  </Text>
-                  {question.isRequired && (
-                    <View style={styles.requiredBadge}>
-                      <Text style={styles.requiredText}>Required</Text>
-                    </View>
-                  )}
+                  <View style={styles.questionNumberBadge}>
+                    <Text style={styles.questionNumber}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.questionHeaderRight}>
+                    {question.isRequired && (
+                      <View style={styles.requiredBadge}>
+                        <Text style={styles.requiredText}>REQUIRED</Text>
+                      </View>
+                    )}
+                    <Text style={styles.questionTypeLabel}>
+                      {question.type === "text" 
+                        ? "Numeric input" 
+                        : question.type === "multiple_choice"
+                        ? "Single choice"
+                        : "Single choice"}
+                    </Text>
+                  </View>
                 </View>
 
                 <Text style={styles.questionText}>{question.text}</Text>
 
-                <View style={styles.questionType}>
-                  <Text style={styles.questionTypeText}>
-                    Type: {getQuestionTypeLabel(question.type)}
-                  </Text>
-                </View>
-
                 {question.options && question.options.length > 0 ? (
-                  question.options.length >= 6 ? (
-                    <View style={styles.optionsContainerWithScroll}>
-                      <ScrollView 
-                        style={styles.optionsScrollView}
-                        nestedScrollEnabled={true}
-                        showsVerticalScrollIndicator={false}
-                      >
-                        <View style={[styles.optionsContainer, styles.optionsContainerTwoColumns]}>
-                          {question.options.map((option, optIndex) => {
-                            const isMultiple =
-                              question.type === "multiple_choice" ||
-                              question.type === "checkbox";
-
-                            return (
-                              <View
-                                key={optIndex}
-                                style={[
-                                  styles.optionButton,
-                                  styles.optionButtonTwoColumns,
-                                ]}
-                              >
-                                <Ionicons
-                                  name={
-                                    isMultiple
-                                      ? "checkbox-outline"
-                                      : "radio-button-off"
-                                  }
-                                  size={20}
-                                  color="#9CA3AF"
-                                />
-                                <Text style={styles.optionButtonText}>
-                                  {option}
-                                </Text>
-                              </View>
-                            );
-                          })}
+                  <View style={styles.optionsContainer}>
+                    {question.options.map((option, optIndex) => (
+                      <View key={optIndex} style={styles.optionButton}>
+                        <View style={styles.optionRadio}>
+                          <View style={styles.optionRadioDot} />
                         </View>
-                      </ScrollView>
-                    </View>
-                  ) : (
-                    <View style={[
-                      styles.optionsContainer, 
-                      question.options && question.options.length >= 2 && styles.optionsContainerTwoColumns
-                    ]}>
-                      {question.options.map((option, optIndex) => {
-                        const isMultiple =
-                          question.type === "multiple_choice" ||
-                          question.type === "checkbox";
-
-                        const shouldUseTwoColumns = question.options && question.options.length >= 2;
-
-                        return (
-                          <View
-                            key={optIndex}
-                            style={[
-                              styles.optionButton,
-                              shouldUseTwoColumns && styles.optionButtonTwoColumns,
-                            ]}
-                          >
-                            <Ionicons
-                              name={
-                                isMultiple
-                                  ? "checkbox-outline"
-                                  : "radio-button-off"
-                              }
-                              size={20}
-                              color="#9CA3AF"
-                            />
-                            <Text style={styles.optionButtonText}>
-                              {option}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )
-                ) : null}
+                        <Text style={styles.optionButtonText}>{option}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.textInputContainer}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Enter number..."
+                      placeholderTextColor="#9CA3AF"
+                      editable={false}
+                    />
+                  </View>
+                )}
               </View>
             ))
           )}
@@ -386,24 +318,25 @@ export default function SurveyPreview() {
 
       {/* Action Buttons */}
       <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={handleEdit}
+          disabled={actionLoading}
+        >
+          <LinearGradient
+            colors={["#A23DD8", "#D13DB8"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.editButtonGradient}
+          >
+            <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.editButtonText}>Edit Survey</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
         <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.archiveButton]}
-            onPress={handleArchive}
-            disabled={actionLoading}
-          >
-            {actionLoading ? (
-              <ActivityIndicator size="small" color="#6B7280" />
-            ) : (
-              <>
-                <Ionicons name="archive-outline" size={18} color="#6B7280" />
-                <Text style={styles.archiveButtonText}>Archive</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.publishButton]}
+            style={styles.publishButton}
             onPress={handlePublish}
             disabled={actionLoading || survey?.draft === "published"}
           >
@@ -417,7 +350,7 @@ export default function SurveyPreview() {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                  <Ionicons name="paper-plane-outline" size={18} color="#FFFFFF" />
                   <Text style={styles.publishButtonText}>Publish</Text>
                 </>
               )}
@@ -425,19 +358,18 @@ export default function SurveyPreview() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={handleEdit}
+            style={styles.archiveButton}
+            onPress={handleArchive}
             disabled={actionLoading}
           >
-            <LinearGradient
-              colors={["#2BB6E9", "#35E0E6"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.editButtonGradient}
-            >
-              <Ionicons name="pencil-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.editButtonText}>Edit</Text>
-            </LinearGradient>
+            {actionLoading ? (
+              <ActivityIndicator size="small" color="#6B7280" />
+            ) : (
+              <>
+                <Ionicons name="archive-outline" size={18} color="#6B7280" />
+                <Text style={styles.archiveButtonText}>Archive</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -539,27 +471,62 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 32,
+    padding: 24,
   },
-  previewBadge: {
+  previewBanner: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: "#F0F9FF",
-    marginBottom: 20,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#E0F2FE",
+    backgroundColor: "#F3E8FF",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    gap: 12,
   },
-  previewBadgeText: {
-    fontSize: 13,
+  previewBannerTextContainer: {
+    flex: 1,
+  },
+  previewBannerTitle: {
+    fontSize: 14,
     fontWeight: "700",
-    color: "#2BB6E9",
-    letterSpacing: 0.3,
+    color: "#8A4DE8",
+    marginBottom: 2,
+  },
+  previewBannerSubtitle: {
+    fontSize: 12,
+    color: "#A23DD8",
+    lineHeight: 16,
+  },
+  surveyHeader: {
+    marginBottom: 32,
+    alignItems: "center",
+  },
+  surveyHeaderIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  surveyTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  surveyQuestionCount: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 16,
+  },
+  surveyDescription: {
+    fontSize: 16,
+    color: "#6B7280",
+    lineHeight: 24,
+    textAlign: "center",
   },
   fixedHeader: {
     backgroundColor: "#FFFFFF",
@@ -605,128 +572,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#505050",
   },
-  surveyInfo: {
-    marginBottom: 28,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 14,
-    lineHeight: 40,
-    letterSpacing: -0.5,
-  },
-  description: {
-    fontSize: 16,
-    color: "#6B7280",
-    lineHeight: 26,
-    marginBottom: 20,
-    fontWeight: "400",
-  },
-  metadata: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 4,
-  },
-  metadataItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  editIcon: {
-    marginLeft: 6,
-  },
-  metadataText: {
-    fontSize: 14,
-    color: "#4B5563",
-    fontWeight: "600",
-  },
-  pointsText: {
-    color: "#8A4DE8",
-    fontWeight: "700",
-  },
   questionsSection: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 20,
-    letterSpacing: -0.3,
+    color: "#222222",
+    marginBottom: 16,
   },
   emptyQuestions: {
     alignItems: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
   emptyQuestionsText: {
-    marginTop: 12,
-    fontSize: 15,
+    marginTop: 8,
+    fontSize: 14,
     color: "#9CA3AF",
     textAlign: "center",
-    fontWeight: "500",
   },
   questionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1.5,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
     borderColor: "#E5E7EB",
-    shadowColor: "#4A63D8",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   questionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 12,
+    gap: 12,
+  },
+  questionNumberBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   questionNumber: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "700",
     color: "#5FA9F5",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
+  },
+  questionHeaderRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   requiredBadge: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: "#F0F9FF",
-    borderWidth: 1,
-    borderColor: "#BAE6FD",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: "#FEE2E2",
   },
   requiredText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
-    color: "#2BB6E9",
-    letterSpacing: 0.3,
+    color: "#EF4444",
+    letterSpacing: 0.5,
+  },
+  questionTypeLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+    textTransform: "uppercase",
   },
   questionText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "600",
-    color: "#111827",
-    marginBottom: 16,
-    lineHeight: 26,
-    letterSpacing: -0.2,
+    color: "#222222",
+    marginBottom: 12,
+    lineHeight: 24,
   },
   questionType: {
     marginBottom: 14,
@@ -747,16 +676,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 10,
   },
-  optionsContainerTwoColumns: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  optionsContainerWithScroll: {
-    marginTop: 12,
-  },
-  optionsScrollView: {
-    maxHeight: 200,
-  },
   optionButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -765,22 +684,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
-  optionButtonTwoColumns: {
-    flexBasis: "48%",
-    flexGrow: 0,
-    flexShrink: 0,
+  optionRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  optionRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "transparent",
   },
   optionButtonText: {
     fontSize: 14,
     color: "#222222",
-    marginLeft: 12,
     flex: 1,
+  },
+  textInputContainer: {
+    marginTop: 12,
+  },
+  textInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: "#111827",
   },
   footer: {
     padding: 20,
@@ -794,28 +731,35 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  editButton: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 12,
+    shadowColor: "#A23DD8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  editButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  editButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
   buttonRow: {
     flexDirection: "row",
     gap: 12,
   },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1.5,
-  },
-  archiveButton: {
-    backgroundColor: "#FAFBFC",
-    borderColor: "#E5E7EB",
-  },
-  archiveButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#6B7280",
-  },
   publishButton: {
+    flex: 1,
     borderRadius: 16,
     overflow: "hidden",
   },
@@ -832,22 +776,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
   },
-  editButton: {
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  editButtonGradient: {
+  archiveButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
     paddingHorizontal: 18,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
     gap: 8,
   },
-  editButtonText: {
+  archiveButtonText: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#6B7280",
   },
   modalOverlay: {
     flex: 1,

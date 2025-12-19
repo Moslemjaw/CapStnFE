@@ -174,8 +174,8 @@ export default function SurveyRespondentPreview() {
           <View style={styles.logoContainer}>
             <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
-          <Text style={styles.headerTitle}>Survey Preview</Text>
-          <Text style={styles.headerSubtitle}>Review before answering</Text>
+          <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
+          <Text style={styles.headerSubtitle}>Survey preview</Text>
         </View>
       </View>
       <ScrollView 
