@@ -273,14 +273,6 @@ export default function AllSurveys() {
     return filtered;
   }, [surveys, statusFilter, responseFilter, sortOption]);
 
-  const hasActiveFilters = statusFilter !== "all" || responseFilter !== "all" || sortOption !== "newest";
-
-  const clearFilters = () => {
-    setStatusFilter("all");
-    setResponseFilter("all");
-    setSortOption("newest");
-  };
-
   const handleViewSurvey = (survey: SurveyWithMetadata) => {
     router.push({
       pathname: "/(protected)/(researcher)/survey-details",
