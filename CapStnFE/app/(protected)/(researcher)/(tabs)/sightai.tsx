@@ -30,6 +30,7 @@ import { getResponsesByUserId } from "@/api/responses";
 import { getUser } from "@/api/storage";
 import { getSurveyById } from "@/api/surveys";
 import { createAnalysis } from "@/api/ai";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 interface SurveyWithTitle {
   surveyId: string;
@@ -47,6 +48,7 @@ interface InsightCard {
 
 export default function SightAI() {
   const router = useRouter();
+  const bottomNavHeight = useBottomNavHeight();
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
   const [answeredSurveys, setAnsweredSurveys] = useState<SurveyWithTitle[]>([]);
   const [insightCards, setInsightCards] = useState<InsightCard[]>([]);
@@ -451,6 +453,7 @@ export default function SightAI() {
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: bottomNavHeight + 16 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

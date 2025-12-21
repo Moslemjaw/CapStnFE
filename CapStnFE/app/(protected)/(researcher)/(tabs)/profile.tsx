@@ -502,7 +502,7 @@ export default function ResearcherProfile() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: bottomNavHeight + 8 },
+          { paddingBottom: bottomNavHeight },
         ]}
       >
         <View style={styles.content}>
@@ -1079,30 +1079,29 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   header: {
-    padding: 24,
-    paddingBottom: 24,
+    padding: 16,
+    paddingBottom: 16,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    height: 24,
+    width: 80,
+    marginLeft: -6,
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#505050",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   headerUserInfo: {
     flexDirection: "row",

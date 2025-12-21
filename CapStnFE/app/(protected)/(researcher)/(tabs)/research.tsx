@@ -403,7 +403,7 @@ export default function ResearcherResearch() {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: bottomNavHeight + 8 },
+          { paddingBottom: bottomNavHeight + 4 },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -700,30 +700,29 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   header: {
-    padding: 24,
-    paddingBottom: 20,
+    padding: 16,
+    paddingBottom: 14,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    height: 24,
+    width: 80,
+    marginLeft: -6,
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#505050",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   headerOverviewRow: {
     flexDirection: "row",

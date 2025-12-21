@@ -361,13 +361,26 @@ export default function ResearcherSurveys() {
   };
 
   const getQuestionLabel = (value: QuestionCountFilter) => {
-    return value === "all" ? "All" : value;
+    switch (value) {
+      case "all":
+        return "Questions";
+      case "1-5":
+        return "1-5 Q's";
+      case "6-10":
+        return "6-10 Q's";
+      case "11-15":
+        return "11-15 Q's";
+      case "16+":
+        return "16+ Q's";
+      default:
+        return "Questions";
+    }
   };
 
   const getTimeLabel = (value: MaxTimeFilter) => {
     switch (value) {
       case "all":
-        return "All Time";
+        return "Duration";
       case "1-5":
         return "1-5 min";
       case "5-10":
@@ -379,20 +392,20 @@ export default function ResearcherSurveys() {
       case "30+":
         return "30+ min";
       default:
-        return "All Time";
+        return "Duration";
     }
   };
 
   const getStatusLabel = (value: StatusFilter) => {
     switch (value) {
       case "all":
-        return "All";
+        return "Status";
       case "open":
-        return "Not Answered";
+        return "Open";
       case "answered":
-        return "Only Answered";
+        return "Answered";
       default:
-        return "All";
+        return "Status";
     }
   };
 
@@ -460,43 +473,108 @@ export default function ResearcherSurveys() {
           )}
           <View style={styles.filtersRow}>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[
+                styles.filterButton,
+                questionCountFilter !== "all" && styles.filterButtonActive,
+              ]}
               onPress={() => {
                 setShowStatusDropdown(false);
                 setShowTimeDropdown(false);
                 setShowQuestionDropdown(!showQuestionDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>
-                {getQuestionLabel(questionCountFilter)}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color="#505050" />
+              <View style={styles.filterButtonContent}>
+                <Ionicons
+                  name="help-circle-outline"
+                  size={16}
+                  color={questionCountFilter !== "all" ? "#4A63D8" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    questionCountFilter !== "all" &&
+                      styles.filterButtonTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {getQuestionLabel(questionCountFilter)}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={questionCountFilter !== "all" ? "#4A63D8" : "#9CA3AF"}
+              />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[
+                styles.filterButton,
+                maxTimeFilter !== "all" && styles.filterButtonActive,
+              ]}
               onPress={() => {
                 setShowStatusDropdown(false);
                 setShowQuestionDropdown(false);
                 setShowTimeDropdown(!showTimeDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>
-                {getTimeLabel(maxTimeFilter)}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color="#505050" />
+              <View style={styles.filterButtonContent}>
+                <Ionicons
+                  name="time-outline"
+                  size={16}
+                  color={maxTimeFilter !== "all" ? "#8A4DE8" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    maxTimeFilter !== "all" && styles.filterButtonTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {getTimeLabel(maxTimeFilter)}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={maxTimeFilter !== "all" ? "#8A4DE8" : "#9CA3AF"}
+              />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[
+                styles.filterButton,
+                statusFilter !== "all" && styles.filterButtonActive,
+              ]}
               onPress={() => {
                 setShowTimeDropdown(false);
                 setShowQuestionDropdown(false);
                 setShowStatusDropdown(!showStatusDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>
-                {getStatusLabel(statusFilter)}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color="#505050" />
+              <View style={styles.filterButtonContent}>
+                <Ionicons
+                  name={
+                    statusFilter === "answered"
+                      ? "checkmark-circle-outline"
+                      : "filter-outline"
+                  }
+                  size={16}
+                  color={statusFilter !== "all" ? "#10B981" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    statusFilter !== "all" && styles.filterButtonTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {getStatusLabel(statusFilter)}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={statusFilter !== "all" ? "#10B981" : "#9CA3AF"}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -507,7 +585,7 @@ export default function ResearcherSurveys() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: bottomNavHeight + 8 },
+          { paddingBottom: bottomNavHeight + 4 },
         ]}
       >
         {/* Status Dropdown Modal */}
@@ -522,6 +600,10 @@ export default function ResearcherSurveys() {
             onPress={() => setShowStatusDropdown(false)}
           >
             <View style={styles.dropdownMenu}>
+              <View style={styles.dropdownHeader}>
+                <Ionicons name="filter-outline" size={18} color="#10B981" />
+                <Text style={styles.dropdownHeaderText}>Filter by Status</Text>
+              </View>
               {statusOptions.map((option) => (
                 <TouchableOpacity
                   key={option}
@@ -534,16 +616,34 @@ export default function ResearcherSurveys() {
                     setShowStatusDropdown(false);
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.dropdownItemText,
-                      statusFilter === option && styles.dropdownItemTextActive,
-                    ]}
-                  >
-                    {getStatusLabel(option)}
-                  </Text>
+                  <View style={styles.dropdownItemContent}>
+                    <Ionicons
+                      name={
+                        option === "answered"
+                          ? "checkmark-circle"
+                          : option === "open"
+                          ? "ellipse-outline"
+                          : "apps-outline"
+                      }
+                      size={18}
+                      color={statusFilter === option ? "#10B981" : "#6B7280"}
+                    />
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        statusFilter === option &&
+                          styles.dropdownItemTextActive,
+                      ]}
+                    >
+                      {option === "all"
+                        ? "All Surveys"
+                        : option === "open"
+                        ? "Not Answered"
+                        : "Already Answered"}
+                    </Text>
+                  </View>
                   {statusFilter === option && (
-                    <Ionicons name="checkmark" size={20} color="#4A63D8" />
+                    <Ionicons name="checkmark" size={20} color="#10B981" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -563,6 +663,12 @@ export default function ResearcherSurveys() {
             onPress={() => setShowTimeDropdown(false)}
           >
             <View style={styles.dropdownMenu}>
+              <View style={styles.dropdownHeader}>
+                <Ionicons name="time-outline" size={18} color="#8A4DE8" />
+                <Text style={styles.dropdownHeaderText}>
+                  Filter by Duration
+                </Text>
+              </View>
               {maxTimeOptions.map((option) => (
                 <TouchableOpacity
                   key={option}
@@ -575,16 +681,24 @@ export default function ResearcherSurveys() {
                     setShowTimeDropdown(false);
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.dropdownItemText,
-                      maxTimeFilter === option && styles.dropdownItemTextActive,
-                    ]}
-                  >
-                    {getTimeLabel(option)}
-                  </Text>
+                  <View style={styles.dropdownItemContent}>
+                    <Ionicons
+                      name="timer-outline"
+                      size={18}
+                      color={maxTimeFilter === option ? "#8A4DE8" : "#6B7280"}
+                    />
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        maxTimeFilter === option &&
+                          styles.dropdownItemTextActive,
+                      ]}
+                    >
+                      {option === "all" ? "Any Duration" : `${option} minutes`}
+                    </Text>
+                  </View>
                   {maxTimeFilter === option && (
-                    <Ionicons name="checkmark" size={20} color="#4A63D8" />
+                    <Ionicons name="checkmark" size={20} color="#8A4DE8" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -604,6 +718,16 @@ export default function ResearcherSurveys() {
             onPress={() => setShowQuestionDropdown(false)}
           >
             <View style={styles.dropdownMenu}>
+              <View style={styles.dropdownHeader}>
+                <Ionicons
+                  name="help-circle-outline"
+                  size={18}
+                  color="#4A63D8"
+                />
+                <Text style={styles.dropdownHeaderText}>
+                  Filter by Questions
+                </Text>
+              </View>
               {questionOptions.map((option) => (
                 <TouchableOpacity
                   key={option}
@@ -616,15 +740,24 @@ export default function ResearcherSurveys() {
                     setShowQuestionDropdown(false);
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.dropdownItemText,
-                      questionCountFilter === option &&
-                        styles.dropdownItemTextActive,
-                    ]}
-                  >
-                    {getQuestionLabel(option)}
-                  </Text>
+                  <View style={styles.dropdownItemContent}>
+                    <Ionicons
+                      name="list-outline"
+                      size={18}
+                      color={
+                        questionCountFilter === option ? "#4A63D8" : "#6B7280"
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        questionCountFilter === option &&
+                          styles.dropdownItemTextActive,
+                      ]}
+                    >
+                      {option === "all" ? "Any Number" : `${option} questions`}
+                    </Text>
+                  </View>
                   {questionCountFilter === option && (
                     <Ionicons name="checkmark" size={20} color="#4A63D8" />
                   )}
@@ -903,39 +1036,38 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    padding: 16,
+    paddingBottom: 12,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    height: 24,
+    width: 80,
+    marginLeft: -6,
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#505050",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    marginHorizontal: 24,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -948,9 +1080,9 @@ const styles = StyleSheet.create({
     color: "#222222",
   },
   filtersSection: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     marginBottom: 0,
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
   filtersHeader: {
     flexDirection: "row",
@@ -971,7 +1103,7 @@ const styles = StyleSheet.create({
   },
   filtersRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
   },
   filterButton: {
     flex: 1,
@@ -981,14 +1113,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  filterButtonActive: {
+    borderColor: "#4A63D8",
+    backgroundColor: "#F0F4FF",
+  },
+  filterButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
   },
   filterButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
+    color: "#6B7280",
+  },
+  filterButtonTextActive: {
     color: "#222222",
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,
@@ -998,34 +1145,55 @@ const styles = StyleSheet.create({
   },
   dropdownMenu: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    minWidth: 200,
-    maxHeight: 300,
+    borderRadius: 16,
+    minWidth: 220,
+    maxHeight: 350,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
     overflow: "hidden",
+  },
+  dropdownHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#F9FAFB",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  dropdownHeaderText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#374151",
   },
   dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
   dropdownItemActive: {
     backgroundColor: "#F0F9FF",
   },
+  dropdownItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
   dropdownItemText: {
     fontSize: 14,
     color: "#374151",
   },
   dropdownItemTextActive: {
-    color: "#4A63D8",
+    color: "#222222",
     fontWeight: "600",
   },
   statsCard: {
