@@ -73,30 +73,45 @@ export default function AnalysisInsights() {
         easing: entranceEasing,
       });
 
-      contentOpacity.value = withDelay(150, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
+      contentOpacity.value = withDelay(
+        150,
+        withTiming(1, {
+          duration: 800,
+          easing: entranceEasing,
+        })
+      );
 
-      headerOpacity.value = withDelay(150, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
+      headerOpacity.value = withDelay(
+        150,
+        withTiming(1, {
+          duration: 800,
+          easing: entranceEasing,
+        })
+      );
 
-      statsOpacity.value = withDelay(270, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
+      statsOpacity.value = withDelay(
+        270,
+        withTiming(1, {
+          duration: 800,
+          easing: entranceEasing,
+        })
+      );
 
-      overviewOpacity.value = withDelay(390, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
+      overviewOpacity.value = withDelay(
+        390,
+        withTiming(1, {
+          duration: 800,
+          easing: entranceEasing,
+        })
+      );
 
-      surveysOpacity.value = withDelay(510, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
+      surveysOpacity.value = withDelay(
+        510,
+        withTiming(1, {
+          duration: 800,
+          easing: entranceEasing,
+        })
+      );
 
       return () => {
         const exitDuration = 600;
@@ -176,7 +191,9 @@ export default function AnalysisInsights() {
     if (!analysis || !analysis.data) return;
 
     try {
-      let shareText = `Analysis Insights\n\nOverview:\n${analysis?.data?.overview || "No overview available"}\n\n`;
+      let shareText = `Analysis Insights\n\nOverview:\n${
+        analysis?.data?.overview || "No overview available"
+      }\n\n`;
 
       if (surveysWithNames.length > 0) {
         shareText += `Surveys Analyzed:\n`;
@@ -232,7 +249,10 @@ export default function AnalysisInsights() {
             <Text style={styles.errorText}>
               {error || "Analysis data not available"}
             </Text>
-            <TouchableOpacity onPress={() => router.back()} style={styles.button}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.button}
+            >
               <Text style={styles.buttonText}>Go Back</Text>
             </TouchableOpacity>
           </View>
@@ -251,87 +271,92 @@ export default function AnalysisInsights() {
   }
 
   return (
-      <SafeAreaView style={styles.container}>
-        {/* Light background layer */}
-        <View style={styles.lightBackground} />
-        
-        {/* Dark overlay that fades in */}
-        <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
-        
-        {/* Content container */}
-        <View style={styles.contentContainer}>
-          {/* Fixed Header Section */}
-          <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Image source={require("@/assets/sightai.png")} style={styles.titleImage} resizeMode="contain" />
-              </View>
-              <Text style={styles.title}>Analysis Insights</Text>
-              <Text style={styles.subtitle}>
-                {analysis?.createdAt ? new Date(analysis.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }) : "Analysis Insights"}
-              </Text>
+    <SafeAreaView style={styles.container}>
+      {/* Light background layer */}
+      <View style={styles.lightBackground} />
+
+      {/* Dark overlay that fades in */}
+      <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
+
+      {/* Content container */}
+      <View style={styles.contentContainer}>
+        {/* Fixed Header Section */}
+        <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Insights</Text>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("@/assets/sightai.png")}
+                style={styles.titleImage}
+                resizeMode="contain"
+              />
             </View>
-          </Animated.View>
-          
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <Animated.View style={contentAnimatedStyle}>
+          </View>
+        </Animated.View>
 
-              {/* Success Badge */}
-              <View style={styles.successBadge}>
-                <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                <Text style={styles.successText}>Analysis Complete</Text>
-              </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={contentAnimatedStyle}>
+            {/* Success Badge */}
+            <View style={styles.successBadge}>
+              <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+              <Text style={styles.successText}>Analysis Complete</Text>
+            </View>
 
-              {/* Stats Cards */}
-              <Animated.View style={[styles.statsGrid, statsAnimatedStyle]}>
-                <StatCard
-                  icon="document-text"
-                  label="Surveys"
-                  value={surveysWithNames.length}
-                  color="#8B5CF6"
-                />
-                <StatCard
-                  icon="people"
-                  label="Responses"
-                  value={totalResponses}
-                  color="#5FA9F5"
-                />
-              </Animated.View>
+            {/* Stats Cards */}
+            <Animated.View style={[styles.statsGrid, statsAnimatedStyle]}>
+              <StatCard
+                icon="document-text"
+                label="Surveys"
+                value={surveysWithNames.length}
+                color="#8B5CF6"
+              />
+              <StatCard
+                icon="people"
+                label="Responses"
+                value={totalResponses}
+                color="#5FA9F5"
+              />
+            </Animated.View>
 
-              {/* Data Quality */}
-              <Animated.View style={overviewAnimatedStyle}>
-                {analysis?.data?.dataQualityNotes && (
-                  <View style={styles.qualityCard}>
-                    <View style={styles.cardHeader}>
-                      <Ionicons name="shield-checkmark" size={24} color="#10B981" />
-                      <Text style={styles.cardTitle}>Data Quality</Text>
-                    </View>
-                    <View style={styles.confidenceRow}>
-                      <Text style={styles.confidenceLabel}>Confidence Score:</Text>
-                      <View style={styles.confidenceBadge}>
-                        <Text style={styles.confidenceValue}>
-                          {Math.round(
-                            (analysis?.data?.dataQualityNotes?.confidenceScore || 0) * 100
-                          )}
-                          %
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.qualityText}>
-                      {analysis?.data?.dataQualityNotes?.confidenceExplanation || ""}
+            {/* Data Quality */}
+            <Animated.View style={overviewAnimatedStyle}>
+              {analysis?.data?.dataQualityNotes && (
+                <View style={styles.qualityCard}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={24}
+                      color="#10B981"
+                    />
+                    <Text style={styles.cardTitle}>Data Quality</Text>
+                  </View>
+                  <View style={styles.confidenceRow}>
+                    <Text style={styles.confidenceLabel}>
+                      Confidence Score:
                     </Text>
-                    {analysis?.data?.dataQualityNotes?.notes &&
-                      analysis?.data?.dataQualityNotes?.notes.length > 0 && (
-                        <View style={styles.notesSection}>
-                          {analysis?.data?.dataQualityNotes?.notes.map((note, index) => (
+                    <View style={styles.confidenceBadge}>
+                      <Text style={styles.confidenceValue}>
+                        {Math.round(
+                          (analysis?.data?.dataQualityNotes?.confidenceScore ||
+                            0) * 100
+                        )}
+                        %
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.qualityText}>
+                    {analysis?.data?.dataQualityNotes?.confidenceExplanation ||
+                      ""}
+                  </Text>
+                  {analysis?.data?.dataQualityNotes?.notes &&
+                    analysis?.data?.dataQualityNotes?.notes.length > 0 && (
+                      <View style={styles.notesSection}>
+                        {analysis?.data?.dataQualityNotes?.notes.map(
+                          (note, index) => (
                             <View key={index} style={styles.noteItem}>
                               <Ionicons
                                 name="information-circle"
@@ -340,37 +365,44 @@ export default function AnalysisInsights() {
                               />
                               <Text style={styles.noteText}>{note}</Text>
                             </View>
-                          ))}
-                        </View>
-                      )}
-                  </View>
-                )}
-
-                {/* Overview Card */}
-                <View style={styles.overviewCard}>
-                  <View style={styles.cardHeader}>
-                    <Ionicons name="document-text-outline" size={24} color="#8B5CF6" />
-                    <Text style={styles.cardTitle}>Overview</Text>
-                  </View>
-                  <Text style={styles.overviewText}>{analysis?.data?.overview || "No overview available"}</Text>
+                          )
+                        )}
+                      </View>
+                    )}
                 </View>
-              </Animated.View>
+              )}
 
-              {/* Survey Insights */}
-              <Animated.View style={surveysAnimatedStyle}>
-                {surveysWithNames && surveysWithNames.length > 0 && (
-                  <View style={styles.surveysSection}>
-                    <Text style={styles.sectionTitle}>Survey Details</Text>
-                    {surveysWithNames.map((survey, index) => (
-                      <SurveyInsightCard key={index} survey={survey} />
-                    ))}
-                  </View>
-                )}
-              </Animated.View>
+              {/* Overview Card */}
+              <View style={styles.overviewCard}>
+                <View style={styles.cardHeader}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={24}
+                    color="#8B5CF6"
+                  />
+                  <Text style={styles.cardTitle}>Overview</Text>
+                </View>
+                <Text style={styles.overviewText}>
+                  {analysis?.data?.overview || "No overview available"}
+                </Text>
+              </View>
             </Animated.View>
-          </ScrollView>
-        </View>
-      </SafeAreaView>
+
+            {/* Survey Insights */}
+            <Animated.View style={surveysAnimatedStyle}>
+              {surveysWithNames && surveysWithNames.length > 0 && (
+                <View style={styles.surveysSection}>
+                  <Text style={styles.sectionTitle}>Survey Details</Text>
+                  {surveysWithNames.map((survey, index) => (
+                    <SurveyInsightCard key={index} survey={survey} />
+                  ))}
+                </View>
+              )}
+            </Animated.View>
+          </Animated.View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -590,23 +622,24 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   title: {
     fontSize: 32,
     fontWeight: "700",
     color: "#FFFFFF",
-    marginBottom: 8,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
   },
   titleImage: {
-    height: 28,
-    width: 92,
+    height: 32,
+    width: 106,
     marginTop: -4,
   },
   subtitle: {

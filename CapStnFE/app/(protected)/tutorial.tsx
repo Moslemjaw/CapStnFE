@@ -10,29 +10,33 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const TUTORIAL_SLIDES = [
   {
     title: "Welcome to SIGHT",
-    description: "Your platform for creating surveys and gathering meaningful insights.",
-    illustration: "👋",
+    description:
+      "Your platform for creating surveys and gathering meaningful insights.",
+    icon: "hand-left-outline" as const,
   },
   {
     title: "Create Clean Surveys",
-    description: "Design structured questions that lead to clear, meaningful results.",
-    illustration: "📝",
+    description:
+      "Design structured questions that lead to clear, meaningful results.",
+    icon: "document-text-outline" as const,
   },
   {
     title: "Analyze Results",
-    description: "Get instant insights from your survey responses with powerful analytics.",
-    illustration: "📊",
+    description:
+      "Get instant insights from your survey responses with powerful analytics.",
+    icon: "analytics-outline" as const,
   },
   {
     title: "Get Started",
     description: "Choose your path and start your journey with clarity.",
-    illustration: "🚀",
+    icon: "rocket-outline" as const,
   },
 ];
 
@@ -70,7 +74,11 @@ export default function Tutorial() {
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / SCREEN_WIDTH);
-    if (index !== currentSlideIndex && index >= 0 && index < TUTORIAL_SLIDES.length) {
+    if (
+      index !== currentSlideIndex &&
+      index >= 0 &&
+      index < TUTORIAL_SLIDES.length
+    ) {
       setCurrentSlideIndex(index);
       // Reset auto-slide timer when user manually swipes
       if (autoSlideTimerRef.current) {
@@ -94,136 +102,102 @@ export default function Tutorial() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.contentContainer}>
-        {/* Decorative Circles */}
-        <View style={styles.decorativeCircle1} />
-        <View style={styles.decorativeCircle2} />
-        <View style={styles.decorativeCircle3} />
-        <View style={styles.decorativeCircle4} />
-
-        {/* Carousel Section */}
-        <View style={styles.carouselSection}>
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            decelerationRate="fast"
-            style={styles.carouselScrollView}
-            contentContainerStyle={styles.carouselContent}
-          >
-            {TUTORIAL_SLIDES.map((slide, index) => (
-              <View key={index} style={styles.slideWrapper}>
-                <View style={styles.slide}>
-                  {/* Illustration Container */}
-                  <View style={styles.illustrationContainer}>
-                    <View style={styles.illustrationCard}>
-                      <Text style={styles.illustrationEmoji}>{slide.illustration}</Text>
-                    </View>
-                  </View>
-
-                  {/* Title */}
-                  <Text style={styles.slideTitle}>{slide.title}</Text>
-
-                  {/* Description */}
-                  <Text style={styles.slideDescription}>{slide.description}</Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* Carousel Indicators */}
-          <View style={styles.indicatorsContainer}>
-            {TUTORIAL_SLIDES.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.indicator,
-                  index === currentSlideIndex && styles.indicatorActive,
-                ]}
-              >
-                {index === currentSlideIndex && (
-                  <LinearGradient
-                    colors={["#60A5FA", "#34D399"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.indicatorGradient}
-                  />
-                )}
-              </View>
-            ))}
-          </View>
-
-          {/* Get Started Button */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              onPress={handleGetStarted}
-              activeOpacity={0.8}
-              style={styles.getStartedButton}
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={["#EEF5FF", "#F9F6FE"]}
+        style={styles.gradientContainer}
+      >
+        <View style={styles.contentContainer}>
+          {/* Carousel Section */}
+          <View style={styles.carouselSection}>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              decelerationRate="fast"
+              style={styles.carouselScrollView}
+              contentContainerStyle={styles.carouselContent}
             >
-              <LinearGradient
-                colors={["#60A5FA", "#34D399"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.buttonGradient}
+              {TUTORIAL_SLIDES.map((slide, index) => (
+                <View key={index} style={styles.slideWrapper}>
+                  <View style={styles.slide}>
+                    {/* Icon Container */}
+                    <View style={styles.iconContainer}>
+                      <View style={styles.iconCard}>
+                        <Ionicons name={slide.icon} size={48} color="#4A63D8" />
+                      </View>
+                    </View>
+
+                    {/* Title */}
+                    <Text style={styles.slideTitle}>{slide.title}</Text>
+
+                    {/* Description */}
+                    <Text style={styles.slideDescription}>
+                      {slide.description}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Carousel Indicators */}
+            <View style={styles.indicatorsContainer}>
+              {TUTORIAL_SLIDES.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicator,
+                    index === currentSlideIndex && styles.indicatorActive,
+                  ]}
+                >
+                  {index === currentSlideIndex && (
+                    <LinearGradient
+                      colors={["#5FA9F5", "#4A63D8"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.indicatorGradient}
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {/* Get Started Button */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                onPress={handleGetStarted}
+                activeOpacity={0.8}
+                style={styles.getStartedButton}
               >
-                <Text style={styles.buttonText}>Get Started</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#5FA9F5", "#4A63D8"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buttonGradient}
+                >
+                  <Text style={styles.buttonText}>Get Started</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+  },
+  gradientContainer: {
+    flex: 1,
   },
   contentContainer: {
     flex: 1,
-    position: "relative",
-  },
-  decorativeCircle1: {
-    position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "rgba(96, 165, 250, 0.15)",
-    top: 40,
-    right: -50,
-  },
-  decorativeCircle2: {
-    position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(96, 165, 250, 0.12)",
-    top: 120,
-    left: -30,
-  },
-  decorativeCircle3: {
-    position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(96, 165, 250, 0.1)",
-    bottom: 200,
-    right: 20,
-  },
-  decorativeCircle4: {
-    position: "absolute",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(96, 165, 250, 0.08)",
-    bottom: 120,
-    left: 40,
   },
   carouselSection: {
     flex: 1,
@@ -250,24 +224,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 60,
   },
-  illustrationContainer: {
+  iconContainer: {
     marginBottom: 48,
     alignItems: "center",
     justifyContent: "center",
   },
-  illustrationCard: {
-    width: 200,
-    height: 200,
-    borderRadius: 24,
-    backgroundColor: "rgba(243, 244, 246, 0.8)",
+  iconCard: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    backgroundColor: "rgba(238, 245, 255, 0.3)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(229, 231, 235, 0.5)",
-  },
-  illustrationEmoji: {
-    fontSize: 80,
-    textAlign: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   slideTitle: {
     fontSize: 32,
@@ -296,9 +272,8 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
+    backgroundColor: "#C8C8C8",
+    borderWidth: 0,
   },
   indicatorActive: {
     borderWidth: 0,
@@ -316,8 +291,13 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   getStartedButton: {
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: "hidden",
+    shadowColor: "#4A63D8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   buttonGradient: {
     paddingVertical: 16,
@@ -327,7 +307,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     textAlign: "center",
   },
 });
