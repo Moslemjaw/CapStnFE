@@ -17,6 +17,7 @@ import { getSurveyById, Survey } from "@/api/surveys";
 import { getResponsesBySurveyId } from "@/api/responses";
 import { createAnalysis, getAllAnalyses, getAnalysisById, AnalysisResponse } from "@/api/ai";
 import AnalysisContext from "@/context/AnalysisContext";
+import { AnalysisSkeleton } from "@/components/Skeleton";
 
 export default function SurveyAnalyses() {
   const router = useRouter();

@@ -21,6 +21,7 @@ import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { SurveyDetailsSkeleton } from "@/components/Skeleton";
 
 export default function SurveyDetails() {
   const router = useRouter();
@@ -131,6 +132,10 @@ export default function SurveyDetails() {
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
   };
+
+  if (loading) {
+    return <SurveyDetailsSkeleton />;
+  }
 
   if (error || !survey) {
     return (

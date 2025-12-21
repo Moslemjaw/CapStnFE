@@ -76,20 +76,12 @@ export default function SurveyAnswerSuccess() {
     }
   };
 
-  const calculatePercentage = (part: number, total: number): number => {
-    if (total === 0) return 0;
-    return Math.round((part / total) * 100);
-  };
-
   const reqAnswered = parseInt(requiredAnswered) || 0;
   const optAnswered = parseInt(optionalAnswered) || 0;
   const totalAns = reqAnswered + optAnswered;
   const totalQ = parseInt(totalQuestions) || 0;
   const totalReq = parseInt(totalRequired) || 0;
   const totalOpt = parseInt(totalOptional) || 0;
-
-  const optionalPercentage = calculatePercentage(optAnswered, totalOpt);
-  const totalPercentage = calculatePercentage(totalAns, totalQ);
 
   const handleFindMoreSurveys = () => {
     router.replace("/(protected)/(researcher)/(tabs)/surveys" as any);
@@ -190,37 +182,44 @@ export default function SurveyAnswerSuccess() {
             </View>
 
             <View style={styles.statsItem}>
-              <Ionicons name="close-circle" size={20} color="#EF4444" />
+              <Ionicons 
+                name={reqAnswered === totalReq ? "checkmark-circle" : "ellipse-outline"} 
+                size={20} 
+                color={reqAnswered === totalReq ? "#10B981" : "#4A63D8"} 
+              />
               <Text style={styles.statsLabel}>Required Questions</Text>
               <View style={styles.statsValueContainer}>
                 <Text style={styles.statsValue}>
                   {reqAnswered}/{totalReq}
                 </Text>
-                {reqAnswered === totalReq && (
-                  <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                )}
               </View>
             </View>
 
             <View style={styles.statsItem}>
-              <Ionicons name="ellipse-outline" size={20} color="#4A63D8" />
+              <Ionicons 
+                name={optAnswered === totalOpt && totalOpt > 0 ? "checkmark-circle" : "ellipse-outline"} 
+                size={20} 
+                color={optAnswered === totalOpt && totalOpt > 0 ? "#10B981" : "#4A63D8"} 
+              />
               <Text style={styles.statsLabel}>Optional Questions</Text>
               <View style={styles.statsValueContainer}>
                 <Text style={styles.statsValue}>
                   {optAnswered}/{totalOpt}
                 </Text>
-                <Text style={styles.statsPercentage}>{optionalPercentage}%</Text>
               </View>
             </View>
 
             <View style={styles.statsItem}>
-              <Ionicons name="layers-outline" size={20} color="#8A4DE8" />
+              <Ionicons 
+                name={totalAns === totalQ && totalQ > 0 ? "checkmark-circle" : "layers-outline"} 
+                size={20} 
+                color={totalAns === totalQ && totalQ > 0 ? "#10B981" : "#8A4DE8"} 
+              />
               <Text style={styles.statsLabel}>Total Answered</Text>
               <View style={styles.statsValueContainer}>
                 <Text style={styles.statsValue}>
                   {totalAns}/{totalQ}
                 </Text>
-                <Text style={styles.statsPercentage}>{totalPercentage}%</Text>
               </View>
             </View>
           </View>
@@ -231,7 +230,7 @@ export default function SurveyAnswerSuccess() {
             <View style={styles.greatJobTextContainer}>
               <Text style={styles.greatJobTitle}>Great Job!</Text>
               <Text style={styles.greatJobText}>
-                You've answered {totalPercentage}% of all questions. Your detailed responses are valuable!
+                Your detailed responses are valuable and help us understand better!
               </Text>
             </View>
           </View>

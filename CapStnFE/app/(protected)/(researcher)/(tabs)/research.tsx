@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { ResearchSkeleton } from "@/components/Skeleton";
 import {
   getSurveysByCreatorId,
   publishSurvey,
@@ -326,6 +327,10 @@ export default function ResearcherResearch() {
       params: { surveyId: survey._id },
     } as any);
   };
+
+  if (loading) {
+    return <ResearchSkeleton />;
+  }
 
   return (
     <FadeInView style={{ flex: 1 }}>

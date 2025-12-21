@@ -1,13 +1,28 @@
 import { StyleSheet, Text, View, ScrollView, Image } from "react-native";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { HomeSkeleton } from "@/components/Skeleton";
+import { SmoothLoader } from "@/components/SmoothLoader";
 
 export default function ResearcherHome() {
   const bottomNavHeight = useBottomNavHeight();
   const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate initial data load
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <HomeSkeleton />;
+  }
 
   return (
     <FadeInView style={{ flex: 1 }}>
@@ -26,34 +41,36 @@ export default function ResearcherHome() {
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
-      >
-        <View style={styles.content}>
-          <View style={styles.placeholderContainer}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="analytics-outline" size={64} color="#8A4DE8" />
-            </View>
-            <Text style={styles.placeholderTitle}>Your Insights Dashboard</Text>
-            <Text style={styles.placeholderText}>
-              This page will populate with insights and data as you use the app.
-            </Text>
-            <View style={styles.iconRow}>
-              <View style={styles.smallIconContainer}>
-                <Ionicons name="bar-chart-outline" size={32} color="#5FA9F5" />
+      <SmoothLoader isLoading={false}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
+        >
+          <View style={styles.content}>
+            <View style={styles.placeholderContainer}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="analytics-outline" size={64} color="#8A4DE8" />
               </View>
-              <View style={styles.smallIconContainer}>
-                <Ionicons name="pie-chart-outline" size={32} color="#8A4DE8" />
-              </View>
-              <View style={styles.smallIconContainer}>
-                <Ionicons name="trending-up-outline" size={32} color="#5FA9F5" />
+              <Text style={styles.placeholderTitle}>Your Insights Dashboard</Text>
+              <Text style={styles.placeholderText}>
+                This page will populate with insights and data as you use the app.
+              </Text>
+              <View style={styles.iconRow}>
+                <View style={styles.smallIconContainer}>
+                  <Ionicons name="bar-chart-outline" size={32} color="#5FA9F5" />
+                </View>
+                <View style={styles.smallIconContainer}>
+                  <Ionicons name="pie-chart-outline" size={32} color="#8A4DE8" />
+                </View>
+                <View style={styles.smallIconContainer}>
+                  <Ionicons name="trending-up-outline" size={32} color="#5FA9F5" />
+                </View>
               </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </SmoothLoader>
     </SafeAreaView>
     </FadeInView>
   );

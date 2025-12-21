@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { SurveysSkeleton } from "@/components/Skeleton";
 import { getPublishedSurveys } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { getResponsesBySurveyId, getResponsesByUserId } from "@/api/responses";
@@ -800,7 +801,9 @@ export default function ResearcherSurveys() {
         </View>
 
         {/* Content */}
-        {loading ? null : error ? (
+        {loading ? (
+          <SurveysSkeleton />
+        ) : error ? (
           <View style={styles.centerContainer}>
             <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
             <Text style={styles.errorText}>{error}</Text>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Liquid Blob</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050505; /* Deep black for contrast */
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Controls UI */
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: opacity 0.3s ease;
+        }
+
+        .controls:hover {
+            opacity: 1;
+        }
+
+        button {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: 500;
+        }
+
+        button:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        button.active {
+            color: #050505;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .instruction {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 1s ease;
+            text-align: center;
+        }
+        
+        /* Fade instruction in initially then out */
+        @keyframes fadeHint {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        .hint-anim {
+            animation: fadeHint 4s forwards;
+        }
+
+        /* Status Icons (Loader & Checkmark) */
+        .icon-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            pointer-events: none;
+            display: grid;
+            place-items: center;
+        }
+
+        .status-icon {
+            grid-area: 1 / 1;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+        }
+
+        .status-icon.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top-color: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            animation: spin 1.5s linear infinite;
+        }
+
+        .checkmark {
+            width: 48px;
+            height: 48px;
+            fill: white;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="instruction hint-anim">Tap the blob</div>
+
+    <!-- Status Icons -->
+    <div class="icon-container">
+        <div class="status-icon loader" id="loader"></div>
+        <svg class="status-icon checkmark" id="checkmark" viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+    </div>
+
+    <canvas id="blobCanvas"></canvas>
+
+    <div class="controls">
+        <button onclick="setBlobState('idle')" class="active" id="btn-idle">Idle</button>
+        <button onclick="setBlobState('active')" id="btn-active">Active</button>
+        <button onclick="setBlobState('processing')" id="btn-processing">Processing</button>
+        <button onclick="setBlobState('done')" id="btn-done">Done</button>
+    </div>
+
+    <script>
+        /**
+         * Simplex Noise Implementation (Minimal)
+         * Used to generate smooth, organic random values for the liquid effect.
+         */
+        const SimplexNoise = (function() {
+            function Grad(x, y, z) {
+                this.x = x; this.y = y; this.z = z;
+            }
+            Grad.prototype.dot2 = function(x, y) { return this.x*x + this.y*y; };
+            var grad3 = [new Grad(1,1,0),new Grad(-1,1,0),new Grad(1,-1,0),new Grad(-1,-1,0),
+                         new Grad(1,0,1),new Grad(-1,0,1),new Grad(1,0,-1),new Grad(-1,0,-1),
+                         new Grad(0,1,1),new Grad(0,-1,1),new Grad(0,1,-1),new Grad(0,-1,-1)];
+            var p = [151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
+            190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168, 68,175,
+            74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54, 65,25,63,161,
+            1,216,80,73,209,76,132,187,208, 89,18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
+            5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,
+            101,155,167, 43,172,9,129,22,39,253, 19,98,108,110,79,113,224,232,178,185,112,104,218,246,97,228,251,34,242,193,238,210,144,12,191,
+            179,162,241, 81,51,145,235,249,14,239,107,49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,138,236,205,
+            93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180];
+            var perm = new Array(512);
+            var gradP = new Array(512);
+            for(var i=0; i<512; i++) {
+                perm[i] = p[i & 255];
+                gradP[i] = grad3[perm[i] % 12];
+            }
+            return {
+                noise2D: function(xin, yin) {
+                    var n0, n1, n2;
+                    var F2 = 0.5*(Math.sqrt(3.0)-1.0);
+                    var s = (xin+yin)*F2;
+                    var i = Math.floor(xin+s);
+                    var j = Math.floor(yin+s);
+                    var G2 = (3.0-Math.sqrt(3.0))/6.0;
+                    var t = (i+j)*G2;
+                    var X0 = i-t;
+                    var Y0 = j-t;
+                    var x0 = xin-X0;
+                    var y0 = yin-Y0;
+                    var i1, j1;
+                    if(x0>y0) {i1=1; j1=0;} else {i1=0; j1=1;}
+                    var x1 = x0 - i1 + G2;
+                    var y1 = y0 - j1 + G2;
+                    var x2 = x0 - 1.0 + 2.0 * G2;
+                    var y2 = y0 - 1.0 + 2.0 * G2;
+                    var ii = i & 255;
+                    var jj = j & 255;
+                    var gi0 = gradP[ii+perm[jj]];
+                    var gi1 = gradP[ii+i1+perm[jj+j1]];
+                    var gi2 = gradP[ii+1+perm[jj+1]];
+                    var t0 = 0.5 - x0*x0 - y0*y0;
+                    if(t0<0) n0 = 0.0; else { t0 *= t0; n0 = t0 * t0 * gi0.dot2(x0, y0); }
+                    var t1 = 0.5 - x1*x1 - y1*y1;
+                    if(t1<0) n1 = 0.0; else { t1 *= t1; n1 = t1 * t1 * gi1.dot2(x1, y1); }
+                    var t2 = 0.5 - x2*x2 - y2*y2;
+                    if(t2<0) n2 = 0.0; else { t2 *= t2; n2 = t2 * t2 * gi2.dot2(x2, y2); }
+                    return 70.0 * (n0 + n1 + n2);
+                }
+            };
+        })();
+
+        // --- Configuration & Palette ---
+        const PALETTE = [
+            '#35E0E6', // Cyan / Aqua
+            '#2BB6E9', // Teal Blue
+            '#5FA9F5', // Sky Blue
+            '#4A63D8', // Indigo Blue
+            '#8A4DE8', // Violet
+            '#A23DD8', // Purple
+            '#D13DB8', // Magenta
+            '#FF6FAE'  // Pink
+        ];
+
+        // --- State Management ---
+        const STATES = {
+            IDLE: 'idle',
+            ACTIVE: 'active',
+            PROCESSING: 'processing',
+            DONE: 'done'
+        };
+
+        let currentState = STATES.IDLE;
+        
+        // Target parameters (we interpolate towards these for smoothness)
+        const targets = {
+            noiseScale: 0.5,   // How "wobbly" the blob is
+            speed: 0.2,        // How fast time moves
+            rotationSpeed: 0.1,// Overall rotation
+            radius: 150,       // Base radius
+            complexity: 1.0,   // Detail of noise
+            globalAlpha: 0.8
+        };
+
+        // Current actual values (interpolated)
+        const current = {
+            noiseScale: 0.5,
+            speed: 0.2,
+            rotationSpeed: 0.1,
+            radius: 150,
+            complexity: 1.0,
+            globalAlpha: 0.8
+        };
+
+        // --- Blob Layer Class ---
+        // Each blob layer is a deformed circle
+        class BlobLayer {
+            constructor(color, offsetAngle, speedModifier, radiusModifier) {
+                this.color = color;
+                this.offsetAngle = offsetAngle; // Phase shift
+                this.speedModifier = speedModifier;
+                this.radiusModifier = radiusModifier;
+                this.points = [];
+                this.numPoints = 120; // Resolution of the circle
+                this.zOff = Math.random() * 100; // Unique random seed for noise
+            }
+
+            update(dt, time) {
+                // Determine current shape parameters based on state
+                // Interpolate 'current' values globally in the main loop, here we just use them
+                this.zOff += dt * current.speed * this.speedModifier;
+            }
+
+            draw(ctx, centerX, centerY, impulse) {
+                ctx.beginPath();
+                for (let i = 0; i <= this.numPoints; i++) {
+                    // Current angle around the circle
+                    let angle = (Math.PI * 2 * i) / this.numPoints;
+                    
+                    // 1. Base Circular Motion
+                    // We map the angle to noise space. 
+                    // To make the loop seamless, we map the 1D circle to a 2D circle in noise space.
+                    let noiseX = Math.cos(angle) * current.complexity + this.zOff;
+                    let noiseY = Math.sin(angle) * current.complexity + this.zOff;
+                    
+                    // Get noise value (-1 to 1)
+                    let n = SimplexNoise.noise2D(noiseX, noiseY);
+                    
+                    // 2. React / Impulse Math
+                    // If there is a click reaction (impulse), deform the circle at that angle
+                    let impulseEffect = 0;
+                    if (impulse.active) {
+                        // Calculate angular distance between current point and click
+                        // We use atan2 logic in the click handler, here we just check difference
+                        let angleDiff = Math.abs(angle - impulse.angle);
+                        if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+                        
+                        // Gaussian-like bump
+                        if (angleDiff < 1.0) {
+                            impulseEffect = Math.cos(angleDiff * 2) * impulse.strength;
+                        }
+                    }
+
+                    // Calculate final radius for this point
+                    // Base Radius + Noise Variation + Impulse
+                    let r = (current.radius * this.radiusModifier) + (n * 30 * current.noiseScale) + impulseEffect;
+                    
+                    // Prevent negative radius
+                    r = Math.max(0, r);
+
+                    // Convert polar to cartesian
+                    let x = centerX + Math.cos(angle + current.rotationSpeed) * r;
+                    let y = centerY + Math.sin(angle + current.rotationSpeed) * r;
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                
+                // Styling
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
+
+        // --- Main Application ---
+        const canvas = document.getElementById('blobCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let layers = [];
+        let time = 0;
+        
+        // Impulse state for "React"
+        let impulse = {
+            active: false,
+            angle: 0,
+            strength: 0,
+            decay: 0.96 // Slower decay for a more fluid, watery ripple
+        };
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        function init() {
+            resize();
+            window.addEventListener('resize', resize);
+
+            // Create 3 layers for the blob with different palette mixtures
+            // Inner core (brighter)
+            layers.push(new BlobLayer(PALETTE[0], 0, 1.0, 0.8)); 
+            // Middle
+            layers.push(new BlobLayer(PALETTE[3], Math.PI / 3, 0.8, 0.95)); 
+            // Outer (Pink/Purple)
+            layers.push(new BlobLayer(PALETTE[6], Math.PI / 1.5, 0.6, 1.05));
+            
+            // Add an extra subtle layer for depth
+            layers.push(new BlobLayer(PALETTE[2], Math.PI, 1.2, 0.9));
+
+            loop();
+        }
+
+        // Linear interpolation utility
+        function lerp(start, end, amt) {
+            return (1 - amt) * start + amt * end;
+        }
+
+        function updateStateParams() {
+            switch (currentState) {
+                case STATES.IDLE:
+                    targets.noiseScale = 0.5;
+                    targets.speed = 0.2;
+                    targets.radius = Math.min(width, height) * 0.15;
+                    targets.complexity = 0.8;
+                    targets.rotationSpeed = time * 0.1;
+                    targets.globalAlpha = 0.6;
+                    break;
+                case STATES.ACTIVE:
+                    targets.noiseScale = 1.0;
+                    targets.speed = 0.4; // Slower, more gentle
+                    targets.radius = Math.min(width, height) * 0.22;
+                    targets.complexity = 1.1;
+                    targets.rotationSpeed = time * 0.2;
+                    targets.globalAlpha = 0.9;
+                    break;
+                case STATES.PROCESSING:
+                    // Pulse the noise scale for a "thinking" effect, but much slower
+                    targets.noiseScale = 1.1 + Math.sin(time * 3) * 0.2; 
+                    targets.speed = 0.6; // Reduced significantly from 2.0
+                    targets.radius = Math.min(width, height) * 0.20;
+                    targets.complexity = 1.6; // Less jagged
+                    targets.rotationSpeed = time * 0.4;
+                    targets.globalAlpha = 1.0;
+                    break;
+                case STATES.DONE:
+                    // Quick satisfying shape
+                    targets.noiseScale = 0.2; // Smooth
+                    targets.speed = 0.1;
+                    targets.radius = Math.min(width, height) * 0.25; // Slightly larger
+                    targets.complexity = 0.5;
+                    targets.rotationSpeed = time * 0.05;
+                    targets.globalAlpha = 0.7;
+                    break;
+            }
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+
+            // Time step
+            const dt = 0.016; 
+            time += dt;
+
+            updateStateParams();
+
+            // Smoothly interpolate current values to target values (Ease out)
+            // LOWER EASE FACTOR = SMOOTHER TRANSITIONS
+            const ease = 0.025; 
+            current.noiseScale = lerp(current.noiseScale, targets.noiseScale, ease);
+            current.speed = lerp(current.speed, targets.speed, ease);
+            current.radius = lerp(current.radius, targets.radius, ease);
+            current.complexity = lerp(current.complexity, targets.complexity, ease);
+            current.globalAlpha = lerp(current.globalAlpha, targets.globalAlpha, ease);
+            // Rotation is cumulative, not lerped directly, but the speed is
+            current.rotationSpeed = targets.rotationSpeed;
+
+            // Handle Impulse Decay
+            if (impulse.active) {
+                impulse.strength *= impulse.decay;
+                if (impulse.strength < 0.1) {
+                    impulse.active = false;
+                }
+            }
+
+            // Drawing
+            ctx.clearRect(0, 0, width, height);
+            
+            // We use 'screen' blending to make colors additive and glowing like light
+            ctx.globalCompositeOperation = 'screen'; 
+            ctx.globalAlpha = current.globalAlpha;
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            // Optional: Draw a subtle glow behind
+            let gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, current.radius * 2);
+            gradient.addColorStop(0, 'rgba(74, 99, 216, 0.2)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.globalCompositeOperation = 'source-over'; // Normal blending for background glow
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, current.radius * 3, 0, Math.PI*2);
+            ctx.fill();
+
+            // Switch back to screen for the blob layers
+            ctx.globalCompositeOperation = 'screen';
+
+            layers.forEach(layer => {
+                layer.update(dt, time);
+                layer.draw(ctx, centerX, centerY, impulse);
+            });
+            
+            // Reset
+            ctx.globalAlpha = 1.0;
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        // --- Interaction ---
+
+        function setBlobState(state) {
+            currentState = state;
+            
+            // Update buttons UI
+            document.querySelectorAll('.controls button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${state}`).classList.add('active');
+
+            // Handle Icons
+            const loader = document.getElementById('loader');
+            const checkmark = document.getElementById('checkmark');
+            
+            // First remove visibility
+            loader.classList.remove('visible');
+            checkmark.classList.remove('visible');
+
+            // Add back based on state
+            if (state === STATES.PROCESSING) {
+                loader.classList.add('visible');
+            } else if (state === STATES.DONE) {
+                checkmark.classList.add('visible');
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => triggerReaction(e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', (e) => {
+            // Prevent scrolling on mobile
+            e.preventDefault(); 
+            triggerReaction(e.touches[0].clientX, e.touches[0].clientY);
+        }, {passive: false});
+
+        function triggerReaction(x, y) {
+            // Calculate angle relative to center
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const dx = x - centerX;
+            const dy = y - centerY;
+            
+            // Standardize angle to 0 - 2PI
+            let angle = Math.atan2(dy, dx);
+            if (angle < 0) angle += Math.PI * 2;
+            
+            // Correct angle logic for impulse
+            impulse.active = true;
+            impulse.angle = angle - current.rotationSpeed; 
+            impulse.strength = 50; // Gentle ripple
+            
+            // If idle, wake up briefly
+            if(currentState === STATES.IDLE) {
+                setBlobState(STATES.ACTIVE);
+                // Go back to idle after 2 seconds if untouched
+                clearTimeout(window.idleTimer);
+                window.idleTimer = setTimeout(() => {
+                    if(currentState === STATES.ACTIVE) setBlobState(STATES.IDLE);
+                }, 2000);
+            }
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>

@@ -9,10 +9,18 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useMemo, useContext, useRef } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useEffect, useState, useMemo, useContext, useRef, useCallback } from "react";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+} from "react-native-reanimated";
 import {
   getSurveysByCreatorId,
   getPublishedSurveys,
@@ -22,8 +30,9 @@ import { getResponsesBySurveyId } from "@/api/responses";
 import { createAnalysis, getAnalysisById } from "@/api/ai";
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
-import { SmoothLoader } from "@/components/SmoothLoader";
+import { SurveyListSkeleton } from "@/components/Skeleton";
 import AnalysisContext from "@/context/AnalysisContext";
+import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 interface SurveyWithResponses extends Survey {
   responseCount: number;
@@ -35,6 +44,8 @@ type TimeRangeFilter = "all" | "1-5" | "6-10" | "11-15" | "16-30" | "31+";
 
 export default function MassAnalyses() {
   const router = useRouter();
+  const bottomNavHeight = useBottomNavHeight();
+  const insets = useSafeAreaInsets();
   const { setIsAnalyzing, triggerCompletion } = useContext(AnalysisContext);
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -51,6 +62,119 @@ export default function MassAnalyses() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dark overlay system for fade-in transition
+  const overlayOpacity = useSharedValue(0);
+  const contentOpacity = useSharedValue(0);
+  const headerOpacity = useSharedValue(0);
+  const searchOpacity = useSharedValue(0);
+  const filtersOpacity = useSharedValue(0);
+  const listOpacity = useSharedValue(0);
+
+  // Ultra-smooth easing curves
+  const entranceEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
+  const exitEasing = Easing.bezier(0.4, 0.0, 0.2, 1);
+
+  // Initialize animations to hidden state
+  useEffect(() => {
+    overlayOpacity.value = 0;
+    contentOpacity.value = 0;
+    headerOpacity.value = 0;
+    searchOpacity.value = 0;
+    filtersOpacity.value = 0;
+    listOpacity.value = 0;
+  }, []);
+
+  // Fade-in animations when page is focused
+  useFocusEffect(
+    useCallback(() => {
+      // Dark overlay fades in first
+      overlayOpacity.value = withTiming(1, {
+        duration: 1000,
+        easing: entranceEasing,
+      });
+
+      // Content fades in after overlay starts
+      contentOpacity.value = withDelay(150, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      // Staggered section animations
+      headerOpacity.value = withDelay(150, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      searchOpacity.value = withDelay(270, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      filtersOpacity.value = withDelay(390, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      listOpacity.value = withDelay(510, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      return () => {
+        const exitDuration = 600;
+        overlayOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        contentOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        headerOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        searchOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        filtersOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        listOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+      };
+    }, [])
+  );
+
+  // Animated styles
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+  }));
+
+  const searchAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: searchOpacity.value,
+  }));
+
+  const filtersAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: filtersOpacity.value,
+  }));
+
+  const listAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: listOpacity.value,
+  }));
 
   useEffect(() => {
     loadUser();
@@ -292,138 +416,184 @@ export default function MassAnalyses() {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={loadSurveys} style={styles.button}>
-            <Text style={styles.buttonText}>Retry</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+        <View style={styles.lightBackground} />
+        <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
+        <View style={styles.contentContainer}>
+          <View style={styles.centerContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={loadSurveys} style={styles.button}>
+              <Text style={styles.buttonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
+  if (loading) {
+    return <SurveyListSkeleton />;
+  }
+
   return (
-    <SmoothLoader isLoading={loading} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      {/* Light background (visible when overlay is transparent) */}
+      <View style={styles.lightBackground} />
+      
+      {/* Dark overlay that fades in */}
+      <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
+      
+      {/* Content container */}
+      <View style={styles.contentContainer}>
         {/* Fixed Header Section */}
-        <View style={styles.fixedHeader}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+        <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
+          <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
+            <Text style={styles.headerTitle}>Mass Analyses</Text>
+            <View style={styles.logoContainer}>
+              <Image source={require("@/assets/sightai.png")} style={styles.titleImage} resizeMode="contain" />
+            </View>
           </View>
-          <Text style={styles.headerTitle}>Mass Analyses</Text>
-          <Text style={styles.headerSubtitle}>Select surveys to analyze together</Text>
-        </View>
-      </View>
-      <View style={styles.content}>
+        </Animated.View>
+        
+        <Animated.View style={[styles.content, contentAnimatedStyle]}>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#6B7280" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search surveys..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color="#6B7280" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Filter Chips */}
-        <View style={styles.filterContainerWrapper}>
-          {/* First Row - Status Filters */}
-          <View style={styles.filterContainer}>
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                filterStatus === "all" && styles.filterChipActive,
-              ]}
-              onPress={() => setFilterStatus("all")}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterStatus === "all" && styles.filterChipTextActive,
-                ]}
-              >
-                All
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                filterStatus === "published" && styles.filterChipActive,
-              ]}
-              onPress={() => setFilterStatus("published")}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterStatus === "published" && styles.filterChipTextActive,
-                ]}
-              >
-                Published
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                filterStatus === "unpublished" && styles.filterChipActive,
-              ]}
-              onPress={() => setFilterStatus("unpublished")}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterStatus === "unpublished" && styles.filterChipTextActive,
-                ]}
-              >
-                My Drafts
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Second Row - Advanced Filters & Select All */}
-          <View style={styles.filterContainer}>
-            {/* Advanced Filters Button */}
-            <TouchableOpacity
-              style={[
-                styles.advancedFilterButton,
-                (responseRangeFilter !== "all" || timeRangeFilter !== "all") &&
-                  styles.advancedFilterButtonActive,
-              ]}
-              onPress={() => setShowFilters(!showFilters)}
-            >
-              <Ionicons
-                name="options-outline"
-                size={16}
-                color={
-                  responseRangeFilter !== "all" || timeRangeFilter !== "all"
-                    ? "#8B5CF6"
-                    : "#6B7280"
-                }
+          {/* Search Bar */}
+          <Animated.View style={searchAnimatedStyle}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search-outline" size={20} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search surveys..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#6B7280"
               />
-              <Text
-                style={[
-                  styles.advancedFilterText,
-                  (responseRangeFilter !== "all" ||
-                    timeRangeFilter !== "all") &&
-                    styles.advancedFilterTextActive,
-                ]}
-              >
-                Filters
-              </Text>
-            </TouchableOpacity>
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </Animated.View>
 
-            {/* Select/Clear All */}
-            <View style={styles.filterDivider} />
+          {/* Filters Section */}
+          <Animated.View style={[styles.filtersSection, filtersAnimatedStyle]}>
+            <View style={styles.filtersRow}>
+              {/* Status Filter */}
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  filterStatus !== "all" && styles.filterButtonActive,
+                ]}
+                onPress={() => {
+                  const statuses: ("all" | "published" | "unpublished")[] = ["all", "published", "unpublished"];
+                  const currentIndex = statuses.indexOf(filterStatus);
+                  const nextIndex = (currentIndex + 1) % statuses.length;
+                  setFilterStatus(statuses[nextIndex]);
+                }}
+              >
+                <View style={styles.filterButtonContent}>
+                  <Ionicons
+                    name={
+                      filterStatus === "published"
+                        ? "checkmark-circle-outline"
+                        : filterStatus === "unpublished"
+                        ? "document-outline"
+                        : "filter-outline"
+                    }
+                    size={16}
+                    color={filterStatus !== "all" ? "#8B5CF6" : "#9CA3AF"}
+                  />
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      filterStatus !== "all" && styles.filterButtonTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {filterStatus === "all"
+                      ? "All Status"
+                      : filterStatus === "published"
+                      ? "Published"
+                      : "My Drafts"}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-down"
+                  size={14}
+                  color={filterStatus !== "all" ? "#8B5CF6" : "#9CA3AF"}
+                />
+              </TouchableOpacity>
+
+              {/* Response Range Filter */}
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  responseRangeFilter !== "all" && styles.filterButtonActive,
+                ]}
+                onPress={() => setShowFilters(!showFilters)}
+              >
+                <View style={styles.filterButtonContent}>
+                  <Ionicons
+                    name="people-outline"
+                    size={16}
+                    color={responseRangeFilter !== "all" ? "#5FA9F5" : "#9CA3AF"}
+                  />
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      responseRangeFilter !== "all" && styles.filterButtonTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {responseRangeFilter === "all"
+                      ? "All Responses"
+                      : `${responseRangeFilter} responses`}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-down"
+                  size={14}
+                  color={responseRangeFilter !== "all" ? "#5FA9F5" : "#9CA3AF"}
+                />
+              </TouchableOpacity>
+
+              {/* Time Range Filter */}
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  timeRangeFilter !== "all" && styles.filterButtonActive,
+                ]}
+                onPress={() => setShowFilters(!showFilters)}
+              >
+                <View style={styles.filterButtonContent}>
+                  <Ionicons
+                    name="time-outline"
+                    size={16}
+                    color={timeRangeFilter !== "all" ? "#8A4DE8" : "#9CA3AF"}
+                  />
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      timeRangeFilter !== "all" && styles.filterButtonTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {timeRangeFilter === "all"
+                      ? "All Time"
+                      : `${timeRangeFilter} min`}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-down"
+                  size={14}
+                  color={timeRangeFilter !== "all" ? "#8A4DE8" : "#9CA3AF"}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Select All Button */}
             <TouchableOpacity
               style={styles.selectAllButton}
               onPress={selectAll}
@@ -434,12 +604,11 @@ export default function MassAnalyses() {
                   : "Select All"}
               </Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Animated.View>
 
         {/* Advanced Filters Panel */}
         {showFilters && (
-          <View style={styles.advancedFiltersPanel}>
+          <Animated.View style={[styles.advancedFiltersPanel, filtersAnimatedStyle]}>
             {/* Response Range Filter */}
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionTitle}>Response Range</Text>
@@ -530,15 +699,16 @@ export default function MassAnalyses() {
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
+          </Animated.View>
         )}
 
-        {/* Survey List */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+          {/* Survey List */}
+          <Animated.View style={[styles.scrollViewContainer, listAnimatedStyle]}>
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
+              showsVerticalScrollIndicator={false}
+            >
           {filteredSurveys.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons
@@ -604,13 +774,13 @@ export default function MassAnalyses() {
 
                     <View style={styles.surveyMeta}>
                       <View style={styles.metaItem}>
-                        <Ionicons name="people" size={14} color="#6B7280" />
+                        <Ionicons name="people" size={14} color="#9CA3AF" />
                         <Text style={styles.metaText}>
                           {survey.responseCount} responses
                         </Text>
                       </View>
                       <View style={styles.metaItem}>
-                        <Ionicons name="time" size={14} color="#6B7280" />
+                        <Ionicons name="time" size={14} color="#9CA3AF" />
                         <Text style={styles.metaText}>
                           {survey.estimatedMinutes} min
                         </Text>
@@ -621,61 +791,80 @@ export default function MassAnalyses() {
               </TouchableOpacity>
             ))
           )}
-        </ScrollView>
+            </ScrollView>
+          </Animated.View>
 
-        {/* Bottom Action Bar */}
-        {selectedSurveys.length > 0 && (
-          <View style={styles.actionBar}>
-            <View style={styles.selectionInfo}>
-              <Text style={styles.selectionCount}>
-                {selectedSurveys.length} survey
-                {selectedSurveys.length !== 1 ? "s" : ""}
-              </Text>
-              <Text style={styles.responseCount}>
-                {totalResponses} total response{totalResponses !== 1 ? "s" : ""}
-              </Text>
+          {/* Bottom Action Bar */}
+          {selectedSurveys.length > 0 && (
+            <View style={[styles.actionBar, { bottom: bottomNavHeight }]}>
+              <View style={styles.selectionInfo}>
+                <Text style={styles.selectionCount}>
+                  {selectedSurveys.length} survey
+                  {selectedSurveys.length !== 1 ? "s" : ""}
+                </Text>
+                <Text style={styles.responseCount}>
+                  {totalResponses} total response{totalResponses !== 1 ? "s" : ""}
+                </Text>
+              </View>
+
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={clearSelection}
+                >
+                  <Text style={styles.clearButtonText}>Clear</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.analyzeButton,
+                    creating && styles.analyzeButtonDisabled,
+                  ]}
+                  onPress={handleStartAnalysis}
+                  disabled={creating}
+                >
+                  {creating ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <LinearGradient
+                      colors={["#8B5CF6", "#5FA9F5"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.analyzeButtonGradient}
+                    >
+                      <Ionicons name="analytics" size={20} color="#FFFFFF" />
+                      <Text style={styles.analyzeButtonText}>
+                        Start Analyses ({totalResponses})
+                      </Text>
+                    </LinearGradient>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearSelection}
-              >
-                <Text style={styles.clearButtonText}>Clear</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.analyzeButton,
-                  creating && styles.analyzeButtonDisabled,
-                ]}
-                onPress={handleStartAnalysis}
-                disabled={creating}
-              >
-                {creating ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="analytics" size={20} color="#FFFFFF" />
-                    <Text style={styles.analyzeButtonText}>
-                      Start Analyses ({totalResponses})
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+          )}
+        </Animated.View>
       </View>
     </SafeAreaView>
-    </SmoothLoader>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+  },
+  lightBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#FFFFFF",
+    zIndex: 0,
+  },
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#0F0F1E",
+    zIndex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    zIndex: 2,
   },
   content: {
     flex: 1,
@@ -689,7 +878,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 14,
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   errorText: {
     marginTop: 16,
@@ -709,7 +898,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   fixedHeader: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
     zIndex: 10,
     paddingBottom: 0,
     borderTopLeftRadius: 20,
@@ -717,139 +906,119 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#1E1E2E",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
+    height: 32,
+    width: 106,
     marginTop: -4,
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: "700",
-    color: "#222222",
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: "#505050",
+    color: "#FFFFFF",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E1E2E",
     marginHorizontal: 24,
     marginBottom: 16,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#2D2D3E",
     gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#111827",
-  },
-  filterContainerWrapper: {
-    paddingHorizontal: 24,
-    marginBottom: 16,
-    gap: 8,
-  },
-  filterContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  filterChipActive: {
-    backgroundColor: "#8B5CF6",
-    borderColor: "#8B5CF6",
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#6B7280",
-  },
-  filterChipTextActive: {
     color: "#FFFFFF",
   },
-  filterDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: "#E5E7EB",
-    marginHorizontal: 4,
+  filtersSection: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  filtersRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#1E1E2E",
+    borderWidth: 1,
+    borderColor: "#2D2D3E",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+    minHeight: 40,
+  },
+  filterButtonActive: {
+    borderColor: "#8B5CF6",
+    backgroundColor: "rgba(139, 92, 246, 0.15)",
+  },
+  filterButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  filterButtonText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#9CA3AF",
+    textAlign: "left",
+  },
+  filterButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   selectAllButton: {
-    paddingVertical: 6,
+    alignSelf: "flex-start",
+    paddingVertical: 8,
     paddingHorizontal: 12,
   },
   selectAllText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#8B5CF6",
-  },
-  advancedFilterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    gap: 4,
-  },
-  advancedFilterButtonActive: {
-    backgroundColor: "#F5F3FF",
-    borderColor: "#8B5CF6",
-  },
-  advancedFilterText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#6B7280",
-  },
-  advancedFilterTextActive: {
-    color: "#8B5CF6",
+    color: "#5FA9F5",
   },
   advancedFiltersPanel: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E1E2E",
     marginHorizontal: 24,
     marginBottom: 16,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#2D2D3E",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -859,7 +1028,7 @@ const styles = StyleSheet.create({
   filterSectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#374151",
+    color: "#FFFFFF",
     marginBottom: 10,
   },
   filterOptionsRow: {
@@ -871,9 +1040,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#2D2D3E",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#3D3D4E",
   },
   filterOptionActive: {
     backgroundColor: "#8B5CF6",
@@ -882,7 +1051,7 @@ const styles = StyleSheet.create({
   filterOptionText: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   filterOptionTextActive: {
     color: "#FFFFFF",
@@ -900,6 +1069,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#EF4444",
   },
+  scrollViewContainer: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
@@ -915,7 +1087,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: "600",
-    color: "#111827",
+    color: "#9CA3AF",
   },
   emptySubtext: {
     marginTop: 8,
@@ -924,7 +1096,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   surveyCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E1E2E",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -932,13 +1104,13 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
   surveyCardSelected: {
     borderColor: "#8B5CF6",
-    backgroundColor: "#F5F3FF",
+    backgroundColor: "rgba(139, 92, 246, 0.2)",
   },
   surveyCardContent: {
     flexDirection: "row",
@@ -950,7 +1122,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#D1D5DB",
+    borderColor: "#2D2D3E",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -972,7 +1144,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "600",
-    color: "#111827",
+    color: "#FFFFFF",
   },
   statusBadge: {
     paddingVertical: 3,
@@ -980,20 +1152,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusBadgePublished: {
-    backgroundColor: "#D1FAE5",
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
   },
   statusBadgeUnpublished: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#2D2D3E",
   },
   statusBadgeText: {
     fontSize: 11,
     fontWeight: "600",
   },
   statusBadgeTextPublished: {
-    color: "#065F46",
+    color: "#10B981",
   },
   statusBadgeTextUnpublished: {
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   surveyMeta: {
     flexDirection: "row",
@@ -1006,14 +1178,20 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   actionBar: {
-    backgroundColor: "#FFFFFF",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#1E1E2E",
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderTopColor: "#2D2D3E",
     padding: 16,
     gap: 12,
+    zIndex: 10,
+    elevation: 10,
   },
   selectionInfo: {
     flexDirection: "row",
@@ -1023,11 +1201,11 @@ const styles = StyleSheet.create({
   selectionCount: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111827",
+    color: "#FFFFFF",
   },
   responseCount: {
     fontSize: 14,
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   actionButtons: {
     flexDirection: "row",
@@ -1040,26 +1218,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#2D2D3E",
   },
   clearButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   analyzeButton: {
     flex: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#8B5CF6",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
     borderRadius: 8,
-    gap: 8,
+    overflow: "hidden",
   },
   analyzeButtonDisabled: {
     opacity: 0.6,
+  },
+  analyzeButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 8,
   },
   analyzeButtonText: {
     fontSize: 16,

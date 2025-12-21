@@ -13,7 +13,7 @@ import {
   Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -55,7 +55,6 @@ export default function CreateSurvey() {
   const [errors, setErrors] = useState<{
     title?: string;
   }>({});
-  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadUser();
@@ -218,10 +217,6 @@ export default function CreateSurvey() {
       logicType: "any",
     };
     setQuestions([...questions, newQuestion]);
-    // Scroll to the newly added question after a short delay to ensure it's rendered
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
   };
 
   const getQuestionTypeLabel = (question: LocalQuestion) => {
@@ -431,7 +426,6 @@ export default function CreateSurvey() {
         style={styles.keyboardView}
       >
         <ScrollView
-          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}

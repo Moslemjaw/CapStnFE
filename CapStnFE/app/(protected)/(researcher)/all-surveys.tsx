@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { SurveyListSkeleton } from "@/components/Skeleton";
 import {
   getSurveysByCreatorId,
   publishSurvey,
@@ -511,7 +512,9 @@ export default function AllSurveys() {
             </View>
           </Pressable>
         </Modal>
-        {error ? (
+        {loading ? (
+          <SurveyListSkeleton />
+        ) : error ? (
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={32} color="#EF4444" />
             <Text style={styles.errorText}>{error}</Text>

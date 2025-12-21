@@ -28,7 +28,7 @@ import {
   Correlation,
 } from "@/api/ai";
 import { getSurveyById } from "@/api/surveys";
-import { SmoothLoader } from "@/components/SmoothLoader";
+import { AnalysisSkeleton } from "@/components/Skeleton";
 
 interface SurveyWithName extends SurveySummary {
   surveyTitle: string;
@@ -246,8 +246,11 @@ export default function AnalysisInsights() {
     0
   );
 
+  if (loading) {
+    return <AnalysisSkeleton />;
+  }
+
   return (
-    <SmoothLoader isLoading={loading} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         {/* Light background layer */}
         <View style={styles.lightBackground} />
@@ -368,7 +371,6 @@ export default function AnalysisInsights() {
           </ScrollView>
         </View>
       </SafeAreaView>
-    </SmoothLoader>
   );
 }
 

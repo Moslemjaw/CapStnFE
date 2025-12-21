@@ -29,6 +29,7 @@ import { getSurveyById } from "@/api/surveys";
 import { createAnalysis, getAnalysisById } from "@/api/ai";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import AnalysisContext from "@/context/AnalysisContext";
+import { SightAISkeleton } from "@/components/Skeleton";
 
 interface SurveyWithTitle {
   surveyId: string;
@@ -483,7 +484,7 @@ export default function SightAI() {
   };
 
   if (loading) {
-    return null;
+    return <SightAISkeleton />;
   }
 
   return (

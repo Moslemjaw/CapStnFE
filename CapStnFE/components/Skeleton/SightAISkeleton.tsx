@@ -55,7 +55,7 @@ const DarkSkeletonText: React.FC<{ width?: number | string; height?: number; lin
   );
 };
 
-export const SurveyListSkeleton: React.FC = () => {
+export const SightAISkeleton: React.FC = () => {
   const bottomNavHeight = useBottomNavHeight();
   const insets = useSafeAreaInsets();
 
@@ -72,11 +72,8 @@ export const SurveyListSkeleton: React.FC = () => {
         {/* Fixed Header Section */}
         <View style={styles.fixedHeader}>
           <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
+            <DarkSkeletonBox width={120} height={32} borderRadius={4} />
             <DarkSkeletonBox width={106} height={32} borderRadius={4} />
-            <View style={styles.headerTextContainer}>
-              <DarkSkeletonBox width={150} height={32} borderRadius={4} style={{ marginBottom: 8 }} />
-              <DarkSkeletonBox width={200} height={16} borderRadius={4} />
-            </View>
           </View>
         </View>
         
@@ -85,35 +82,50 @@ export const SurveyListSkeleton: React.FC = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: bottomNavHeight + 16 }}
         >
-          {/* Search Bar Skeleton */}
-          <View style={styles.searchContainer}>
-            <DarkSkeletonBox width="100%" height={40} borderRadius={8} />
+          {/* AI Card Skeleton */}
+          <View style={styles.aiCardContainer}>
+            <View style={styles.aiCard}>
+              <DarkSkeletonBox width={64} height={64} borderRadius={32} style={styles.aiIcon} />
+              <DarkSkeletonText width="70%" height={28} lines={1} style={styles.aiTitle} />
+              <DarkSkeletonText width="100%" height={16} lines={2} style={styles.aiDescription} />
+              <DarkSkeletonBox width="100%" height={52} borderRadius={12} style={styles.aiButton} />
+            </View>
           </View>
 
-          {/* Filter Chips Skeleton */}
-          <View style={styles.filterContainer}>
-            <DarkSkeletonBox width={60} height={28} borderRadius={16} />
-            <DarkSkeletonBox width={80} height={28} borderRadius={16} />
-            <DarkSkeletonBox width={90} height={28} borderRadius={16} />
+          {/* Stats Container */}
+          <View style={styles.statsContainer}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={styles.statCard}>
+                <DarkSkeletonBox width={40} height={24} borderRadius={4} />
+                <DarkSkeletonBox width={60} height={14} borderRadius={4} style={{ marginTop: 8 }} />
+              </View>
+            ))}
           </View>
 
-          {/* Survey Cards Skeleton */}
-          <View style={styles.content}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <View key={i} style={styles.surveyCard}>
-                <View style={styles.cardContent}>
-                  <DarkSkeletonBox width={24} height={24} borderRadius={12} />
-                  <View style={styles.cardInfo}>
-                    <View style={styles.cardHeader}>
-                      <DarkSkeletonText width="70%" height={18} lines={1} />
-                      <DarkSkeletonBox width={60} height={20} borderRadius={8} />
-                    </View>
-                    <View style={styles.metricsRow}>
-                      <DarkSkeletonBox width={100} height={14} borderRadius={4} />
-                      <DarkSkeletonBox width={80} height={14} borderRadius={4} />
-                    </View>
+          {/* Insights Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <DarkSkeletonBox width={150} height={20} borderRadius={4} />
+              <DarkSkeletonBox width={80} height={14} borderRadius={4} />
+            </View>
+            
+            {[1, 2].map((i) => (
+              <View key={i} style={styles.insightCard}>
+                <View style={styles.insightCardHeader}>
+                  <View style={styles.insightCardHeaderLeft}>
+                    <DarkSkeletonBox width={24} height={24} borderRadius={12} />
+                    <DarkSkeletonBox width={80} height={12} borderRadius={4} style={{ marginLeft: 8 }} />
                   </View>
+                  <DarkSkeletonBox width={20} height={20} borderRadius={10} />
                 </View>
+                <DarkSkeletonBox width="80%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+                <DarkSkeletonText width="100%" height={14} lines={3} />
+                <View style={styles.tagsContainer}>
+                  <DarkSkeletonBox width={60} height={24} borderRadius={6} />
+                  <DarkSkeletonBox width={70} height={24} borderRadius={6} />
+                  <DarkSkeletonBox width={50} height={24} borderRadius={6} />
+                </View>
+                <DarkSkeletonBox width={120} height={14} borderRadius={4} style={{ marginTop: 12 }} />
               </View>
             ))}
           </View>
@@ -156,53 +168,80 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 24,
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 16,
-  },
-  headerTextContainer: {
-    flex: 1,
   },
   scrollView: {
     flex: 1,
   },
-  searchContainer: {
+  aiCardContainer: {
     paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  aiCard: {
+    backgroundColor: "#1E1E2E",
+    borderRadius: 20,
+    padding: 24,
+    minHeight: 200,
+    alignItems: "center",
+  },
+  aiIcon: {
     marginBottom: 16,
   },
-  filterContainer: {
+  aiTitle: {
+    marginBottom: 12,
+  },
+  aiDescription: {
+    marginBottom: 24,
+  },
+  aiButton: {
+    width: "100%",
+  },
+  statsContainer: {
     flexDirection: "row",
     paddingHorizontal: 24,
+    gap: 12,
+    marginBottom: 32,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#1E1E2E",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  section: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
-    gap: 8,
   },
-  content: {
-    padding: 24,
-    paddingTop: 0,
-  },
-  surveyCard: {
+  insightCard: {
     backgroundColor: "#1E1E2E",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
-  cardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardHeader: {
+  insightCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  metricsRow: {
+  insightCardHeaderLeft: {
     flexDirection: "row",
-    gap: 16,
-    marginTop: 8,
+    alignItems: "center",
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
   },
 });
 

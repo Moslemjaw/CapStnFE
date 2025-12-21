@@ -34,6 +34,7 @@ import { getAllAnalyses } from "@/api/ai";
 import { calculateStreak } from "@/utils/userProgress";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { ProfileSkeleton } from "@/components/Skeleton";
 
 export default function ResearcherProfile() {
   const [user, setUser] = useState<User | null>(null);
@@ -56,6 +57,7 @@ export default function ResearcherProfile() {
   const [surveysCreated, setSurveysCreated] = useState<number>(0);
   const [aiAnalyses, setAiAnalyses] = useState<number>(0);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Format duration: show minutes if < 60 min, hours if >= 60 min
   const formatDuration = (ms: number): { value: string; label: string } => {
@@ -325,6 +327,7 @@ export default function ResearcherProfile() {
   }, []);
 
   const loadUser = useCallback(async () => {
+    setInitialLoading(true);
     const userData = await getUser();
     setUser(userData);
     setImageError(false); // Reset image error when user changes
@@ -337,6 +340,7 @@ export default function ResearcherProfile() {
         loadActivityMetrics(userData._id),
       ]);
     }
+    setInitialLoading(false);
   }, [calculateTotalAndWeeklyPoints, loadStreak, loadActivityMetrics]);
 
   useEffect(() => {
@@ -440,6 +444,10 @@ export default function ResearcherProfile() {
 
   const levelInfo = calculateLevel(totalPoints);
   const imageUrl = getImageUrl(user?.image || "");
+
+  if (initialLoading) {
+    return <ProfileSkeleton />;
+  }
 
   return (
     <FadeInView style={{ flex: 1 }}>
