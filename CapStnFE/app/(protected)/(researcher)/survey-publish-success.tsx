@@ -83,8 +83,15 @@ export default function SurveyPublishSuccess() {
           style={styles.button}
           onPress={handleGoToResearch}
         >
-          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-          <Text style={styles.buttonText}>Back to Research</Text>
+          <LinearGradient
+            colors={["#5FA9F5", "#4A63D8"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.buttonGradient}
+          >
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Back to Research</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

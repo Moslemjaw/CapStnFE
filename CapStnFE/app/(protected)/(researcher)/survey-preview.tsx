@@ -245,12 +245,36 @@ export default function SurveyPreview() {
             <Ionicons name="document-text-outline" size={32} color="#5FA9F5" />
           </View>
           <Text style={styles.surveyTitle}>{survey.title}</Text>
-          <Text style={styles.surveyQuestionCount}>
-            {questions.length} {questions.length === 1 ? "question" : "questions"}
-          </Text>
           {survey.description && (
             <Text style={styles.surveyDescription}>{survey.description}</Text>
           )}
+        </View>
+
+        {/* Survey Summary Card */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>SURVEY SUMMARY</Text>
+          <View style={styles.summaryModules}>
+            <View style={styles.summaryModule}>
+              <Ionicons name="list-outline" size={24} color="#4A63D8" />
+              <Text style={styles.moduleValue}>{questions.length}</Text>
+              <Text style={styles.moduleLabel}>Questions</Text>
+            </View>
+
+            <TouchableOpacity style={styles.summaryModule} onPress={openTimeEditModal}>
+              <View style={styles.timeIconContainer}>
+                <Ionicons name="time-outline" size={24} color="#2BB6E9" />
+                <Ionicons name="pencil" size={10} color="#2BB6E9" style={styles.timeEditIcon} />
+              </View>
+              <Text style={styles.moduleValue}>~{survey.estimatedMinutes}</Text>
+              <Text style={styles.moduleLabel}>Minutes</Text>
+            </TouchableOpacity>
+
+            <View style={styles.summaryModule}>
+              <Ionicons name="star-outline" size={24} color="#F59E0B" />
+              <Text style={styles.moduleValue}>+{survey.rewardPoints}</Text>
+              <Text style={styles.moduleLabel}>Points</Text>
+            </View>
+          </View>
         </View>
 
         {/* Questions Section */}
@@ -527,6 +551,49 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     lineHeight: 24,
     textAlign: "center",
+  },
+  summaryCard: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  summaryTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6B7280",
+    letterSpacing: 1,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  summaryModules: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  summaryModule: {
+    alignItems: "center",
+    flex: 1,
+  },
+  moduleValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#222222",
+    marginTop: 8,
+  },
+  moduleLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
+  },
+  timeIconContainer: {
+    position: "relative",
+  },
+  timeEditIcon: {
+    position: "absolute",
+    bottom: -2,
+    right: -6,
   },
   fixedHeader: {
     backgroundColor: "#FFFFFF",

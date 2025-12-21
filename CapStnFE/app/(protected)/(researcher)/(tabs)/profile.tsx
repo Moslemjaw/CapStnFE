@@ -48,13 +48,30 @@ export default function ResearcherProfile() {
   const [loadingWeeklyPoints, setLoadingWeeklyPoints] = useState(false);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
   const [loadingStreak, setLoadingStreak] = useState(false);
-  
+
   // Activity metrics
   const [surveysAnswered, setSurveysAnswered] = useState<number>(0);
-  const [hoursSpent, setHoursSpent] = useState<number>(0);
+  const [durationMs, setDurationMs] = useState<number>(0); // Store in milliseconds
   const [surveysCreated, setSurveysCreated] = useState<number>(0);
   const [aiAnalyses, setAiAnalyses] = useState<number>(0);
   const [loadingActivity, setLoadingActivity] = useState(false);
+
+  // Format duration: show minutes if < 60 min, hours if >= 60 min
+  const formatDuration = (ms: number): { value: string; label: string } => {
+    const totalMinutes = ms / 60000; // Convert milliseconds to minutes
+    if (totalMinutes < 60) {
+      return {
+        value: totalMinutes.toFixed(2),
+        label: "Minutes Spent",
+      };
+    } else {
+      const hours = totalMinutes / 60;
+      return {
+        value: hours.toFixed(2),
+        label: "Hours Spent",
+      };
+    }
+  };
 
   // Animation values
   const termsSlideAnim = useRef(new Animated.Value(0)).current;
@@ -224,31 +241,34 @@ export default function ResearcherProfile() {
   const loadActivityMetrics = useCallback(async (userId: string) => {
     try {
       setLoadingActivity(true);
-      
+
       // Get all responses to calculate surveys answered and hours spent
       const responses = await getResponsesByUserId(userId);
       console.log("Profile: Total responses fetched:", responses.length);
-      
+
       // Get surveys created by user (to exclude from "answered")
       const createdSurveys = await getSurveysByCreatorId(userId);
       const createdSurveyIds = new Set(createdSurveys.map((s) => s._id));
       console.log("Profile: Surveys created by user:", createdSurveys.length);
-      
+
       // Filter responses: exclude self-created surveys and spam
       const validResponses = responses.filter((r) => {
         const isNotSelfCreated = !createdSurveyIds.has(r.surveyId);
         const isNotSpam = !r.isFlaggedSpam;
         return isNotSelfCreated && isNotSpam;
       });
-      console.log("Profile: Valid responses (excluding self-created and spam):", validResponses.length);
-      
+      console.log(
+        "Profile: Valid responses (excluding self-created and spam):",
+        validResponses.length
+      );
+
       // Calculate unique surveys answered (from valid responses only)
       const uniqueSurveyIds = new Set(validResponses.map((r) => r.surveyId));
       const surveysAnsweredCount = uniqueSurveyIds.size;
       setSurveysAnswered(surveysAnsweredCount);
       console.log("Profile: Surveys answered:", surveysAnsweredCount);
-      
-      // Calculate total hours spent (sum valid durationMs)
+
+      // Calculate total time spent (sum valid durationMs)
       const totalMs = validResponses.reduce((sum, r) => {
         const duration = r.durationMs || 0;
         if (!r.durationMs) {
@@ -256,26 +276,41 @@ export default function ResearcherProfile() {
         }
         return sum + duration;
       }, 0);
-      const totalHours = totalMs / 3600000; // Convert milliseconds to hours
-      const hoursSpentValue = parseFloat(totalHours.toFixed(1));
-      setHoursSpent(hoursSpentValue);
-      console.log("Profile: Hours spent:", hoursSpentValue, "hours (", totalMs, "ms)");
-      
+      setDurationMs(totalMs);
+      const formatted = formatDuration(totalMs);
+      console.log(
+        "Profile: Time spent:",
+        formatted.value,
+        formatted.label,
+        "(",
+        totalMs,
+        "ms)"
+      );
+
       // Surveys created
       const surveysCreatedCount = createdSurveys.length;
       setSurveysCreated(surveysCreatedCount);
       console.log("Profile: Surveys created:", surveysCreatedCount);
-      
+
       // Get AI analyses count
       const analysesData = await getAllAnalyses();
       // Use analyses.length as primary, count as fallback
-      const aiAnalysesCount = analysesData.analyses?.length || analysesData.count || 0;
+      const aiAnalysesCount =
+        analysesData.analyses?.length || analysesData.count || 0;
       setAiAnalyses(aiAnalysesCount);
-      console.log("Profile: AI analyses:", aiAnalysesCount, "(from analyses.length:", analysesData.analyses?.length, "or count:", analysesData.count, ")");
+      console.log(
+        "Profile: AI analyses:",
+        aiAnalysesCount,
+        "(from analyses.length:",
+        analysesData.analyses?.length,
+        "or count:",
+        analysesData.count,
+        ")"
+      );
     } catch (err) {
       console.error("Error loading activity metrics:", err);
       setSurveysAnswered(0);
-      setHoursSpent(0);
+      setDurationMs(0);
       setSurveysCreated(0);
       setAiAnalyses(0);
     } finally {
@@ -407,11 +442,17 @@ export default function ResearcherProfile() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>View stats and manage your account.</Text>
-          
+          <Text style={styles.subtitle}>
+            View stats and manage your account.
+          </Text>
+
           {/* User Information */}
           <View style={styles.headerUserInfo}>
             <View style={styles.avatarContainer}>
@@ -459,7 +500,10 @@ export default function ResearcherProfile() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: bottomNavHeight + 8 },
+        ]}
       >
         <View style={styles.content}>
           {/* Your Activity Section */}
@@ -475,9 +519,11 @@ export default function ResearcherProfile() {
             <View style={styles.activityCard}>
               <Ionicons name="time" size={24} color="#4A63D8" />
               <Text style={styles.activityValue}>
-                {loadingActivity ? "..." : hoursSpent.toFixed(1)}
+                {loadingActivity ? "..." : formatDuration(durationMs).value}
               </Text>
-              <Text style={styles.activityLabel}>Hours Spent</Text>
+              <Text style={styles.activityLabel}>
+                {loadingActivity ? "..." : formatDuration(durationMs).label}
+              </Text>
             </View>
             <View style={styles.activityCard}>
               <Ionicons name="document-text" size={24} color="#8B5CF6" />
@@ -510,7 +556,8 @@ export default function ResearcherProfile() {
                     {loadingWeeklyPoints ? "..." : totalPoints.toLocaleString()}
                   </Text>
                   <Text style={styles.pointsNextReward}>
-                    Next reward: {levelInfo.nextThreshold.toLocaleString()} points
+                    Next reward: {levelInfo.nextThreshold.toLocaleString()}{" "}
+                    points
                   </Text>
                   <View style={styles.pointsProgressBar}>
                     <View
@@ -562,7 +609,9 @@ export default function ResearcherProfile() {
                 <View style={styles.logoutIconContainer}>
                   <Ionicons name="add" size={16} color="#FFFFFF" />
                 </View>
-                <Text style={[styles.settingsItemText, styles.logoutText]}>Logout</Text>
+                <Text style={[styles.settingsItemText, styles.logoutText]}>
+                  Logout
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#EF4444" />
             </TouchableOpacity>
@@ -571,11 +620,17 @@ export default function ResearcherProfile() {
           {/* Footer */}
           <View style={styles.footer}>
             <View style={styles.footerBranding}>
-              <Image source={require("@/assets/logo.png")} style={styles.footerLogo} resizeMode="contain" />
+              <Image
+                source={require("@/assets/logo.png")}
+                style={styles.footerLogo}
+                resizeMode="contain"
+              />
               <Text style={styles.footerBrandText}>sight</Text>
             </View>
             <Text style={styles.footerVersion}>Version 1.3.4</Text>
-            <Text style={styles.footerCopyright}>© 2023 Sight. All rights reserved.</Text>
+            <Text style={styles.footerCopyright}>
+              © 2023 Sight. All rights reserved.
+            </Text>
           </View>
         </View>
       </ScrollView>

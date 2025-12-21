@@ -53,12 +53,18 @@ const formatTimeAgo = (dateString?: string): string => {
   const diffMonths = Math.floor(diffDays / 30);
 
   if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+  if (diffMins < 60)
+    return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
+  if (diffHours < 24)
+    return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
-  if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks !== 1 ? "s" : ""} ago`;
-  if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`;
-  return `${Math.floor(diffMonths / 12)} year${Math.floor(diffMonths / 12) !== 1 ? "s" : ""} ago`;
+  if (diffWeeks < 4)
+    return `${diffWeeks} week${diffWeeks !== 1 ? "s" : ""} ago`;
+  if (diffMonths < 12)
+    return `${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`;
+  return `${Math.floor(diffMonths / 12)} year${
+    Math.floor(diffMonths / 12) !== 1 ? "s" : ""
+  } ago`;
 };
 
 // Utility function to format response count
@@ -149,21 +155,29 @@ export default function ResearcherResearch() {
 
     // Sort surveys by most recent (updatedAt or createdAt) and take top 5
     const sortedSurveys = surveysWithMetadata.sort((a, b) => {
-      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const dateA = a.updatedAt
+        ? new Date(a.updatedAt).getTime()
+        : a.createdAt
+        ? new Date(a.createdAt).getTime()
+        : 0;
+      const dateB = b.updatedAt
+        ? new Date(b.updatedAt).getTime()
+        : b.createdAt
+        ? new Date(b.createdAt).getTime()
+        : 0;
       return dateB - dateA; // Most recent first
     });
-    
+
     setSurveys(sortedSurveys.slice(0, 5)); // Show only recent 5
 
     // Calculate statistics
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
+
     const surveysLast7Days = userSurveys.filter((survey) => {
-      const surveyDate = survey.createdAt 
-        ? new Date(survey.createdAt) 
-        : survey.updatedAt 
+      const surveyDate = survey.createdAt
+        ? new Date(survey.createdAt)
+        : survey.updatedAt
         ? new Date(survey.updatedAt)
         : null;
       return surveyDate && surveyDate >= sevenDaysAgo;
@@ -328,20 +342,20 @@ export default function ResearcherResearch() {
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.title}>Research</Text>
-          <Text style={styles.subtitle}>
-            Create and manage your surveys
-          </Text>
-          
+          <Text style={styles.subtitle}>Create and manage your surveys</Text>
+
           {/* Compact Overview Stats Row */}
           <View style={styles.headerOverviewRow}>
             <View style={styles.headerOverviewStats}>
               <View style={styles.headerStatItem}>
-                <Text style={styles.headerStatValuePink}>
-                  {surveys.length}
-                </Text>
+                <Text style={styles.headerStatValuePink}>{surveys.length}</Text>
                 <Text style={styles.headerStatLabel}>Total surveys</Text>
               </View>
               <View style={styles.headerStatItem}>
@@ -377,7 +391,9 @@ export default function ResearcherResearch() {
               style={styles.headerCreateButtonGradient}
             >
               <Ionicons name="add" size={18} color="#FFFFFF" />
-              <Text style={styles.headerCreateButtonText}>Create New Survey</Text>
+              <Text style={styles.headerCreateButtonText}>
+                Create New Survey
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -385,13 +401,15 @@ export default function ResearcherResearch() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: bottomNavHeight + 8 },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-
         {/* Recent Surveys Section */}
         <View style={styles.surveysSection}>
           <View style={styles.sectionHeader}>
@@ -466,7 +484,7 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
   // If unpublished and no responses, it's a Draft
   const isArchived = survey.draft === "unpublished" && survey.responseCount > 0;
   const isDraft = survey.draft === "unpublished" && survey.responseCount === 0;
-  
+
   // Determine status
   const getStatus = () => {
     if (isPublished) return "Published";
@@ -513,13 +531,15 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
         <View style={styles.surveyMetricItem}>
           <Ionicons name="help-circle-outline" size={16} color="#8A4DE8" />
           <Text style={styles.surveyMetricText}>
-            {survey.questionCount} question{survey.questionCount !== 1 ? "s" : ""}
+            {survey.questionCount} question
+            {survey.questionCount !== 1 ? "s" : ""}
           </Text>
         </View>
         <View style={styles.surveyMetricItem}>
           <Ionicons name="people-outline" size={16} color="#2BB6E9" />
           <Text style={styles.surveyMetricText}>
-            {formatResponseCount(survey.responseCount)} response{survey.responseCount !== 1 ? "s" : ""}
+            {formatResponseCount(survey.responseCount)} response
+            {survey.responseCount !== 1 ? "s" : ""}
           </Text>
         </View>
       </View>
@@ -529,7 +549,10 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
           <>
             {/* Full-width Analyze Button for Published */}
             <TouchableOpacity
-              style={[styles.mainActionButton, styles.mainActionButtonFullWidth]}
+              style={[
+                styles.mainActionButton,
+                styles.mainActionButtonFullWidth,
+              ]}
               onPress={onAnalyze}
             >
               <LinearGradient
@@ -567,7 +590,10 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
           <>
             {/* Full-width Publish Button for Draft */}
             <TouchableOpacity
-              style={[styles.mainActionButton, styles.mainActionButtonFullWidth]}
+              style={[
+                styles.mainActionButton,
+                styles.mainActionButtonFullWidth,
+              ]}
               onPress={onToggleStatus}
             >
               <LinearGradient
@@ -594,7 +620,10 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
           <>
             {/* Full-width Unarchive Button for Archived */}
             <TouchableOpacity
-              style={[styles.mainActionButton, styles.mainActionButtonFullWidth]}
+              style={[
+                styles.mainActionButton,
+                styles.mainActionButtonFullWidth,
+              ]}
               onPress={onToggleStatus}
             >
               <LinearGradient
@@ -704,7 +733,7 @@ const styles = StyleSheet.create({
   headerOverviewStats: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 16,
+    gap: 14,
     flex: 1,
   },
   headerStatItem: {

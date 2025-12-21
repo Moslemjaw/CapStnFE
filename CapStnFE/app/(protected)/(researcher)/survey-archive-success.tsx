@@ -18,12 +18,13 @@ import { Survey } from "@/api/surveys";
 
 export default function SurveyArchiveSuccess() {
   const router = useRouter();
-  const { surveyId, questionCount, points, estimatedMinutes } = useLocalSearchParams<{
-    surveyId: string;
-    questionCount: string;
-    points: string;
-    estimatedMinutes: string;
-  }>;
+  const { surveyId, questionCount, points, estimatedMinutes } =
+    useLocalSearchParams<{
+      surveyId: string;
+      questionCount: string;
+      points: string;
+      estimatedMinutes: string;
+    }>();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -63,7 +64,9 @@ export default function SurveyArchiveSuccess() {
       console.error("Error publishing survey:", err);
       Alert.alert(
         "Error",
-        err.response?.data?.message || err.message || "Failed to publish survey. Please try again."
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to publish survey. Please try again."
       );
       setActionLoading(false);
     }
@@ -87,10 +90,16 @@ export default function SurveyArchiveSuccess() {
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.headerTitle}>Success</Text>
-          <Text style={styles.headerSubtitle}>Your survey has been archived</Text>
+          <Text style={styles.headerSubtitle}>
+            Your survey has been archived
+          </Text>
         </View>
       </View>
       <ScrollView
@@ -113,7 +122,8 @@ export default function SurveyArchiveSuccess() {
         {/* Success Message */}
         <Text style={styles.title}>Survey Archived!</Text>
         <Text style={styles.subtitle}>
-          Your survey has been successfully saved to your archives. You can publish it anytime.
+          Your survey has been successfully saved to your archives. You can
+          publish it anytime.
         </Text>
 
         {/* Survey Summary Card */}
@@ -122,7 +132,7 @@ export default function SurveyArchiveSuccess() {
           <Text style={styles.surveyTitleText}>
             {survey?.title || "Survey"}
           </Text>
-          
+
           <View style={styles.summaryModules}>
             <View style={styles.summaryModule}>
               <Ionicons name="list-outline" size={24} color="#4A63D8" />
@@ -131,12 +141,15 @@ export default function SurveyArchiveSuccess() {
             </View>
 
             <View style={styles.summaryModule}>
-              <View style={styles.timeIconContainer}>
-                <Ionicons name="time-outline" size={20} color="#2BB6E9" />
-                <Ionicons name="pencil" size={10} color="#2BB6E9" style={styles.timeEditIcon} />
-              </View>
+              <Ionicons name="time-outline" size={24} color="#2BB6E9" />
               <Text style={styles.moduleValue}>~{estimatedMinutes || 0}</Text>
               <Text style={styles.moduleLabel}>Minutes</Text>
+            </View>
+
+            <View style={styles.summaryModule}>
+              <Ionicons name="star-outline" size={24} color="#F59E0B" />
+              <Text style={styles.moduleValue}>+{points || 0}</Text>
+              <Text style={styles.moduleLabel}>Points</Text>
             </View>
           </View>
         </View>
@@ -157,7 +170,11 @@ export default function SurveyArchiveSuccess() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="cloud-upload-outline" size={20} color="#FFFFFF" />
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={20}
+                  color="#FFFFFF"
+                />
                 <Text style={styles.publishButtonText}>Publish Now</Text>
               </>
             )}

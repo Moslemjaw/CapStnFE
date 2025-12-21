@@ -121,7 +121,7 @@ export default function CreateSurvey() {
   };
 
 
-  const deleteQuestion = (index: number) => {
+  const handleDeleteQuestion = (index: number) => {
     Alert.alert(
       "Delete Question",
       "Are you sure you want to delete this question?",
@@ -487,7 +487,7 @@ export default function CreateSurvey() {
                   <Text style={styles.questionLabel}>QUESTION</Text>
                   <TouchableOpacity
                     style={styles.deleteQuestionButton}
-                    onPress={() => deleteQuestion(index)}
+                    onPress={() => handleDeleteQuestion(index)}
                   >
                     <Ionicons name="trash-outline" size={20} color="#9CA3AF" />
                   </TouchableOpacity>

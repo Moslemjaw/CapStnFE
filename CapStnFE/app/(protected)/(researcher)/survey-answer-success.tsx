@@ -59,12 +59,21 @@ export default function SurveyAnswerSuccess() {
     }
   };
 
-  const formatDuration = (ms: string): string => {
+  const formatDuration = (ms: string): { value: string; label: string } => {
     const duration = parseInt(ms) || 0;
-    const seconds = Math.floor(duration / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds}s`;
+    const totalMinutes = duration / 60000; // Convert milliseconds to minutes
+    if (totalMinutes < 60) {
+      return {
+        value: totalMinutes.toFixed(2),
+        label: "Minutes",
+      };
+    } else {
+      const hours = totalMinutes / 60;
+      return {
+        value: hours.toFixed(2),
+        label: "Hours",
+      };
+    }
   };
 
   const calculatePercentage = (part: number, total: number): number => {
@@ -174,7 +183,9 @@ export default function SurveyAnswerSuccess() {
             <View style={styles.statsItem}>
               <Ionicons name="time-outline" size={20} color="#8A4DE8" />
               <Text style={styles.statsLabel}>Time Spent</Text>
-              <Text style={styles.statsValue}>{formatDuration(durationMs || "0")}</Text>
+              <Text style={styles.statsValue}>
+                {formatDuration(durationMs || "0").value} {formatDuration(durationMs || "0").label}
+              </Text>
             </View>
 
             <View style={styles.statsItem}>

@@ -692,9 +692,23 @@ export default function SurveyView() {
               <View style={styles.completedInfoGrid}>
                 <View style={styles.completedInfoItem}>
                   <Text style={styles.completedInfoNumber}>
-                    {Math.round((userResponse.durationMs || 0) / 60000)}
+                    {(() => {
+                      const ms = userResponse.durationMs || 0;
+                      const totalMinutes = ms / 60000;
+                      if (totalMinutes < 60) {
+                        return totalMinutes.toFixed(2);
+                      } else {
+                        return (totalMinutes / 60).toFixed(2);
+                      }
+                    })()}
                   </Text>
-                  <Text style={styles.completedInfoLabel}>Minutes</Text>
+                  <Text style={styles.completedInfoLabel}>
+                    {(() => {
+                      const ms = userResponse.durationMs || 0;
+                      const totalMinutes = ms / 60000;
+                      return totalMinutes < 60 ? "Minutes" : "Hours";
+                    })()}
+                  </Text>
                 </View>
                 <View style={styles.completedInfoItem}>
                   <Text style={styles.completedInfoNumber}>+{survey.rewardPoints}</Text>

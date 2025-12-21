@@ -93,7 +93,18 @@ export default function GlobalBottomNav() {
   };
 
   const handleNavigation = (route: string) => {
-    router.push(route as any);
+    try {
+      // Check if we're already on this route
+      if (pathname === route || pathname?.includes(route.split("/").pop() || "")) {
+        return; // Already on this route, don't navigate
+      }
+      // Use replace for tab navigation to avoid unmatched route errors
+      router.replace(route as any);
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback: try push if replace fails
+      router.push(route as any);
+    }
   };
 
   return (
@@ -109,7 +120,7 @@ export default function GlobalBottomNav() {
     >
       <Pressable
         style={styles.navItem}
-        onPress={() => handleNavigation("/(protected)/(researcher)/(tabs)/index")}
+        onPress={() => handleNavigation("/(protected)/(researcher)/(tabs)/")}
       >
         <Ionicons
           name={activeTab === "home" ? "home" : "home-outline"}

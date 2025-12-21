@@ -29,22 +29,30 @@ type StatusFilter = "all" | "open" | "answered";
 
 interface UserStats {
   surveysAnswered: number;
-  totalTimeSpent: number; // in minutes
+  totalTimeSpent: number; // in milliseconds
 }
 
 export default function ResearcherSurveys() {
   const router = useRouter();
   const bottomNavHeight = useBottomNavHeight();
-  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>([]);
-  const [availableSurveys, setAvailableSurveys] = useState<SurveyWithMetadata[]>([]);
+  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>(
+    []
+  );
+  const [availableSurveys, setAvailableSurveys] = useState<
+    SurveyWithMetadata[]
+  >([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [questionCountFilter, setQuestionCountFilter] = useState<QuestionCountFilter>("all");
+  const [questionCountFilter, setQuestionCountFilter] =
+    useState<QuestionCountFilter>("all");
   const [maxTimeFilter, setMaxTimeFilter] = useState<MaxTimeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [userStats, setUserStats] = useState<UserStats>({ surveysAnswered: 0, totalTimeSpent: 0 });
+  const [userStats, setUserStats] = useState<UserStats>({
+    surveysAnswered: 0,
+    totalTimeSpent: 0,
+  });
   const [showQuestionDropdown, setShowQuestionDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -71,12 +79,14 @@ export default function ResearcherSurveys() {
     try {
       const responses = await getResponsesByUserId(user._id);
       const uniqueSurveys = new Set(responses.map((r) => r.surveyId));
-      const totalTimeMs = responses.reduce((sum, r) => sum + (r.durationMs || 0), 0);
-      const totalTimeMinutes = Math.floor(totalTimeMs / 60000);
-      
+      const totalTimeMs = responses.reduce(
+        (sum, r) => sum + (r.durationMs || 0),
+        0
+      );
+
       setUserStats({
         surveysAnswered: uniqueSurveys.size,
-        totalTimeSpent: totalTimeMinutes,
+        totalTimeSpent: totalTimeMs, // Store in milliseconds
       });
     } catch (err) {
       console.error("Error loading user stats:", err);
@@ -97,7 +107,10 @@ export default function ResearcherSurveys() {
       }
 
       const featured = await loadFeaturedSurveys(userResponses);
-      await loadAvailableSurveys(featured.map((s) => s._id), userResponses);
+      await loadAvailableSurveys(
+        featured.map((s) => s._id),
+        userResponses
+      );
     } catch (err: any) {
       console.error("Error loading surveys:", err);
       setError(err.message || "Failed to load surveys");
@@ -106,7 +119,9 @@ export default function ResearcherSurveys() {
     }
   };
 
-  const loadFeaturedSurveys = async (userResponses: any[] = []): Promise<SurveyWithMetadata[]> => {
+  const loadFeaturedSurveys = async (
+    userResponses: any[] = []
+  ): Promise<SurveyWithMetadata[]> => {
     const publishedSurveys = await getPublishedSurveys();
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -140,14 +155,18 @@ export default function ResearcherSurveys() {
       topSurveys.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return {
             ...survey,
             questionCount: questions.length,
             isAnswered,
           };
         } catch (err) {
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return { ...survey, questionCount: 0, isAnswered };
         }
       })
@@ -157,24 +176,33 @@ export default function ResearcherSurveys() {
     return surveysWithMetadata;
   };
 
-  const loadAvailableSurveys = async (featuredIds: string[] = [], userResponses: any[] = []) => {
+  const loadAvailableSurveys = async (
+    featuredIds: string[] = [],
+    userResponses: any[] = []
+  ) => {
     if (!user?._id) return;
 
     const publishedSurveys = await getPublishedSurveys();
-    const available = publishedSurveys.filter((survey) => survey.creatorId !== user._id);
+    const available = publishedSurveys.filter(
+      (survey) => survey.creatorId !== user._id
+    );
 
     const surveysWithMetadata = await Promise.all(
       available.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return {
             ...survey,
             questionCount: questions.length,
             isAnswered,
           };
         } catch (err) {
-          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          const isAnswered = userResponses.some(
+            (response) => response.surveyId === survey._id
+          );
           return { ...survey, questionCount: 0, isAnswered };
         }
       })
@@ -208,7 +236,10 @@ export default function ResearcherSurveys() {
       filtered = filtered.filter(
         (survey) =>
           survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (survey.description && survey.description.toLowerCase().includes(searchQuery.toLowerCase()))
+          (survey.description &&
+            survey.description
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -263,12 +294,24 @@ export default function ResearcherSurveys() {
 
   const filteredFeatured = useMemo(
     () => filterSurveys(featuredSurveys),
-    [featuredSurveys, searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
+    [
+      featuredSurveys,
+      searchQuery,
+      questionCountFilter,
+      maxTimeFilter,
+      statusFilter,
+    ]
   );
 
   const filteredAvailable = useMemo(
     () => filterSurveys(availableSurveys),
-    [availableSurveys, searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
+    [
+      availableSurveys,
+      searchQuery,
+      questionCountFilter,
+      maxTimeFilter,
+      statusFilter,
+    ]
   );
 
   const handleSurveyAction = (survey: SurveyWithMetadata) => {
@@ -300,13 +343,21 @@ export default function ResearcherSurveys() {
     maxTimeFilter !== "all" ||
     statusFilter !== "all";
 
-  const formatTime = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
+  // Format duration: show minutes if < 60 min, hours if >= 60 min (with 2 decimals)
+  const formatDuration = (ms: number): { value: string; label: string } => {
+    const totalMinutes = ms / 60000; // Convert milliseconds to minutes
+    if (totalMinutes < 60) {
+      return {
+        value: totalMinutes.toFixed(2),
+        label: "Minutes",
+      };
+    } else {
+      const hours = totalMinutes / 60;
+      return {
+        value: hours.toFixed(2),
+        label: "Hours",
+      };
     }
-    return `${mins}m`;
   };
 
   const getQuestionLabel = (value: QuestionCountFilter) => {
@@ -345,8 +396,21 @@ export default function ResearcherSurveys() {
     }
   };
 
-  const maxTimeOptions: MaxTimeFilter[] = ["all", "1-5", "5-10", "10-15", "15-30", "30+"];
-  const questionOptions: QuestionCountFilter[] = ["all", "1-5", "6-10", "11-15", "16+"];
+  const maxTimeOptions: MaxTimeFilter[] = [
+    "all",
+    "1-5",
+    "5-10",
+    "10-15",
+    "15-30",
+    "30+",
+  ];
+  const questionOptions: QuestionCountFilter[] = [
+    "all",
+    "1-5",
+    "6-10",
+    "11-15",
+    "16+",
+  ];
   const statusOptions: StatusFilter[] = ["all", "open", "answered"];
 
   return (
@@ -356,15 +420,26 @@ export default function ResearcherSurveys() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.title}>Explore Surveys</Text>
-          <Text style={styles.subtitle}>Answer surveys, earn points, shape insights.</Text>
+          <Text style={styles.subtitle}>
+            Answer surveys, earn points, shape insights.
+          </Text>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#505050" style={styles.searchIcon} />
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color="#505050"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search for surveys by title or description"
@@ -392,7 +467,9 @@ export default function ResearcherSurveys() {
                 setShowQuestionDropdown(!showQuestionDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>{getQuestionLabel(questionCountFilter)}</Text>
+              <Text style={styles.filterButtonText}>
+                {getQuestionLabel(questionCountFilter)}
+              </Text>
               <Ionicons name="chevron-down" size={16} color="#505050" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -403,7 +480,9 @@ export default function ResearcherSurveys() {
                 setShowTimeDropdown(!showTimeDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>{getTimeLabel(maxTimeFilter)}</Text>
+              <Text style={styles.filterButtonText}>
+                {getTimeLabel(maxTimeFilter)}
+              </Text>
               <Ionicons name="chevron-down" size={16} color="#505050" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -414,36 +493,58 @@ export default function ResearcherSurveys() {
                 setShowStatusDropdown(!showStatusDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>{getStatusLabel(statusFilter)}</Text>
+              <Text style={styles.filterButtonText}>
+                {getStatusLabel(statusFilter)}
+              </Text>
               <Ionicons name="chevron-down" size={16} color="#505050" />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: bottomNavHeight + 8 },
+        ]}
       >
-
         {/* Status Dropdown Modal */}
-        <Modal visible={showStatusDropdown} transparent animationType="fade" onRequestClose={() => setShowStatusDropdown(false)}>
-          <Pressable style={styles.modalOverlay} onPress={() => setShowStatusDropdown(false)}>
+        <Modal
+          visible={showStatusDropdown}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowStatusDropdown(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowStatusDropdown(false)}
+          >
             <View style={styles.dropdownMenu}>
               {statusOptions.map((option) => (
                 <TouchableOpacity
                   key={option}
-                  style={[styles.dropdownItem, statusFilter === option && styles.dropdownItemActive]}
+                  style={[
+                    styles.dropdownItem,
+                    statusFilter === option && styles.dropdownItemActive,
+                  ]}
                   onPress={() => {
                     setStatusFilter(option);
                     setShowStatusDropdown(false);
                   }}
                 >
-                  <Text style={[styles.dropdownItemText, statusFilter === option && styles.dropdownItemTextActive]}>
+                  <Text
+                    style={[
+                      styles.dropdownItemText,
+                      statusFilter === option && styles.dropdownItemTextActive,
+                    ]}
+                  >
                     {getStatusLabel(option)}
                   </Text>
-                  {statusFilter === option && <Ionicons name="checkmark" size={20} color="#4A63D8" />}
+                  {statusFilter === option && (
+                    <Ionicons name="checkmark" size={20} color="#4A63D8" />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -451,22 +552,40 @@ export default function ResearcherSurveys() {
         </Modal>
 
         {/* Time Dropdown Modal */}
-        <Modal visible={showTimeDropdown} transparent animationType="fade" onRequestClose={() => setShowTimeDropdown(false)}>
-          <Pressable style={styles.modalOverlay} onPress={() => setShowTimeDropdown(false)}>
+        <Modal
+          visible={showTimeDropdown}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowTimeDropdown(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowTimeDropdown(false)}
+          >
             <View style={styles.dropdownMenu}>
               {maxTimeOptions.map((option) => (
                 <TouchableOpacity
                   key={option}
-                  style={[styles.dropdownItem, maxTimeFilter === option && styles.dropdownItemActive]}
+                  style={[
+                    styles.dropdownItem,
+                    maxTimeFilter === option && styles.dropdownItemActive,
+                  ]}
                   onPress={() => {
                     setMaxTimeFilter(option);
                     setShowTimeDropdown(false);
                   }}
                 >
-                  <Text style={[styles.dropdownItemText, maxTimeFilter === option && styles.dropdownItemTextActive]}>
+                  <Text
+                    style={[
+                      styles.dropdownItemText,
+                      maxTimeFilter === option && styles.dropdownItemTextActive,
+                    ]}
+                  >
                     {getTimeLabel(option)}
                   </Text>
-                  {maxTimeFilter === option && <Ionicons name="checkmark" size={20} color="#4A63D8" />}
+                  {maxTimeFilter === option && (
+                    <Ionicons name="checkmark" size={20} color="#4A63D8" />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -474,22 +593,41 @@ export default function ResearcherSurveys() {
         </Modal>
 
         {/* Question Dropdown Modal */}
-        <Modal visible={showQuestionDropdown} transparent animationType="fade" onRequestClose={() => setShowQuestionDropdown(false)}>
-          <Pressable style={styles.modalOverlay} onPress={() => setShowQuestionDropdown(false)}>
+        <Modal
+          visible={showQuestionDropdown}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowQuestionDropdown(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowQuestionDropdown(false)}
+          >
             <View style={styles.dropdownMenu}>
               {questionOptions.map((option) => (
                 <TouchableOpacity
                   key={option}
-                  style={[styles.dropdownItem, questionCountFilter === option && styles.dropdownItemActive]}
+                  style={[
+                    styles.dropdownItem,
+                    questionCountFilter === option && styles.dropdownItemActive,
+                  ]}
                   onPress={() => {
                     setQuestionCountFilter(option);
                     setShowQuestionDropdown(false);
                   }}
                 >
-                  <Text style={[styles.dropdownItemText, questionCountFilter === option && styles.dropdownItemTextActive]}>
+                  <Text
+                    style={[
+                      styles.dropdownItemText,
+                      questionCountFilter === option &&
+                        styles.dropdownItemTextActive,
+                    ]}
+                  >
                     {getQuestionLabel(option)}
                   </Text>
-                  {questionCountFilter === option && <Ionicons name="checkmark" size={20} color="#4A63D8" />}
+                  {questionCountFilter === option && (
+                    <Ionicons name="checkmark" size={20} color="#4A63D8" />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -498,12 +636,19 @@ export default function ResearcherSurveys() {
 
         {/* Stats Summary Card */}
         <View style={styles.statsCard}>
-          <LinearGradient colors={["#EEF5FF", "#E8D5FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.statsGradient}>
+          <LinearGradient
+            colors={["#EEF5FF", "#E8D5FF"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.statsGradient}
+          >
             <View style={styles.statsLeft}>
               <View style={styles.statsIconContainer}>
                 <Ionicons name="checkmark-circle" size={24} color="#4A63D8" />
               </View>
-              <Text style={styles.statsNumber}>{userStats.surveysAnswered}</Text>
+              <Text style={styles.statsNumber}>
+                {userStats.surveysAnswered}
+              </Text>
               <Text style={styles.statsLabel}>Surveys answered</Text>
             </View>
             <View style={styles.statsDivider} />
@@ -511,8 +656,12 @@ export default function ResearcherSurveys() {
               <View style={styles.statsIconContainer}>
                 <Ionicons name="time" size={24} color="#8A4DE8" />
               </View>
-              <Text style={styles.statsNumber}>{formatTime(userStats.totalTimeSpent)}</Text>
-              <Text style={styles.statsLabel}>Total Time Spent</Text>
+              <Text style={styles.statsNumber}>
+                {formatDuration(userStats.totalTimeSpent).value}
+              </Text>
+              <Text style={styles.statsLabel}>
+                {formatDuration(userStats.totalTimeSpent).label} Spent
+              </Text>
             </View>
           </LinearGradient>
         </View>
@@ -541,7 +690,11 @@ export default function ResearcherSurveys() {
                 {/* Large Featured Card */}
                 {filteredFeatured[0] && (
                   <View style={styles.largeFeaturedCard}>
-                    <SurveyCard survey={filteredFeatured[0]} onPress={handleSurveyAction} isLarge={true} />
+                    <SurveyCard
+                      survey={filteredFeatured[0]}
+                      onPress={handleSurveyAction}
+                      isLarge={true}
+                    />
                   </View>
                 )}
                 {/* 2x2 Grid of Smaller Cards */}
@@ -549,7 +702,11 @@ export default function ResearcherSurveys() {
                   <View style={styles.featuredGrid}>
                     {filteredFeatured.slice(1, 5).map((survey) => (
                       <View key={survey._id} style={styles.smallFeaturedCard}>
-                        <SurveyCard survey={survey} onPress={handleSurveyAction} isSmall={true} />
+                        <SurveyCard
+                          survey={survey}
+                          onPress={handleSurveyAction}
+                          isSmall={true}
+                        />
                       </View>
                     ))}
                   </View>
@@ -562,15 +719,25 @@ export default function ResearcherSurveys() {
               <Text style={styles.sectionTitle}>All Surveys</Text>
               {filteredAvailable.length === 0 ? (
                 <View style={styles.emptySection}>
-                  <Ionicons name="document-text-outline" size={32} color="#9CA3AF" />
+                  <Ionicons
+                    name="document-text-outline"
+                    size={32}
+                    color="#9CA3AF"
+                  />
                   <Text style={styles.emptySectionText}>
-                    {hasActiveFilters ? "No surveys match your filters" : "No available surveys"}
+                    {hasActiveFilters
+                      ? "No surveys match your filters"
+                      : "No available surveys"}
                   </Text>
                 </View>
               ) : (
                 filteredAvailable.map((survey) => (
                   <View key={survey._id} style={styles.allSurveyCard}>
-                    <SurveyCard survey={survey} onPress={handleSurveyAction} isAllSurvey={true} />
+                    <SurveyCard
+                      survey={survey}
+                      onPress={handleSurveyAction}
+                      isAllSurvey={true}
+                    />
                   </View>
                 ))
               )}
@@ -591,8 +758,14 @@ interface SurveyCardProps {
   isAllSurvey?: boolean;
 }
 
-const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress, isLarge = false, isSmall = false, isAllSurvey = false }) => {
-  const getPointsTagColor = () => {
+const SurveyCard: React.FC<SurveyCardProps> = ({
+  survey,
+  onPress,
+  isLarge = false,
+  isSmall = false,
+  isAllSurvey = false,
+}) => {
+  const getPointsTagColor = (): [string, string] => {
     const points = survey.rewardPoints || 0;
     if (points >= 100) return ["#FF6FAE", "#D13DB8"]; // Pink to Magenta
     if (points >= 80) return ["#8A4DE8", "#A23DD8"]; // Violet to Purple
@@ -606,7 +779,14 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress, isLarge = fals
   };
 
   return (
-    <TouchableOpacity style={[styles.card, isLarge && styles.largeCard, isSmall && styles.smallCard]} onPress={() => onPress(survey)}>
+    <TouchableOpacity
+      style={[
+        styles.card,
+        isLarge && styles.largeCard,
+        isSmall && styles.smallCard,
+      ]}
+      onPress={() => onPress(survey)}
+    >
       {survey.isAnswered && isAllSurvey && (
         <View style={styles.answeredTag}>
           <Ionicons name="checkmark" size={12} color="#FFFFFF" />
@@ -615,12 +795,26 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress, isLarge = fals
       )}
       {!survey.isAnswered && (isLarge || isSmall) && (
         <View style={styles.pointsTag}>
-          <LinearGradient colors={getPointsTagColor()} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.pointsTagGradient}>
-            <Text style={styles.pointsTagText}>+{survey.rewardPoints || 0}</Text>
+          <LinearGradient
+            colors={getPointsTagColor()}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.pointsTagGradient}
+          >
+            <Text style={styles.pointsTagText}>
+              +{survey.rewardPoints || 0}
+            </Text>
           </LinearGradient>
         </View>
       )}
-      <Text style={[styles.cardTitle, isLarge && styles.largeCardTitle]} numberOfLines={isSmall ? 2 : undefined}>
+      <Text
+        style={[
+          styles.cardTitle,
+          isLarge && styles.largeCardTitle,
+          isSmall && styles.smallCardTitle,
+        ]}
+        numberOfLines={isSmall ? 2 : undefined}
+      >
         {survey.title}
       </Text>
       {survey.description && (
@@ -628,27 +822,49 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress, isLarge = fals
           {survey.description}
         </Text>
       )}
-      <View style={styles.cardDetails}>
+      <View style={[styles.cardDetails, isSmall && styles.smallCardDetails]}>
         <View style={styles.detailItem}>
-          <Ionicons name="people-outline" size={16} color="#4A63D8" />
-          <Text style={styles.detailText}>
-            {formatResponseCount(survey.responseCount || 0)} answers
+          <Ionicons
+            name="people-outline"
+            size={isSmall ? 14 : 16}
+            color="#4A63D8"
+          />
+          <Text style={[styles.detailText, isSmall && styles.smallDetailText]}>
+            {formatResponseCount(survey.responseCount || 0)}{" "}
+            {isSmall ? "" : "answers"}
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Ionicons name="document-text-outline" size={16} color="#4A63D8" />
-          <Text style={styles.detailText}>{survey.questionCount || 0} questions</Text>
+          <Ionicons
+            name="document-text-outline"
+            size={isSmall ? 14 : 16}
+            color="#4A63D8"
+          />
+          <Text style={[styles.detailText, isSmall && styles.smallDetailText]}>
+            {survey.questionCount || 0} {isSmall ? "Q" : "questions"}
+          </Text>
         </View>
         <View style={styles.detailItem}>
-          <Ionicons name="time-outline" size={16} color="#8A4DE8" />
-          <Text style={styles.detailText}>{survey.estimatedMinutes} min</Text>
+          <Ionicons
+            name="time-outline"
+            size={isSmall ? 14 : 16}
+            color="#8A4DE8"
+          />
+          <Text style={[styles.detailText, isSmall && styles.smallDetailText]}>
+            {survey.estimatedMinutes}m
+          </Text>
         </View>
       </View>
       <TouchableOpacity
         style={styles.viewButton}
         onPress={() => onPress(survey)}
       >
-        <LinearGradient colors={["#5FA9F5", "#4A63D8"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.viewButtonGradient}>
+        <LinearGradient
+          colors={["#5FA9F5", "#4A63D8"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.viewButtonGradient}
+        >
           <Text style={styles.viewButtonText}>View</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -887,6 +1103,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   sectionContainer: {
+    paddingHorizontal: 24,
     marginBottom: 32,
   },
   allSurveysSection: {
@@ -925,10 +1142,12 @@ const styles = StyleSheet.create({
   featuredGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    justifyContent: "space-between",
+    rowGap: 12,
   },
   smallFeaturedCard: {
-    width: "48%",
+    width: "48.5%",
+    minWidth: 150,
   },
   allSurveyCard: {
     marginBottom: 16,
@@ -949,6 +1168,7 @@ const styles = StyleSheet.create({
   },
   smallCard: {
     padding: 12,
+    minHeight: 180,
   },
   cardTitle: {
     fontSize: 18,
@@ -958,6 +1178,10 @@ const styles = StyleSheet.create({
   },
   largeCardTitle: {
     fontSize: 22,
+  },
+  smallCardTitle: {
+    fontSize: 15,
+    marginBottom: 6,
   },
   cardDescription: {
     fontSize: 14,
@@ -971,6 +1195,10 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 16,
   },
+  smallCardDetails: {
+    gap: 8,
+    marginBottom: 12,
+  },
   detailItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -979,6 +1207,9 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 12,
     color: "#505050",
+  },
+  smallDetailText: {
+    fontSize: 11,
   },
   pointsTag: {
     position: "absolute",
