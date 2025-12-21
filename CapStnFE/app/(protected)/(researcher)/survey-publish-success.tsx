@@ -1,10 +1,4 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  Image,
-} from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,12 +7,13 @@ import { LinearGradient } from "expo-linear-gradient";
 
 export default function SurveyPublishSuccess() {
   const router = useRouter();
-  const { surveyId, questionCount, points, estimatedMinutes } = useLocalSearchParams<{
-    surveyId: string;
-    questionCount: string;
-    points: string;
-    estimatedMinutes: string;
-  }>;
+  const { surveyId, questionCount, points, estimatedMinutes } =
+    useLocalSearchParams<{
+      surveyId: string;
+      questionCount: string;
+      points: string;
+      estimatedMinutes: string;
+    }>();
 
   const handleGoToResearch = () => {
     router.replace("/(protected)/(researcher)/(tabs)/research" as any);
@@ -30,10 +25,16 @@ export default function SurveyPublishSuccess() {
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.headerTitle}>Success</Text>
-          <Text style={styles.headerSubtitle}>Your survey has been published</Text>
+          <Text style={styles.headerSubtitle}>
+            Your survey has been published
+          </Text>
         </View>
       </View>
       <View style={styles.content}>
@@ -52,13 +53,14 @@ export default function SurveyPublishSuccess() {
         {/* Success Message */}
         <Text style={styles.title}>Survey Published!</Text>
         <Text style={styles.subtitle}>
-          Your survey has been successfully published and is now available for respondents.
+          Your survey has been successfully published and is now available for
+          respondents.
         </Text>
 
         {/* Survey Overview */}
         <View style={styles.overviewCard}>
           <Text style={styles.overviewTitle}>Survey Overview</Text>
-          
+
           <View style={styles.overviewItem}>
             <Ionicons name="list-outline" size={20} color="#4A63D8" />
             <Text style={styles.overviewLabel}>Questions:</Text>
@@ -74,15 +76,14 @@ export default function SurveyPublishSuccess() {
           <View style={styles.overviewItem}>
             <Ionicons name="time-outline" size={20} color="#2BB6E9" />
             <Text style={styles.overviewLabel}>Estimated Time:</Text>
-            <Text style={styles.overviewValue}>{estimatedMinutes || 0} min</Text>
+            <Text style={styles.overviewValue}>
+              {estimatedMinutes || 0} min
+            </Text>
           </View>
         </View>
 
         {/* Action Button */}
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleGoToResearch}
-        >
+        <TouchableOpacity style={styles.button} onPress={handleGoToResearch}>
           <LinearGradient
             colors={["#5FA9F5", "#4A63D8"]}
             start={{ x: 0, y: 0 }}
