@@ -457,13 +457,15 @@ export default function CreateSurvey() {
         </View>
       </View>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardView}
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Survey Information Section */}
           <View style={styles.section}>
@@ -666,65 +668,65 @@ export default function CreateSurvey() {
             ))}
           </View>
         </ScrollView>
+      </KeyboardAvoidingView>
 
-        {/* Action Buttons */}
-        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 32 }]}>
+      {/* Action Buttons - Outside KeyboardAvoidingView to stay fixed */}
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 48 }]}>
+        <TouchableOpacity
+          style={styles.addQuestionButton}
+          onPress={addNewQuestion}
+          disabled={loading}
+        >
+          <LinearGradient
+            colors={["#5FA9F5", "#4A63D8"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.addQuestionButtonGradient}
+          >
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Text style={styles.addQuestionButtonText}>Add Question</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <View style={styles.actionButtonsRow}>
           <TouchableOpacity
-            style={styles.addQuestionButton}
-            onPress={addNewQuestion}
+            style={styles.previewButton}
+            onPress={handlePreview}
             disabled={loading}
           >
             <LinearGradient
-              colors={["#5FA9F5", "#4A63D8"]}
+              colors={["#A23DD8", "#D13DB8"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.addQuestionButtonGradient}
+              style={styles.previewButtonGradient}
             >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.addQuestionButtonText}>Add Question</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="eye-outline" size={20} color="#FFFFFF" />
+                  <Text style={styles.previewButtonText}>Preview</Text>
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
-          <View style={styles.actionButtonsRow}>
-            <TouchableOpacity
-              style={styles.previewButton}
-              onPress={handlePreview}
-              disabled={loading}
-            >
-              <LinearGradient
-                colors={["#A23DD8", "#D13DB8"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.previewButtonGradient}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="eye-outline" size={20} color="#FFFFFF" />
-                    <Text style={styles.previewButtonText}>Preview</Text>
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.archiveButton}
-              onPress={handleArchive}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#6B7280" />
-              ) : (
-                <>
-                  <Ionicons name="archive-outline" size={20} color="#6B7280" />
-                  <Text style={styles.archiveButtonText}>Archive</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.archiveButton}
+            onPress={handleArchive}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#6B7280" />
+            ) : (
+              <>
+                <Ionicons name="archive-outline" size={20} color="#6B7280" />
+                <Text style={styles.archiveButtonText}>Archive</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -793,7 +795,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingBottom: 100,
+    paddingBottom: 220,
   },
   section: {
     marginBottom: 32,
