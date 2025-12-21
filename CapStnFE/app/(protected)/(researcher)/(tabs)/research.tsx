@@ -4,12 +4,11 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   RefreshControl,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -28,6 +27,7 @@ import { getResponsesBySurveyId } from "@/api/responses";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
+import { Colors, Typography, Spacing, Shadows } from "@/constants/design";
 
 interface SurveyWithMetadata extends Survey {
   responseCount: number;
@@ -42,7 +42,6 @@ interface Statistics {
   archivedCount: number;
 }
 
-// Utility function to format relative time
 const formatTimeAgo = (dateString?: string): string => {
   if (!dateString) return "Unknown";
   const date = new Date(dateString);
@@ -55,21 +54,14 @@ const formatTimeAgo = (dateString?: string): string => {
   const diffMonths = Math.floor(diffDays / 30);
 
   if (diffMins < 1) return "just now";
-  if (diffMins < 60)
-    return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
-  if (diffHours < 24)
-    return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
-  if (diffWeeks < 4)
-    return `${diffWeeks} week${diffWeeks !== 1 ? "s" : ""} ago`;
-  if (diffMonths < 12)
-    return `${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`;
-  return `${Math.floor(diffMonths / 12)} year${
-    Math.floor(diffMonths / 12) !== 1 ? "s" : ""
-  } ago`;
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffWeeks < 4) return `${diffWeeks}w ago`;
+  if (diffMonths < 12) return `${diffMonths}mo ago`;
+  return `${Math.floor(diffMonths / 12)}y ago`;
 };
 
-// Utility function to format response count
 const formatResponseCount = (count: number): string => {
   if (count < 1000) return count.toString();
   const k = (count / 1000).toFixed(1);
@@ -126,10 +118,8 @@ export default function ResearcherResearch() {
   const loadSurveysAndStatistics = async () => {
     if (!user?._id) return;
 
-    // Fetch all surveys by creator
     const userSurveys = await getSurveysByCreatorId(user._id);
 
-    // Fetch response counts and question counts for each survey
     const surveysWithMetadata = await Promise.all(
       userSurveys.map(async (survey) => {
         try {
@@ -143,10 +133,6 @@ export default function ResearcherResearch() {
             questionCount: questions.length,
           };
         } catch (err) {
-          console.error(
-            `Error fetching metadata for survey ${survey._id}:`,
-            err
-          );
           return {
             ...survey,
             responseCount: 0,
@@ -156,53 +142,26 @@ export default function ResearcherResearch() {
       })
     );
 
-    // Sort surveys by most recent (updatedAt or createdAt) and take top 5
     const sortedSurveys = surveysWithMetadata.sort((a, b) => {
-      const dateA = a.updatedAt
-        ? new Date(a.updatedAt).getTime()
-        : a.createdAt
-        ? new Date(a.createdAt).getTime()
-        : 0;
-      const dateB = b.updatedAt
-        ? new Date(b.updatedAt).getTime()
-        : b.createdAt
-        ? new Date(b.createdAt).getTime()
-        : 0;
-      return dateB - dateA; // Most recent first
+      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
     });
 
-    setSurveys(sortedSurveys.slice(0, 5)); // Show only recent 5
+    setSurveys(sortedSurveys.slice(0, 5));
 
-    // Calculate statistics
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const surveysLast7Days = userSurveys.filter((survey) => {
-      const surveyDate = survey.createdAt
-        ? new Date(survey.createdAt)
-        : survey.updatedAt
-        ? new Date(survey.updatedAt)
-        : null;
+      const surveyDate = survey.createdAt ? new Date(survey.createdAt) : survey.updatedAt ? new Date(survey.updatedAt) : null;
       return surveyDate && surveyDate >= sevenDaysAgo;
     }).length;
 
-    const totalRespondents = surveysWithMetadata.reduce(
-      (sum, survey) => sum + survey.responseCount,
-      0
-    );
-
-    const totalResponses = surveysWithMetadata.reduce(
-      (sum, survey) => sum + survey.responseCount,
-      0
-    );
-
-    const publishedCount = userSurveys.filter(
-      (s) => s.draft === "published"
-    ).length;
-
-    const archivedCount = userSurveys.filter(
-      (s) => s.draft === "unpublished"
-    ).length;
+    const totalRespondents = surveysWithMetadata.reduce((sum, survey) => sum + survey.responseCount, 0);
+    const totalResponses = surveysWithMetadata.reduce((sum, survey) => sum + survey.responseCount, 0);
+    const publishedCount = userSurveys.filter((s) => s.draft === "published").length;
+    const archivedCount = userSurveys.filter((s) => s.draft === "unpublished").length;
 
     setStatistics({
       surveysLast7Days,
@@ -232,46 +191,28 @@ export default function ResearcherResearch() {
     const isPublishing = survey.draft === "unpublished";
     const action = isPublishing ? "publish" : "archive";
 
-    // Confirm action with user
     Alert.alert(
       isPublishing ? "Publish Survey" : "Archive Survey",
       isPublishing
-        ? `Are you sure you want to publish "${survey.title}"? It will be visible to all users.`
-        : `Are you sure you want to archive "${survey.title}"? It will no longer be visible to users.`,
+        ? `Publish "${survey.title}"? It will be visible to all users.`
+        : `Archive "${survey.title}"? It will no longer be visible.`,
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: isPublishing ? "Publish" : "Archive",
           onPress: async () => {
             try {
               if (isPublishing) {
                 await publishSurvey(survey._id);
-                Alert.alert(
-                  "Success",
-                  "Survey published successfully! It is now visible to all users."
-                );
+                Alert.alert("Success", "Survey published successfully!");
               } else {
                 await unpublishSurvey(survey._id);
-                Alert.alert(
-                  "Success",
-                  "Survey archived successfully. It is no longer visible to users."
-                );
+                Alert.alert("Success", "Survey archived successfully.");
               }
-              // Refresh data
               await loadSurveysAndStatistics();
             } catch (err: any) {
-              console.error(`Error ${action}ing survey:`, err);
-              const errorMessage =
-                err.response?.data?.message ||
-                err.message ||
-                `Failed to ${action} survey`;
-              Alert.alert(
-                "Error",
-                `${errorMessage}. Please check your connection and try again.`
-              );
+              const errorMessage = err.response?.data?.message || err.message || `Failed to ${action} survey`;
+              Alert.alert("Error", errorMessage);
             }
           },
         },
@@ -282,12 +223,9 @@ export default function ResearcherResearch() {
   const handleDeleteSurvey = async (survey: SurveyWithMetadata) => {
     Alert.alert(
       "Delete Survey",
-      `Are you sure you want to delete "${survey.title}"? This action cannot be undone.`,
+      `Delete "${survey.title}"? This cannot be undone.`,
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
@@ -295,18 +233,10 @@ export default function ResearcherResearch() {
             try {
               await deleteSurvey(survey._id);
               Alert.alert("Success", "Survey deleted successfully.");
-              // Refresh data
               await loadSurveysAndStatistics();
             } catch (err: any) {
-              console.error("Error deleting survey:", err);
-              const errorMessage =
-                err.response?.data?.message ||
-                err.message ||
-                "Failed to delete survey";
-              Alert.alert(
-                "Error",
-                `${errorMessage}. Please check your connection and try again.`
-              );
+              const errorMessage = err.response?.data?.message || err.message || "Failed to delete survey";
+              Alert.alert("Error", errorMessage);
             }
           },
         },
@@ -334,129 +264,91 @@ export default function ResearcherResearch() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Fixed Header Section */}
-      <View style={styles.fixedHeader}>
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <Text style={styles.title}>Research</Text>
-          <View style={styles.logoContainer}>
+      <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+          <View style={styles.headerTop}>
+            <Text style={styles.headerTitle}>Research</Text>
             <Image
               source={require("@/assets/title.png")}
               style={styles.titleImage}
               resizeMode="contain"
             />
           </View>
-        </View>
-        <View style={styles.headerContent}>
-          {/* Compact Overview Stats Row */}
-          <View style={styles.headerOverviewRow}>
-            <View style={styles.headerOverviewStats}>
-              <View style={styles.headerStatItem}>
-                <Text style={styles.headerStatValuePink}>{surveys.length}</Text>
-                <Text style={styles.headerStatLabel}>Total surveys</Text>
-              </View>
-              <View style={styles.headerStatItem}>
-                <Text style={styles.headerStatValueGreen}>
-                  {statistics.publishedCount}
-                </Text>
-                <Text style={styles.headerStatLabel}>Published</Text>
-              </View>
-              <View style={styles.headerStatItem}>
-                <Text style={styles.headerStatValueGrey}>
-                  {statistics.archivedCount}
-                </Text>
-                <Text style={styles.headerStatLabel}>Archived</Text>
-              </View>
-              <View style={styles.headerStatItem}>
-                <Text style={styles.headerStatValueTeal}>
-                  {formatResponseCount(statistics.totalResponses)}
-                </Text>
-                <Text style={styles.headerStatLabel}>Responses</Text>
-              </View>
+
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: Colors.primary.pink }]}>{surveys.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: Colors.semantic.success }]}>{statistics.publishedCount}</Text>
+              <Text style={styles.statLabel}>Published</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: Colors.text.secondary }]}>{statistics.archivedCount}</Text>
+              <Text style={styles.statLabel}>Archived</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: Colors.accent.teal }]}>{formatResponseCount(statistics.totalResponses)}</Text>
+              <Text style={styles.statLabel}>Responses</Text>
             </View>
           </View>
 
-          {/* Compact Create Button */}
-          <TouchableOpacity
-            style={styles.headerCreateButton}
-            onPress={handleCreateSurvey}
-          >
-            <LinearGradient
-              colors={["#8A4DE8", "#5FA9F5"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.headerCreateButtonGradient}
-            >
-              <Ionicons name="add" size={18} color="#FFFFFF" />
-              <Text style={styles.headerCreateButtonText}>
-                Create New Survey
-              </Text>
-            </LinearGradient>
+          {/* Create Button */}
+          <TouchableOpacity style={styles.createButton} onPress={handleCreateSurvey} activeOpacity={0.9}>
+            <Text style={styles.createButtonText}>Create New Survey</Text>
+            <Ionicons name="add" size={18} color={Colors.background.primary} />
           </TouchableOpacity>
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: bottomNavHeight + 4 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Recent Surveys Section */}
-        <View style={styles.surveysSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Surveys</Text>
-            <TouchableOpacity
-              onPress={() => {
-                router.push({
-                  pathname: "/(protected)/(researcher)/all-surveys",
-                } as any);
-              }}
-            >
-              <Text style={styles.viewAllLink}>view all</Text>
-            </TouchableOpacity>
-          </View>
-
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={32} color="#EF4444" />
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={loadData} style={styles.retryButton}>
-                <Text style={styles.retryButtonText}>Retry</Text>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + Spacing.lg }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          {/* Recent Surveys */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Surveys</Text>
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: "/(protected)/(researcher)/all-surveys" } as any)}
+              >
+                <Text style={styles.viewAllLink}>View all</Text>
               </TouchableOpacity>
             </View>
-          ) : surveys.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="document-text-outline"
-                size={48}
-                color="#9CA3AF"
-              />
-              <Text style={styles.emptyText}>No surveys created yet</Text>
-              <Text style={styles.emptySubtext}>
-                Create your first survey to get started
-              </Text>
-            </View>
-          ) : (
-            surveys.map((survey) => (
-              <ResearchSurveyCard
-                key={survey._id}
-                survey={survey}
-                onView={() => handleViewSurvey(survey)}
-                onAnalyze={() => handleAnalyzeSurvey(survey)}
-                onToggleStatus={() => handleToggleStatus(survey)}
-                onDelete={() => handleDeleteSurvey(survey)}
-              />
-            ))
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={32} color={Colors.semantic.error} />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity onPress={loadData} style={styles.retryButton}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : surveys.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="document-text-outline" size={40} color={Colors.text.tertiary} />
+                <Text style={styles.emptyText}>No surveys created yet</Text>
+                <Text style={styles.emptySubtext}>Create your first survey to get started</Text>
+              </View>
+            ) : (
+              surveys.map((survey) => (
+                <ResearchSurveyCard
+                  key={survey._id}
+                  survey={survey}
+                  onView={() => handleViewSurvey(survey)}
+                  onAnalyze={() => handleAnalyzeSurvey(survey)}
+                  onToggleStatus={() => handleToggleStatus(survey)}
+                  onDelete={() => handleDeleteSurvey(survey)}
+                />
+              ))
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </FadeInView>
   );
 }
@@ -478,178 +370,111 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
   onDelete,
 }) => {
   const isPublished = survey.draft === "published";
-  // If unpublished and has responses, it was published before (Archived)
-  // If unpublished and no responses, it's a Draft
   const isArchived = survey.draft === "unpublished" && survey.responseCount > 0;
   const isDraft = survey.draft === "unpublished" && survey.responseCount === 0;
 
-  // Determine status
   const getStatus = () => {
     if (isPublished) return "Published";
     if (isArchived) return "Archived";
     return "Draft";
   };
 
+  const getStatusColor = () => {
+    if (isPublished) return Colors.semantic.success;
+    if (isArchived) return Colors.text.secondary;
+    return Colors.primary.blue;
+  };
+
   const status = getStatus();
+  const statusColor = getStatusColor();
   const timeAgo = formatTimeAgo(survey.updatedAt || survey.createdAt);
 
   return (
     <View style={styles.surveyCard}>
-      <View style={styles.surveyCardHeader}>
-        {/* Status and Time Row */}
-        <View style={styles.surveyCardStatusRow}>
-          <View
-            style={[
-              styles.statusBadge,
-              status === "Published" && styles.statusBadgePublished,
-              status === "Draft" && styles.statusBadgeDraft,
-              status === "Archived" && styles.statusBadgeArchived,
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusBadgeText,
-                status === "Published" && styles.statusBadgeTextPublished,
-                status === "Draft" && styles.statusBadgeTextDraft,
-                status === "Archived" && styles.statusBadgeTextArchived,
-              ]}
-            >
-              {status}
-            </Text>
+      {/* Left color stripe */}
+      <View style={[styles.cardStripe, { backgroundColor: statusColor }]} />
+
+      <View style={styles.cardContent}>
+        {/* Header Row */}
+        <View style={styles.cardHeader}>
+          <View style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}>
+            <Text style={[styles.statusBadgeText, { color: statusColor }]}>{status}</Text>
           </View>
-          <Text style={styles.surveyCardTime}>{timeAgo}</Text>
+          <Text style={styles.timeAgo}>{timeAgo}</Text>
         </View>
-        {/* Title Row */}
-        <Text style={styles.surveyCardTitle} numberOfLines={2}>
-          {survey.title}
-        </Text>
-      </View>
 
-      <View style={styles.surveyCardMetrics}>
-        <View style={styles.surveyMetricItem}>
-          <Ionicons name="help-circle-outline" size={16} color="#8A4DE8" />
-          <Text style={styles.surveyMetricText}>
-            {survey.questionCount} question
-            {survey.questionCount !== 1 ? "s" : ""}
-          </Text>
-        </View>
-        <View style={styles.surveyMetricItem}>
-          <Ionicons name="people-outline" size={16} color="#2BB6E9" />
-          <Text style={styles.surveyMetricText}>
-            {formatResponseCount(survey.responseCount)} response
-            {survey.responseCount !== 1 ? "s" : ""}
-          </Text>
-        </View>
-      </View>
+        {/* Title */}
+        <Text style={styles.cardTitle} numberOfLines={2}>{survey.title}</Text>
 
-      <View style={styles.surveyCardActions}>
-        {isPublished ? (
-          <>
-            {/* Full-width Analyze Button for Published */}
-            <TouchableOpacity
-              style={[
-                styles.mainActionButton,
-                styles.mainActionButtonFullWidth,
-              ]}
-              onPress={onAnalyze}
-            >
-              <LinearGradient
-                colors={["#8A4DE8", "#FF6FAE"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.mainActionButtonGradient}
-              >
-                <Text style={styles.mainActionButtonText}>Analyze with</Text>
-                <Image
-                  source={require("@/assets/sightai.png")}
-                  style={styles.sightaiIcon}
-                  resizeMode="contain"
-                />
-              </LinearGradient>
-            </TouchableOpacity>
-            {/* Secondary Buttons Row Below */}
-            <View style={styles.secondaryActions}>
-              <TouchableOpacity
-                style={styles.secondaryActionButton}
-                onPress={onView}
-              >
-                <Text style={styles.secondaryActionButtonText}>View</Text>
+        {/* Metrics */}
+        <View style={styles.cardMetrics}>
+          <View style={styles.metricItem}>
+            <Ionicons name="layers-outline" size={14} color={Colors.primary.purple} />
+            <Text style={styles.metricText}>{survey.questionCount} questions</Text>
+          </View>
+          <View style={styles.metricItem}>
+            <Ionicons name="bar-chart-outline" size={14} color={Colors.accent.teal} />
+            <Text style={styles.metricText}>{formatResponseCount(survey.responseCount)} responses</Text>
+          </View>
+        </View>
+
+        {/* Actions */}
+        <View style={styles.cardActions}>
+          {isPublished ? (
+            <>
+              <TouchableOpacity style={styles.analyzeButton} onPress={onAnalyze} activeOpacity={0.9}>
+                <LinearGradient
+                  colors={[Colors.primary.purple, Colors.primary.pink]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.analyzeButtonGradient}
+                >
+                  <Text style={styles.analyzeButtonText}>Analyze with</Text>
+                  <Image
+                    source={require("@/assets/sightai.png")}
+                    style={styles.sightaiIcon}
+                    resizeMode="contain"
+                  />
+                </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.secondaryActionButton}
-                onPress={onToggleStatus}
-              >
-                <Ionicons name="archive-outline" size={18} color="#6B7280" />
-                <Text style={styles.secondaryActionButtonText}>Archive</Text>
+              <View style={styles.secondaryActions}>
+                <TouchableOpacity style={styles.secondaryButton} onPress={onView}>
+                  <Text style={styles.secondaryButtonText}>View</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.secondaryButton} onPress={onToggleStatus}>
+                  <Ionicons name="folder-outline" size={16} color={Colors.text.secondary} />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : isDraft ? (
+            <>
+              <TouchableOpacity style={styles.publishButton} onPress={onToggleStatus} activeOpacity={0.9}>
+                <Ionicons name="send-outline" size={16} color={Colors.background.primary} />
+                <Text style={styles.publishButtonText}>Publish</Text>
               </TouchableOpacity>
-            </View>
-          </>
-        ) : isDraft ? (
-          <>
-            {/* Full-width Publish Button for Draft */}
-            <TouchableOpacity
-              style={[
-                styles.mainActionButton,
-                styles.mainActionButtonFullWidth,
-              ]}
-              onPress={onToggleStatus}
-            >
-              <LinearGradient
-                colors={["#3B82F6", "#2563EB"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.mainActionButtonGradient}
-              >
-                <Ionicons name="rocket-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.mainActionButtonText}>Publish</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            {/* Secondary Buttons Row Below */}
-            <View style={styles.secondaryActions}>
-              <TouchableOpacity
-                style={styles.secondaryActionButton}
-                onPress={onView}
-              >
-                <Text style={styles.secondaryActionButtonText}>View</Text>
+              <View style={styles.secondaryActions}>
+                <TouchableOpacity style={styles.secondaryButton} onPress={onView}>
+                  <Text style={styles.secondaryButtonText}>View</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.unarchiveButton} onPress={onToggleStatus} activeOpacity={0.9}>
+                <Ionicons name="arrow-undo-outline" size={16} color={Colors.background.primary} />
+                <Text style={styles.unarchiveButtonText}>Unarchive</Text>
               </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <>
-            {/* Full-width Unarchive Button for Archived */}
-            <TouchableOpacity
-              style={[
-                styles.mainActionButton,
-                styles.mainActionButtonFullWidth,
-              ]}
-              onPress={onToggleStatus}
-            >
-              <LinearGradient
-                colors={["#8A4DE8", "#5FA9F5"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.mainActionButtonGradient}
-              >
-                <Ionicons name="archive-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.mainActionButtonText}>Unarchive</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            <View style={styles.secondaryActions}>
-              <TouchableOpacity
-                style={styles.secondaryActionButton}
-                onPress={onView}
-              >
-                <Text style={styles.secondaryActionButtonText}>View</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.secondaryActionButton}
-                onPress={onDelete}
-              >
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+              <View style={styles.secondaryActions}>
+                <TouchableOpacity style={styles.secondaryButton} onPress={onView}>
+                  <Text style={styles.secondaryButtonText}>View</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.secondaryButton} onPress={onDelete}>
+                  <Ionicons name="trash-outline" size={16} color={Colors.semantic.error} />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -658,416 +483,257 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: Colors.background.secondary,
   },
-  fixedHeader: {
-    backgroundColor: "#FFFFFF",
-    zIndex: 10,
-    paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  header: {
+    backgroundColor: Colors.background.primary,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    borderBottomColor: Colors.border.light,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    padding: 24,
+    marginBottom: Spacing.md,
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: "#6B7280",
+  headerTitle: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h2,
+    color: Colors.text.primary,
+    letterSpacing: Typography.letterSpacing.tight,
+  },
+  titleImage: {
+    height: 28,
+    width: 94,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: Spacing.md,
+  },
+  statItem: {
+    alignItems: "center",
+  },
+  statValue: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h4,
+  },
+  statLabel: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.text.secondary,
+    marginTop: 2,
+  },
+  createButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.primary.blue,
+    paddingVertical: Spacing.button.paddingVertical,
+    borderRadius: Spacing.button.borderRadius,
+    gap: Spacing.xs,
+  },
+  createButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.background.primary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 0,
-    paddingBottom: 24,
+    padding: Spacing.page.paddingHorizontal,
+    paddingTop: Spacing.lg,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  titleImage: {
-    height: 32,
-    width: 106,
-    marginLeft: -6,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#222222",
-  },
-  headerOverviewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  headerOverviewStats: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 14,
-    flex: 1,
-    justifyContent: "center",
-  },
-  headerStatItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 80,
-  },
-  headerStatValueBlue: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#3B82F6",
-    marginBottom: 2,
-  },
-  headerStatValuePink: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FF6FAE",
-    marginBottom: 2,
-    textAlign: "center",
-  },
-  headerStatValueTeal: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#2BB6E9",
-    marginBottom: 2,
-    textAlign: "center",
-  },
-  headerStatValueGreen: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#10B981",
-    marginBottom: 2,
-    textAlign: "center",
-  },
-  headerStatValueGrey: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#6B7280",
-    marginBottom: 2,
-    textAlign: "center",
-  },
-  headerStatLabel: {
-    fontSize: 11,
-    color: "#6B7280",
-    textAlign: "center",
-    width: "100%",
-  },
-  headerCreateButton: {
-    borderRadius: 8,
-    overflow: "hidden",
-    width: "100%",
-  },
-  headerCreateButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  headerCreateButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  overviewCardContainer: {
-    paddingHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  overviewCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  overviewCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  overviewCardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  overviewMenuButton: {
-    padding: 4,
-  },
-  overviewStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  overviewStatItem: {
-    flex: 1,
-    alignItems: "flex-start",
-  },
-  overviewStatValueBlue: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#3B82F6",
-    marginBottom: 4,
-  },
-  overviewStatValuePink: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#FF6FAE",
-    marginBottom: 4,
-  },
-  overviewStatLabel: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  createButtonContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  createButton: {
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  createButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 8,
-  },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  surveysSection: {
-    paddingHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 16,
+  section: {
+    marginBottom: Spacing.lg,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.h4,
+    color: Colors.text.primary,
   },
   viewAllLink: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#3B82F6",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.primary.blue,
   },
   errorContainer: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: Spacing.xxl,
   },
   errorText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: "#EF4444",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.body,
+    color: Colors.semantic.error,
     textAlign: "center",
+    marginTop: Spacing.sm,
   },
   retryButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary.blue,
+    paddingVertical: Spacing.button.paddingVerticalSmall,
+    paddingHorizontal: Spacing.button.paddingHorizontal,
+    borderRadius: Spacing.button.borderRadius,
   },
   retryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.background.primary,
   },
   emptyContainer: {
     alignItems: "center",
-    paddingVertical: 48,
+    paddingVertical: Spacing.xxl,
   },
   emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
+    marginTop: Spacing.md,
   },
   emptySubtext: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
   },
   surveyCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    flexDirection: "row",
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.card.borderRadius,
+    marginBottom: Spacing.sm,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.border.light,
   },
-  surveyCardHeader: {
-    marginBottom: 12,
+  cardStripe: {
+    width: 4,
   },
-  surveyCardStatusRow: {
+  cardContent: {
+    flex: 1,
+    padding: Spacing.card.paddingSmall,
+  },
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  surveyCardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  surveyCardTime: {
-    fontSize: 12,
-    color: "#6B7280",
+    marginBottom: Spacing.xs,
   },
   statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  statusBadgePublished: {
-    backgroundColor: "#D1FAE5",
-  },
-  statusBadgeDraft: {
-    backgroundColor: "#DBEAFE",
-  },
-  statusBadgeArchived: {
-    backgroundColor: "#F3F4F6",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: Spacing.button.borderRadiusPill,
   },
   statusBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.label,
   },
-  statusBadgeTextPublished: {
-    color: "#065F46",
+  timeAgo: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.text.tertiary,
   },
-  statusBadgeTextDraft: {
-    color: "#1E40AF",
+  cardTitle: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodyLarge,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+    lineHeight: 22,
   },
-  statusBadgeTextArchived: {
-    color: "#6B7280",
-  },
-  surveyCardMetrics: {
+  cardMetrics: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 16,
+    gap: Spacing.md,
+    marginBottom: Spacing.sm,
   },
-  surveyMetricItem: {
+  metricItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
-  surveyMetricText: {
-    fontSize: 14,
-    color: "#6B7280",
+  metricText: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.secondary,
   },
-  surveyCardActions: {
-    gap: 12,
+  cardActions: {
+    gap: Spacing.xs,
   },
-  mainActionButton: {
-    borderRadius: 8,
-    shadowColor: "#8A4DE8",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    minHeight: 44,
+  analyzeButton: {
+    borderRadius: Spacing.button.borderRadiusSmall,
+    overflow: "hidden",
+    ...Shadows.purple,
   },
-  mainActionButtonFullWidth: {
-    width: "100%",
-  },
-  mainActionButtonCompact: {
-    flex: 1,
-  },
-  mainActionButtonGradient: {
+  analyzeButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-    borderRadius: 8,
-    overflow: "hidden",
-    width: "100%",
+    paddingVertical: Spacing.button.paddingVerticalSmall,
+    gap: 6,
   },
-  mainActionButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
+  analyzeButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.background.primary,
   },
   sightaiIcon: {
-    width: 22,
-    height: 22,
+    width: 34,
+    height: 34,
+  },
+  publishButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.primary.blue,
+    paddingVertical: Spacing.button.paddingVerticalSmall,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    gap: 6,
+  },
+  publishButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.background.primary,
+  },
+  unarchiveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.primary.purple,
+    paddingVertical: Spacing.button.paddingVerticalSmall,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    gap: 6,
+  },
+  unarchiveButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.background.primary,
   },
   secondaryActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: Spacing.xs,
   },
-  secondaryActionButton: {
+  secondaryButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F9FAFB",
+    height: 36,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    backgroundColor: Colors.background.tertiary,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 12,
-    gap: 6,
+    borderColor: Colors.border.light,
+    gap: 4,
   },
-  secondaryActionButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6B7280",
+  secondaryButtonText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.secondary,
   },
 });

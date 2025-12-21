@@ -216,11 +216,11 @@ export default function SurveyPreview() {
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
+            <Text style={styles.headerSubtitle}>Survey preview</Text>
           </View>
-          <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
-          <Text style={styles.headerSubtitle}>Survey preview</Text>
+          <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
         </View>
       </View>
       <ScrollView
@@ -616,23 +616,22 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingBottom: 16,
-  },
-  logoContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerLeft: {
+    flex: 1,
   },
   titleImage: {
     height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    width: 94,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,

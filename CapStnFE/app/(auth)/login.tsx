@@ -22,29 +22,30 @@ import AuthContext from "@/context/AuthContext";
 import UserInfo from "@/types/UserInfo";
 import { login } from "@/api/auth";
 import { storeToken, storeUser } from "@/api/storage";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const FEATURE_CARDS = [
   {
     icon: "trophy-outline",
-    headline: "Answer surveys. Earn points.",
-    body: "Earn points for every question you answer",
+    headline: "Earn rewards for insights",
+    body: "Complete surveys and accumulate points",
   },
   {
     icon: "analytics-outline",
-    headline: "Know yourself better",
-    body: "Gain insights about who you are",
+    headline: "Discover who you are",
+    body: "AI-powered analysis reveals patterns",
   },
   {
     icon: "create-outline",
-    headline: "Create surveys in minutes",
-    body: "Design and publish quickly",
+    headline: "Design surveys in minutes",
+    body: "Intuitive tools for researchers",
   },
   {
-    icon: "shield-checkmark-outline",
-    headline: "Powered by sightAI",
-    body: "Validates surveys and responses",
+    icon: "sparkles-outline",
+    headline: "Powered by SightAI",
+    body: "Advanced validation and insights",
   },
 ];
 
@@ -52,6 +53,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const autoSlideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -83,13 +86,11 @@ export default function Login() {
     };
   }, []);
 
-  // Handle scroll events to update current index
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / SCREEN_WIDTH);
     if (index !== currentCardIndex && index >= 0 && index < FEATURE_CARDS.length) {
       setCurrentCardIndex(index);
-      // Reset auto-slide timer when user manually swipes
       if (autoSlideTimerRef.current) {
         clearInterval(autoSlideTimerRef.current);
       }
@@ -110,11 +111,8 @@ export default function Login() {
     mutationKey: ["Login"],
     mutationFn: (userInfo: UserInfo) => login(userInfo),
     onSuccess: async (data) => {
-      console.log("Login success, data:", data);
       if (data?.token) {
-        console.log("data.token", data.token);
         await storeToken(data.token);
-        // Store user data if available (normalize id to _id)
         if (data?.user) {
           const normalizedUser = {
             ...data.user,
@@ -122,12 +120,9 @@ export default function Login() {
           };
           await storeUser(normalizedUser);
         }
-        console.log("Token stored, setting authenticated to true");
         setIsAuthenticated(true);
-        console.log("Navigating to researcher dashboard");
         router.replace("/(protected)/(researcher)/(tabs)/" as any);
       } else {
-        console.log("No token in response:", data);
         Alert.alert("Error", "Invalid response from server");
       }
     },
@@ -147,193 +142,208 @@ export default function Login() {
     }
   };
 
-  // Show loading while checking authentication
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1 }}>
-      <LinearGradient
-        colors={["#EEF5FF", "#F9F6FE"]}
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      >
-        <ActivityIndicator size="large" color="#4A63D8" />
-      </LinearGradient>
+        <LinearGradient
+          colors={[Colors.background.secondary, Colors.surface.purpleTint]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color={Colors.primary.blue} />
+        </LinearGradient>
       </SafeAreaView>
     );
   }
 
-  // If authenticated, redirect to protected routes
   if (isAuthenticated) {
     return <Redirect href={"/(protected)/(researcher)/(tabs)/" as any} />;
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <LinearGradient
-      colors={["#EEF5FF", "#F9F6FE"]}
-      style={styles.gradientContainer}
-    >
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <LinearGradient
+        colors={[Colors.background.secondary, Colors.surface.purpleTint]}
+        style={styles.gradientContainer}
       >
-        <View style={styles.contentContainer}>
-          {/* Branding Section */}
-          <View style={styles.brandingSection}>
-            {/* Main Logo */}
-            <View style={styles.logoContainer}>
-              <Image
-                source={require("@/assets/logo.png")}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.contentContainer}>
+              {/* Branding Section */}
+              <View style={styles.brandingSection}>
+                <View style={styles.logoContainer}>
+                  <Image
+                    source={require("@/assets/logo.png")}
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Image
+                  source={require("@/assets/title.png")}
+                  style={styles.appTitle}
+                  resizeMode="contain"
+                />
+              </View>
 
-              {/* Title */}
-              <Image
-                source={require("@/assets/title.png")}
-                style={styles.appTitle}
-                resizeMode="contain"
-              />
-          </View>
+              {/* Feature Carousel */}
+              <View style={styles.featureSection}>
+                <ScrollView
+                  ref={scrollViewRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                  decelerationRate="fast"
+                  style={styles.carouselScrollView}
+                  contentContainerStyle={styles.carouselContent}
+                >
+                  {FEATURE_CARDS.map((card, index) => (
+                    <View key={index} style={styles.featureCardWrapper}>
+                      <View style={styles.featureCard}>
+                        <View style={styles.featureIconContainer}>
+                          <Ionicons
+                            name={card.icon as any}
+                            size={28}
+                            color={Colors.primary.blue}
+                          />
+                        </View>
+                        <Text style={styles.featureHeadline}>{card.headline}</Text>
+                        <Text style={styles.featureBody}>{card.body}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
 
-            {/* Feature Callout Section */}
-            <View style={styles.featureSection}>
-            <ScrollView
-              ref={scrollViewRef}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              decelerationRate="fast"
-              style={styles.carouselScrollView}
-              contentContainerStyle={styles.carouselContent}
-            >
-                {FEATURE_CARDS.map((card, index) => (
-                  <View key={index} style={styles.featureCardWrapper}>
-                    <View style={styles.featureCard}>
-                      <Ionicons
-                        name={card.icon as any}
-                        size={32}
-                        color="#4A63D8"
-                        style={styles.icon}
-                      />
-                      <Text style={styles.featureHeadline}>{card.headline}</Text>
-                      <Text style={styles.featureBody}>{card.body}</Text>
+                {/* Pagination Dots */}
+                <View style={styles.indicatorsContainer}>
+                  {FEATURE_CARDS.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.indicator,
+                        index === currentCardIndex && styles.indicatorActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {/* Login Form */}
+              <View style={styles.formSection}>
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle" size={18} color={Colors.semantic.error} />
+                    <Text style={styles.errorText}>
+                      {error?.response?.data?.message ||
+                        error?.message ||
+                        "Login failed. Please try again."}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email</Text>
+                  <View style={[styles.inputContainer, emailFocused && styles.inputContainerFocused]}>
+                    <Ionicons 
+                      name="mail-outline" 
+                      size={20} 
+                      color={emailFocused ? Colors.primary.blue : Colors.text.tertiary}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="you@example.com"
+                      placeholderTextColor={Colors.text.tertiary}
+                      value={email}
+                      onChangeText={setEmail}
+                      onFocus={() => setEmailFocused(true)}
+                      onBlur={() => setEmailFocused(false)}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
                   </View>
                 </View>
-              ))}
-            </ScrollView>
 
-              {/* Pagination Dots */}
-            <View style={styles.indicatorsContainer}>
-                {FEATURE_CARDS.map((_, index) => {
-                  const isActive = index === currentCardIndex;
-                  
-                  return (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicator,
-                        isActive && styles.indicatorActive,
-                  ]}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <View style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}>
+                    <Ionicons 
+                      name="lock-closed-outline" 
+                      size={20} 
+                      color={passwordFocused ? Colors.primary.blue : Colors.text.tertiary}
+                      style={styles.inputIcon}
                     />
-                  );
-                })}
-            </View>
-          </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your password"
+                      placeholderTextColor={Colors.text.tertiary}
+                      value={password}
+                      onChangeText={setPassword}
+                      onFocus={() => setPasswordFocused(true)}
+                      onBlur={() => setPasswordFocused(false)}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color={Colors.text.tertiary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-          {/* Login Form Section */}
-          <View style={styles.formSection}>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                  {error?.response?.data?.message ||
-                    error?.message ||
-                    "Login failed. Please try again."}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                  placeholder="example@sight.ai"
-                  placeholderTextColor="#969696"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter your password"
-                    placeholderTextColor="#969696"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
                 <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
+                  onPress={handleLogin}
+                  disabled={isPending || !email || !password}
+                  activeOpacity={0.8}
+                  style={styles.loginButtonWrapper}
                 >
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={20}
-                      color="#969696"
-                  />
+                  <LinearGradient
+                    colors={
+                      isPending || !email || !password
+                        ? [Colors.text.tertiary, Colors.text.tertiary]
+                        : [Colors.accent.sky, Colors.primary.blue]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.loginButton}
+                  >
+                    {isPending ? (
+                      <ActivityIndicator size="small" color={Colors.text.inverse} />
+                    ) : (
+                      <>
+                        <Text style={styles.loginButtonText}>Sign In</Text>
+                        <Ionicons name="arrow-forward" size={20} color={Colors.text.inverse} />
+                      </>
+                    )}
+                  </LinearGradient>
                 </TouchableOpacity>
+
+                <View style={styles.bottomLinkContainer}>
+                  <Text style={styles.bottomLinkText}>Don't have an account? </Text>
+                  <TouchableOpacity onPress={() => router.navigate("/(auth)/register")}>
+                    <Text style={styles.signUpLink}>Create Account</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-
-            <TouchableOpacity
-              onPress={handleLogin}
-              disabled={isPending}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                  colors={["#5FA9F5", "#4A63D8"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[
-                  styles.loginButton,
-                  isPending && styles.loginButtonDisabled,
-                ]}
-              >
-                <Text style={styles.loginButtonText}>
-                  {isPending ? "Signing In..." : "Log In"}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <View style={styles.bottomLinkContainer}>
-              <Text style={styles.bottomLinkText}>
-                Don't have an account?{" "}
-                <Text
-                  style={styles.signUpLink}
-                  onPress={() => router.navigate("/(auth)/register")}
-                >
-                    Sign Up
-                </Text>
-              </Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-    </LinearGradient>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -345,6 +355,11 @@ const styles = StyleSheet.create({
   gradientContainer: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
   },
@@ -354,37 +369,34 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.xl,
     justifyContent: "center",
   },
   brandingSection: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: Spacing.xl,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   logo: {
-    width: 210,
-    height: 210,
+    width: 180,
+    height: 180,
   },
   appTitle: {
-    height: 30,
+    height: 32,
     width: 120,
-    paddingHorizontal: 8,
-    marginTop: 12,
   },
   featureSection: {
-    marginBottom: 40,
-    marginTop: -20,
+    marginBottom: Spacing.xxl,
     alignItems: "center",
   },
   carouselScrollView: {
-    marginBottom: 16,
     width: SCREEN_WIDTH,
+    marginBottom: Spacing.md,
   },
   carouselContent: {
     alignItems: "center",
@@ -393,130 +405,134 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: Spacing.xl,
   },
   featureCard: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-    paddingVertical: 24,
-    backgroundColor: "rgba(238, 245, 255, 0.3)",
-    borderRadius: 16,
-    marginHorizontal: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.xl,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xxl,
+    width: "100%",
+    ...Shadows.md,
   },
-  icon: {
-    marginBottom: 16,
-    alignSelf: "center",
+  featureIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.surface.blueTint,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.md,
   },
   featureHeadline: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#222222",
+    ...Typography.styles.h5,
+    color: Colors.text.primary,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: Spacing.xs,
   },
   featureBody: {
-    fontSize: 16,
-    color: "#505050",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
     textAlign: "center",
-    lineHeight: 24,
   },
   indicatorsContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
+    gap: Spacing.xs,
   },
   indicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#C8C8C8",
+    backgroundColor: Colors.border.default,
   },
   indicatorActive: {
-    backgroundColor: "#4A63D8",
+    width: 24,
+    backgroundColor: Colors.primary.blue,
   },
   formSection: {
     width: "100%",
   },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCDCDC",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#111827",
-  },
-  passwordContainer: {
+  errorContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCDCDC",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#111827",
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  loginButton: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  loginButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  bottomLinkContainer: {
-    marginTop: 24,
-    alignItems: "center",
-  },
-  bottomLinkText: {
-    fontSize: 14,
-    color: "#969696",
-  },
-  signUpLink: {
-    color: "#4A63D8",
-    fontWeight: "500",
-    textDecorationLine: "underline",
-  },
-  errorContainer: {
-    backgroundColor: "#FEE2E2",
-    borderWidth: 1,
-    borderColor: "#EF4444",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
+    backgroundColor: Colors.semantic.errorLight,
+    borderRadius: Borders.radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+    gap: Spacing.xs,
   },
   errorText: {
-    color: "#DC2626",
-    fontSize: 14,
-    textAlign: "center",
+    ...Typography.styles.bodySmall,
+    color: Colors.semantic.error,
+    flex: 1,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    ...Typography.styles.label,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.background.primary,
+    borderWidth: 1.5,
+    borderColor: Colors.border.default,
+    borderRadius: Borders.radius.md,
+    paddingHorizontal: Spacing.md,
+  },
+  inputContainerFocused: {
+    borderColor: Colors.primary.blue,
+    ...Shadows.xs,
+  },
+  inputIcon: {
+    marginRight: Spacing.sm,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    ...Typography.styles.body,
+    color: Colors.text.primary,
+  },
+  eyeButton: {
+    padding: Spacing.xs,
+  },
+  loginButtonWrapper: {
+    marginTop: Spacing.lg,
+    borderRadius: Borders.radius.md,
+    overflow: "hidden",
+    ...Shadows.primary,
+  },
+  loginButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md + 2,
+    gap: Spacing.xs,
+  },
+  loginButtonText: {
+    ...Typography.styles.button,
+    color: Colors.text.inverse,
+  },
+  bottomLinkContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: Spacing.xl,
+  },
+  bottomLinkText: {
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
+  },
+  signUpLink: {
+    ...Typography.styles.body,
+    color: Colors.primary.blue,
+    fontWeight: "600",
   },
 });

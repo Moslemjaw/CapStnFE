@@ -4,12 +4,12 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   Image,
+  Animated,
 } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,6 +30,7 @@ import { updateUserProgress } from "@/utils/userProgress";
 import { getUser } from "@/api/storage";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { Colors, Typography, Spacing, Shadows } from "@/constants/design";
 
 export default function SurveyView() {
   const router = useRouter();
@@ -49,6 +50,7 @@ export default function SurveyView() {
   const [optionSearchQueries, setOptionSearchQueries] = useState<Record<string, string>>({});
   const scrollViewRef = useRef<ScrollView>(null);
   const questionPositions = useRef<Record<string, number>>({});
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (surveyId) {
@@ -56,6 +58,16 @@ export default function SurveyView() {
       checkIfAlreadyAnswered();
     }
   }, [surveyId]);
+
+  // Animate progress bar when answers change
+  useEffect(() => {
+    const progress = getProgress();
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [answers, questions]);
 
   const checkIfAlreadyAnswered = async () => {
     if (!surveyId) return;
@@ -73,7 +85,6 @@ export default function SurveyView() {
           setHasAnswered(true);
           setUserResponse(existingResponse);
 
-          // Populate answers from the response
           const populatedAnswers: Record<string, string> = {};
           existingResponse.answers.forEach((answer) => {
             populatedAnswers[answer.questionId] = answer.value;
@@ -85,7 +96,6 @@ export default function SurveyView() {
       }
     } catch (err: any) {
       console.error("Error checking if survey was answered:", err);
-      // Don't block the user if check fails
       setHasAnswered(false);
     } finally {
       setCheckingAnswered(false);
@@ -103,7 +113,6 @@ export default function SurveyView() {
         getQuestionsBySurveyId(surveyId),
       ]);
 
-      // Sort questions by order
       const sortedQuestions = questionsData.sort((a, b) => a.order - b.order);
 
       setSurvey(surveyData);
@@ -117,27 +126,23 @@ export default function SurveyView() {
   };
 
   const scrollToNextQuestion = (currentQuestionId: string) => {
-    if (hasAnswered) return; // Don't scroll if already answered
-    
-    // Find the current question index
+    if (hasAnswered) return;
+
     const currentIndex = questions.findIndex((q) => q._id === currentQuestionId);
     if (currentIndex === -1) return;
-    
-    // Find the next unanswered question
+
     const nextUnansweredIndex = questions.findIndex(
       (q, index) => index > currentIndex && !answers[q._id]
     );
-    
+
     if (nextUnansweredIndex !== -1) {
       const nextQuestionId = questions[nextUnansweredIndex]._id;
       const position = questionPositions.current[nextQuestionId];
-      
+
       if (position !== undefined && scrollViewRef.current) {
-        // Scroll to the next question with a slight offset for better visibility
-        // The position from onLayout is relative to the ScrollView content
         setTimeout(() => {
           scrollViewRef.current?.scrollTo({
-            y: Math.max(0, position - 100), // Offset to show question better in view
+            y: Math.max(0, position - 100),
             animated: true,
           });
         }, 300);
@@ -150,8 +155,7 @@ export default function SurveyView() {
       ...prev,
       [questionId]: value,
     }));
-    
-    // Scroll to next question if answer is provided (non-empty)
+
     if (value && value.trim()) {
       scrollToNextQuestion(questionId);
     }
@@ -173,9 +177,10 @@ export default function SurveyView() {
   };
 
   const getProgress = (): number => {
-    if (questions.length === 0) return 0;
-    const answeredCount = questions.filter((q) => answers[q._id]).length;
-    return answeredCount / questions.length;
+    const requiredQuestions = questions.filter((q) => q.isRequired);
+    if (requiredQuestions.length === 0) return 1; // No required questions means 100%
+    const answeredRequiredCount = requiredQuestions.filter((q) => answers[q._id]).length;
+    return answeredRequiredCount / requiredQuestions.length;
   };
 
   const handleOptionSelect = (
@@ -184,22 +189,18 @@ export default function SurveyView() {
     questionType: Question["type"]
   ) => {
     if (questionType === "single_choice" || questionType === "dropdown") {
-      // Single selection - scroll to next question
       handleAnswerChange(questionId, option);
     } else if (
       questionType === "multiple_choice" ||
       questionType === "checkbox"
     ) {
-      // Multiple selection - toggle option (don't auto-scroll for multiple choice)
       const currentAnswer = answers[questionId] || "";
       const selectedOptions = currentAnswer ? currentAnswer.split(",") : [];
       const optionIndex = selectedOptions.indexOf(option);
 
       if (optionIndex > -1) {
-        // Remove option
         selectedOptions.splice(optionIndex, 1);
       } else {
-        // Add option
         selectedOptions.push(option);
       }
 
@@ -244,24 +245,16 @@ export default function SurveyView() {
   const handleSubmit = async () => {
     if (!surveyId || !survey) return;
 
-    // Check if user has already answered
     if (hasAnswered) {
       Alert.alert(
         "Already Answered",
-        "You have already submitted a response to this survey. Each user can only answer a survey once.",
-        [
-          {
-            text: "Go Back",
-            onPress: () => router.back(),
-          },
-        ]
+        "You have already submitted a response to this survey.",
+        [{ text: "Go Back", onPress: () => router.back() }]
       );
       return;
     }
 
-    if (!validateAnswers()) {
-      return;
-    }
+    if (!validateAnswers()) return;
 
     setSubmitting(true);
     try {
@@ -289,10 +282,8 @@ export default function SurveyView() {
         answers: answerArray,
       });
 
-      // Update user progress (points and streak)
       await updateUserProgress(surveyId, survey.rewardPoints);
 
-      // Calculate statistics
       const requiredAnswered = questions.filter(
         (q) => q.isRequired && answers[q._id]
       ).length;
@@ -300,7 +291,6 @@ export default function SurveyView() {
         (q) => !q.isRequired && answers[q._id]
       ).length;
 
-      // Navigate to success page
       router.replace({
         pathname: "/(protected)/(researcher)/survey-answer-success",
         params: {
@@ -317,7 +307,6 @@ export default function SurveyView() {
     } catch (err: any) {
       console.error("Error submitting response:", err);
 
-      // Check if error is due to duplicate submission
       const errorMessage = err.response?.data?.message || err.message || "";
       if (
         errorMessage.toLowerCase().includes("already") ||
@@ -326,12 +315,7 @@ export default function SurveyView() {
         Alert.alert(
           "Already Answered",
           "You have already submitted a response to this survey.",
-          [
-            {
-              text: "Go Back",
-              onPress: () => router.back(),
-            },
-          ]
+          [{ text: "Go Back", onPress: () => router.back() }]
         );
       } else {
         Alert.alert(
@@ -344,41 +328,14 @@ export default function SurveyView() {
     }
   };
 
-  const getQuestionTypeLabel = (type: Question["type"]) => {
-    switch (type) {
-      case "text":
-        return "Text";
-      case "multiple_choice":
-        return "Multiple Choice";
-      case "single_choice":
-        return "Single Choice";
-      case "dropdown":
-        return "Dropdown";
-      case "checkbox":
-        return "Checkbox";
-      default:
-        return type;
-    }
-  };
-
   if (error || !survey) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+          <Ionicons name="alert-circle-outline" size={48} color={Colors.semantic.error} />
           <Text style={styles.errorText}>{error || "Survey not found"}</Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.retryButton}
-          >
-            <LinearGradient
-              colors={["#5FA9F5", "#4A63D8"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.retryButtonGradient}
-            >
-              <Text style={styles.retryButtonText}>Go Back</Text>
-            </LinearGradient>
+          <TouchableOpacity onPress={() => router.back()} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -387,325 +344,305 @@ export default function SurveyView() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Fixed Header Section */}
-      <View style={styles.fixedHeader}>
-        <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
+      <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <Text style={styles.headerTitle}>Answer Survey</Text>
-          <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
-          </View>
+          <Image
+            source={require("@/assets/title.png")}
+            style={styles.titleImage}
+            resizeMode="contain"
+          />
         </View>
-      </View>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            hasAnswered && userResponse && styles.scrollContentWithCompleted,
-            !hasAnswered && styles.scrollContentWithSubmit,
-          ]}
-          showsVerticalScrollIndicator={false}
+
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
-          {/* Survey Info */}
-          <View style={styles.surveyInfo}>
-            {survey.description && (
-              <Text style={styles.description}>{survey.description}</Text>
-            )}
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: bottomNavHeight + (hasAnswered ? 140 : 100) },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Survey Info */}
+            <View style={styles.surveyInfo}>
+              {survey.description && (
+                <Text style={styles.description}>{survey.description}</Text>
+              )}
 
-            {/* Progress Bar */}
-            {!hasAnswered && (
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${getProgress() * 100}%` }]} />
+              {/* Progress Bar */}
+              {!hasAnswered && (
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <LinearGradient
+                      colors={[Colors.accent.sky, Colors.primary.blue]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.progressFill, { width: `${getProgress() * 100}%` }]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {questions.filter((q) => answers[q._id]).length} / {questions.length} answered
+                  </Text>
                 </View>
-                <Text style={styles.progressText}>
-                  {questions.filter((q) => answers[q._id]).length} / {questions.length} answered
-                </Text>
-              </View>
-            )}
-          </View>
+              )}
+            </View>
 
-          {/* Questions Section */}
-          <View style={styles.questionsSection}>
-            <Text style={styles.sectionTitle}>Questions</Text>
+            {/* Questions Section */}
+            <View style={styles.questionsSection}>
+              <Text style={styles.sectionTitle}>Questions</Text>
 
-            {questions.length === 0 ? (
-              <View style={styles.emptyQuestions}>
-                <Ionicons
-                  name="help-circle-outline"
-                  size={32}
-                  color="#9CA3AF"
-                />
-                <Text style={styles.emptyQuestionsText}>
-                  No questions available for this survey
-                </Text>
-              </View>
-            ) : (
-              questions.map((question, index) => (
-                <View
-                  key={question._id}
-                  style={styles.questionCard}
-                  onLayout={(event) => {
-                    const { y } = event.nativeEvent.layout;
-                    questionPositions.current[question._id] = y;
-                  }}
-                >
-                  <View style={styles.questionHeader}>
-                    <Text style={styles.questionNumber}>
-                      Question {index + 1}
+              {questions.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="help-circle-outline" size={32} color={Colors.text.tertiary} />
+                  <Text style={styles.emptyStateText}>No questions available</Text>
+                </View>
+              ) : (
+                questions.map((question, index) => (
+                  <View
+                    key={question._id}
+                    style={styles.questionCard}
+                    onLayout={(event) => {
+                      const { y } = event.nativeEvent.layout;
+                      questionPositions.current[question._id] = y;
+                    }}
+                  >
+                    <View style={styles.questionHeader}>
+                      <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                      {question.isRequired && (
+                        <View style={styles.requiredBadge}>
+                          <Text style={styles.requiredBadgeText}>Required</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.questionText}>{question.text}</Text>
+
+                    {question.type === "text" ? (
+                      <TextInput
+                        style={[
+                          styles.textInput,
+                          hasAnswered && styles.textInputReadOnly,
+                        ]}
+                        placeholder={hasAnswered ? "" : "Type your answer here..."}
+                        placeholderTextColor={Colors.text.tertiary}
+                        value={answers[question._id] || ""}
+                        onChangeText={(text) => handleAnswerChange(question._id, text)}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                        editable={!hasAnswered}
+                      />
+                    ) : question.options && question.options.length > 0 ? (
+                      question.options.length >= 6 ? (
+                        <View style={styles.optionsWithSearch}>
+                          <View style={styles.searchContainer}>
+                            <Ionicons name="search" size={18} color={Colors.text.tertiary} />
+                            <TextInput
+                              style={styles.searchInput}
+                              placeholder="Search options..."
+                              placeholderTextColor={Colors.text.tertiary}
+                              value={optionSearchQueries[question._id] || ""}
+                              onChangeText={(text) => handleOptionSearchChange(question._id, text)}
+                              editable={!hasAnswered}
+                            />
+                            {optionSearchQueries[question._id] && (
+                              <TouchableOpacity
+                                onPress={() => handleOptionSearchChange(question._id, "")}
+                              >
+                                <Ionicons name="close-circle" size={18} color={Colors.text.tertiary} />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <ScrollView
+                            style={styles.optionsScrollView}
+                            nestedScrollEnabled={true}
+                            showsVerticalScrollIndicator={false}
+                          >
+                            <View style={styles.optionsGrid}>
+                              {getFilteredOptions(question._id, question.options).map((option, optIndex) => {
+                                const isSelected = isOptionSelected(question._id, option, question.type);
+                                const isMultiple =
+                                  question.type === "multiple_choice" || question.type === "checkbox";
+
+                                return (
+                                  <TouchableOpacity
+                                    key={optIndex}
+                                    style={[
+                                      styles.optionButton,
+                                      isSelected && styles.optionButtonSelected,
+                                      hasAnswered && styles.optionButtonReadOnly,
+                                    ]}
+                                    onPress={() => handleOptionSelect(question._id, option, question.type)}
+                                    disabled={hasAnswered}
+                                    activeOpacity={0.7}
+                                  >
+                                    <Ionicons
+                                      name={
+                                        isMultiple
+                                          ? isSelected ? "checkbox" : "checkbox-outline"
+                                          : isSelected ? "radio-button-on" : "radio-button-off"
+                                      }
+                                      size={18}
+                                      color={isSelected ? Colors.primary.blue : Colors.text.tertiary}
+                                    />
+                                    <Text
+                                      style={[
+                                        styles.optionButtonText,
+                                        isSelected && styles.optionButtonTextSelected,
+                                      ]}
+                                    >
+                                      {option}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </ScrollView>
+                        </View>
+                      ) : (
+                        <View style={styles.optionsGrid}>
+                          {question.options.map((option, optIndex) => {
+                            const isSelected = isOptionSelected(question._id, option, question.type);
+                            const isMultiple =
+                              question.type === "multiple_choice" || question.type === "checkbox";
+
+                            return (
+                              <TouchableOpacity
+                                key={optIndex}
+                                style={[
+                                  styles.optionButton,
+                                  isSelected && styles.optionButtonSelected,
+                                  hasAnswered && styles.optionButtonReadOnly,
+                                ]}
+                                onPress={() => handleOptionSelect(question._id, option, question.type)}
+                                disabled={hasAnswered}
+                                activeOpacity={0.7}
+                              >
+                                <Ionicons
+                                  name={
+                                    isMultiple
+                                      ? isSelected ? "checkbox" : "checkbox-outline"
+                                      : isSelected ? "radio-button-on" : "radio-button-off"
+                                  }
+                                  size={18}
+                                  color={isSelected ? Colors.primary.blue : Colors.text.tertiary}
+                                />
+                                <Text
+                                  style={[
+                                    styles.optionButtonText,
+                                    isSelected && styles.optionButtonTextSelected,
+                                  ]}
+                                >
+                                  {option}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )
+                    ) : null}
+                  </View>
+                ))
+              )}
+            </View>
+          </ScrollView>
+
+          {/* Submit Button with Progress */}
+          {!hasAnswered && (
+            <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight + 16 }]}>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSubmit}
+                disabled={submitting}
+                activeOpacity={0.9}
+              >
+                <View style={styles.submitButtonBackground}>
+                  {/* Animated Progress Fill */}
+                  <Animated.View
+                    style={[
+                      styles.submitProgressFillContainer,
+                      {
+                        width: progressAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0%', '100%'],
+                        }),
+                      },
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[Colors.accent.sky, Colors.primary.blue]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.submitProgressFill}
+                    />
+                  </Animated.View>
+                  {/* Button Content */}
+                  <View style={styles.submitButtonContent}>
+                    <Text style={[
+                      styles.submitButtonText,
+                      getProgress() < 0.5 && styles.submitButtonTextDark
+                    ]}>
+                      {submitting ? "Submitting..." : "Submit Survey"}
                     </Text>
-                    {question.isRequired && (
-                      <View style={styles.requiredBadge}>
-                        <Text style={styles.requiredText}>Required</Text>
-                      </View>
+                    {!submitting && (
+                      <Ionicons 
+                        name="arrow-forward" 
+                        size={20} 
+                        color={getProgress() >= 0.5 ? Colors.background.primary : Colors.text.secondary} 
+                      />
                     )}
                   </View>
-
-                  <Text style={styles.questionText}>{question.text}</Text>
-
-                  {/* Answer Input Section */}
-                  {question.type === "text" ? (
-                    <TextInput
-                      style={[
-                        styles.textInput,
-                        hasAnswered && styles.textInputReadOnly,
-                      ]}
-                      placeholder={
-                        hasAnswered ? "" : "Type your answer here..."
-                      }
-                      placeholderTextColor="#9CA3AF"
-                      value={answers[question._id] || ""}
-                      onChangeText={(text) =>
-                        handleAnswerChange(question._id, text)
-                      }
-                      multiline
-                      numberOfLines={4}
-                      textAlignVertical="top"
-                      editable={!hasAnswered}
-                    />
-                  ) : question.options && question.options.length > 0 ? (
-                    question.options.length >= 6 ? (
-                      <View style={styles.optionsContainerWithSearch}>
-                        <View style={styles.searchContainer}>
-                          <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
-                          <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search options..."
-                            placeholderTextColor="#9CA3AF"
-                            value={optionSearchQueries[question._id] || ""}
-                            onChangeText={(text) => handleOptionSearchChange(question._id, text)}
-                            editable={!hasAnswered}
-                          />
-                          {optionSearchQueries[question._id] && (
-                            <TouchableOpacity
-                              onPress={() => handleOptionSearchChange(question._id, "")}
-                              style={styles.clearSearchButton}
-                            >
-                              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                        <ScrollView 
-                          style={styles.optionsScrollView}
-                          nestedScrollEnabled={true}
-                          showsVerticalScrollIndicator={false}
-                        >
-                          <View style={[styles.optionsContainer, styles.optionsContainerTwoColumns]}>
-                            {getFilteredOptions(question._id, question.options).map((option, optIndex) => {
-                              const isSelected = isOptionSelected(
-                                question._id,
-                                option,
-                                question.type
-                              );
-                              const isMultiple =
-                                question.type === "multiple_choice" ||
-                                question.type === "checkbox";
-
-                              return (
-                                <TouchableOpacity
-                                  key={optIndex}
-                                  style={[
-                                    styles.optionButton,
-                                    styles.optionButtonTwoColumns,
-                                    isSelected && styles.optionButtonSelected,
-                                    hasAnswered && styles.optionButtonReadOnly,
-                                  ]}
-                                  onPress={() =>
-                                    handleOptionSelect(
-                                      question._id,
-                                      option,
-                                      question.type
-                                    )
-                                  }
-                                  disabled={hasAnswered}
-                                >
-                                  <Ionicons
-                                    name={
-                                      isMultiple
-                                        ? isSelected
-                                          ? "checkbox"
-                                          : "checkbox-outline"
-                                        : isSelected
-                                        ? "radio-button-on"
-                                        : "radio-button-off"
-                                    }
-                                    size={20}
-                                    color={isSelected ? "#4A63D8" : "#9CA3AF"}
-                                  />
-                                  <Text
-                                    style={[
-                                      styles.optionButtonText,
-                                      isSelected && styles.optionButtonTextSelected,
-                                    ]}
-                                  >
-                                    {option}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        </ScrollView>
-                      </View>
-                    ) : (
-                      <View style={[
-                        styles.optionsContainer, 
-                        question.options && question.options.length >= 2 && styles.optionsContainerTwoColumns
-                      ]}>
-                        {question.options.map((option, optIndex) => {
-                          const isSelected = isOptionSelected(
-                            question._id,
-                            option,
-                            question.type
-                          );
-                          const isMultiple =
-                            question.type === "multiple_choice" ||
-                            question.type === "checkbox";
-
-                          const shouldUseTwoColumns = question.options && question.options.length >= 2;
-
-                          return (
-                            <TouchableOpacity
-                              key={optIndex}
-                              style={[
-                                styles.optionButton,
-                                shouldUseTwoColumns && styles.optionButtonTwoColumns,
-                                isSelected && styles.optionButtonSelected,
-                                hasAnswered && styles.optionButtonReadOnly,
-                              ]}
-                              onPress={() =>
-                                handleOptionSelect(
-                                  question._id,
-                                  option,
-                                  question.type
-                                )
-                              }
-                              disabled={hasAnswered}
-                            >
-                              <Ionicons
-                                name={
-                                  isMultiple
-                                    ? isSelected
-                                      ? "checkbox"
-                                      : "checkbox-outline"
-                                    : isSelected
-                                    ? "radio-button-on"
-                                    : "radio-button-off"
-                                }
-                                size={20}
-                                color={isSelected ? "#4A63D8" : "#9CA3AF"}
-                              />
-                              <Text
-                                style={[
-                                  styles.optionButtonText,
-                                  isSelected && styles.optionButtonTextSelected,
-                                ]}
-                              >
-                                {option}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    )
-                  ) : null}
                 </View>
-              ))
-            )}
-          </View>
+              </TouchableOpacity>
+            </View>
+          )}
 
-          {/* Spacer for fixed completed section */}
-          {hasAnswered && userResponse && <View style={styles.bottomSpacer} />}
-          {/* Spacer for submit button */}
-          {!hasAnswered && <View style={styles.bottomSpacerSubmit} />}
-        </ScrollView>
-
-        {/* Submit Button - Only show if survey hasn't been answered */}
-        {!hasAnswered && (
-          <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight }]}>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <LinearGradient
-                colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.submitButtonGradient}
-              >
-                <Text style={styles.submitButtonText}>Submit Survey</Text>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Fixed Survey Completed Section - Only show if survey has been answered */}
-        {hasAnswered && userResponse && (
-          <View style={[styles.fixedCompletedSection, { bottom: bottomNavHeight }]}>
-            <LinearGradient
-              colors={["#F0F9FF", "#EFF6FF", "#F0F9FF"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.completedSectionGradient}
-            >
-              <View style={styles.completedInfoHeader}>
-                <View style={styles.completedIconContainer}>
-                  <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
-                </View>
-                <Text style={styles.completedSectionTitle}>
-                  Survey completed on {new Date(userResponse.submittedAt || "").toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </Text>
-              </View>
-              <View style={styles.completedInfoGrid}>
-                <View style={styles.completedInfoItem}>
-                  <Text style={styles.completedInfoNumber}>
-                    {Math.round((userResponse.durationMs || 0) / 60000)}
+          {/* Completed Info */}
+          {hasAnswered && userResponse && (
+            <View style={[styles.completedSection, { bottom: bottomNavHeight + 16 }]}>
+              <View style={styles.completedCard}>
+                <View style={styles.completedHeader}>
+                  <View style={styles.completedIconContainer}>
+                    <Ionicons name="checkmark" size={12} color={Colors.background.primary} />
+                  </View>
+                  <Text style={styles.completedTitle}>
+                    Completed on{" "}
+                    {new Date(userResponse.submittedAt || "").toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </Text>
-                  <Text style={styles.completedInfoLabel}>Minutes</Text>
                 </View>
-                <View style={styles.completedInfoItem}>
-                  <Text style={styles.completedInfoNumber}>+{survey.rewardPoints}</Text>
-                  <Text style={styles.completedInfoLabel}>Points</Text>
-                </View>
-                <View style={styles.completedInfoItem}>
-                  <Text style={styles.completedInfoNumber}>
-                    {questions.filter((q) => answers[q._id]).length}
-                  </Text>
-                  <Text style={styles.completedInfoLabel}>Answered</Text>
+                <View style={styles.completedGrid}>
+                  <View style={styles.completedItem}>
+                    <Text style={styles.completedNumber}>
+                      {Math.round((userResponse.durationMs || 0) / 60000)}
+                    </Text>
+                    <Text style={styles.completedLabel}>Min</Text>
+                  </View>
+                  <View style={styles.completedItem}>
+                    <Text style={styles.completedNumber}>+{survey.rewardPoints}</Text>
+                    <Text style={styles.completedLabel}>Points</Text>
+                  </View>
+                  <View style={styles.completedItem}>
+                    <Text style={styles.completedNumber}>
+                      {questions.filter((q) => answers[q._id]).length}
+                    </Text>
+                    <Text style={styles.completedLabel}>Answered</Text>
+                  </View>
                 </View>
               </View>
-            </LinearGradient>
-          </View>
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            </View>
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </FadeInView>
   );
 }
@@ -713,7 +650,7 @@ export default function SurveyView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
   },
   keyboardView: {
     flex: 1,
@@ -722,398 +659,323 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: "#6B7280",
+    padding: Spacing.xl,
   },
   errorText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: "#EF4444",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.body,
+    color: Colors.semantic.error,
     textAlign: "center",
+    marginTop: Spacing.md,
   },
   retryButton: {
-    marginTop: 16,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  retryButtonGradient: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    justifyContent: "center",
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary.blue,
+    paddingVertical: Spacing.button.paddingVerticalSmall,
+    paddingHorizontal: Spacing.button.paddingHorizontal,
+    borderRadius: Spacing.button.borderRadius,
   },
   retryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 16,
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.background.primary,
+  },
+  header: {
+    backgroundColor: Colors.background.primary,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  headerTitle: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h2,
+    color: Colors.text.primary,
+    letterSpacing: Typography.letterSpacing.tight,
+  },
+  titleImage: {
+    height: 28,
+    width: 94,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
-  },
-  fixedHeader: {
-    backgroundColor: "#FFFFFF",
-    zIndex: 10,
-    paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  titleImage: {
-    height: 36,
-    width: 120,
-    marginLeft: -8,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#222222",
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingTop: Spacing.lg,
   },
   surveyInfo: {
-    padding: 24,
-    paddingBottom: 16,
+    marginBottom: Spacing.lg,
   },
   description: {
-    fontSize: 16,
-    color: "#6B7280",
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.secondary,
     lineHeight: 24,
-    marginBottom: 20,
+    marginBottom: Spacing.md,
   },
   progressContainer: {
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: Spacing.xs,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: 3,
     overflow: "hidden",
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#4A63D8",
-    borderRadius: 4,
+    borderRadius: 3,
   },
   progressText: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.secondary,
   },
   questionsSection: {
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#222222",
-    marginBottom: 16,
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.h4,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
-  emptyQuestions: {
+  emptyState: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: Spacing.xxl,
   },
-  emptyQuestionsText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#9CA3AF",
-    textAlign: "center",
+  emptyStateText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.sm,
   },
   questionCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.card.borderRadius,
+    padding: Spacing.card.paddingSmall,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderColor: Colors.border.light,
+    ...Shadows.xs,
   },
   questionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: Spacing.xs,
   },
   questionNumber: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#4A63D8",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.primary.blue,
   },
   requiredBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    backgroundColor: "#EEF5FF",
+    backgroundColor: Colors.surface.blueTint,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: Spacing.button.borderRadiusPill,
   },
-  requiredText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#4A63D8",
+  requiredBadgeText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.label,
+    color: Colors.primary.blue,
   },
   questionText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#222222",
-    marginBottom: 12,
-    lineHeight: 24,
-    textAlign: "left",
-  },
-  questionType: {
-    marginBottom: 12,
-  },
-  questionTypeText: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontStyle: "italic",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
+    lineHeight: 22,
+    marginBottom: Spacing.sm,
   },
   textInput: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.tertiary,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: "#111827",
+    borderColor: Colors.border.light,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    padding: Spacing.sm,
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
     minHeight: 100,
-    marginTop: 12,
   },
-  optionsContainer: {
-    marginTop: 12,
-    gap: 10,
+  textInputReadOnly: {
+    backgroundColor: Colors.background.tertiary,
+    color: Colors.text.secondary,
   },
-  optionsContainerTwoColumns: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  optionsContainerWithSearch: {
-    marginTop: 12,
+  optionsWithSearch: {
+    gap: Spacing.sm,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: Colors.background.tertiary,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    minHeight: 44,
-  },
-  searchIcon: {
-    marginRight: 8,
+    borderColor: Colors.border.light,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    gap: Spacing.xs,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: "#222222",
-    paddingVertical: 10,
-  },
-  clearSearchButton: {
-    padding: 4,
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
+    paddingVertical: 4,
   },
   optionsScrollView: {
     maxHeight: 200,
   },
+  optionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.xs,
+  },
   optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
-    padding: 14,
-    borderRadius: 12,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Spacing.button.borderRadiusSmall,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  optionButtonTwoColumns: {
+    borderColor: Colors.border.light,
+    backgroundColor: Colors.background.primary,
+    gap: Spacing.xs,
     flexBasis: "48%",
     flexGrow: 0,
-    flexShrink: 0,
   },
   optionButtonSelected: {
-    borderColor: "#4A63D8",
-    backgroundColor: "#EEF5FF",
+    borderColor: Colors.primary.blue,
+    backgroundColor: Colors.surface.blueTint,
+  },
+  optionButtonReadOnly: {
+    opacity: 0.7,
   },
   optionButtonText: {
-    fontSize: 14,
-    color: "#222222",
-    marginLeft: 12,
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.text.secondary,
     flex: 1,
   },
   optionButtonTextSelected: {
-    color: "#4A63D8",
-    fontWeight: "600",
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.primary.blue,
   },
   fixedButtonContainer: {
     position: "absolute",
     left: 0,
     right: 0,
-    backgroundColor: "transparent",
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-    alignItems: "center",
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    zIndex: 10,
   },
   submitButton: {
-    borderRadius: 24,
+    borderRadius: Spacing.button.borderRadiusPill,
     overflow: "hidden",
-    shadowColor: "#4A63D8",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-    width: "100%",
-    maxWidth: 400,
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    ...Shadows.primary,
   },
-  submitButtonGradient: {
+  submitButtonBackground: {
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: Spacing.button.borderRadiusPill,
+    overflow: "hidden",
+    position: "relative",
+  },
+  submitProgressFillContainer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    overflow: "hidden",
+  },
+  submitProgressFill: {
+    flex: 1,
+    width: 1000, // Large enough to fill any button width
+  },
+  submitButtonContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 20,
-    gap: 10,
-    minHeight: 58,
+    paddingVertical: Spacing.button.paddingVerticalLarge,
+    gap: Spacing.xs,
   },
   submitButtonText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodyLarge,
+    color: Colors.background.primary,
     letterSpacing: 0.3,
-    textAlign: "center",
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  fixedCompletedSection: {
+  submitButtonTextDark: {
+    color: Colors.text.secondary,
+    textShadowColor: 'rgba(255, 255, 255, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  completedSection: {
     position: "absolute",
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 5,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
     zIndex: 10,
   },
-  completedSectionGradient: {
-    borderRadius: 22,
-    padding: 14,
-    shadowColor: "#4A63D8",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+  completedCard: {
+    backgroundColor: Colors.surface.blueTint,
+    borderRadius: Spacing.card.borderRadius,
+    padding: Spacing.card.paddingSmall,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    ...Shadows.sm,
   },
-  completedInfoHeader: {
+  completedHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 16,
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   completedIconContainer: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#10B981",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.semantic.success,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  completedSectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-    letterSpacing: -0.2,
+  completedTitle: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.text.primary,
   },
-  completedInfoGrid: {
+  completedGrid: {
     flexDirection: "row",
-    gap: 10,
+    gap: Spacing.xs,
   },
-  completedInfoItem: {
+  completedItem: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.button.borderRadiusSmall,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border.light,
   },
-  completedInfoNumber: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 6,
-    letterSpacing: -0.3,
+  completedNumber: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h4,
+    color: Colors.text.primary,
+    marginBottom: 2,
   },
-  completedInfoLabel: {
-    fontSize: 10,
-    color: "#6B7280",
-    textAlign: "center",
-    fontWeight: "600",
+  completedLabel: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.label,
+    color: Colors.text.secondary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-  },
-  bottomSpacer: {
-    height: 119,
-  },
-  scrollContentWithCompleted: {
-    paddingBottom: 102,
-  },
-  scrollContentWithSubmit: {
-    paddingBottom: 70,
-  },
-  bottomSpacerSubmit: {
-    height: 70,
-  },
-  textInputReadOnly: {
-    backgroundColor: "#F3F4F6",
-    color: "#505050",
-  },
-  optionButtonReadOnly: {
-    opacity: 0.7,
   },
 });

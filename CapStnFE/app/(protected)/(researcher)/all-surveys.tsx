@@ -938,8 +938,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   sightaiIcon: {
-    width: 22,
-    height: 22,
+    width: 36,
+    height: 36,
   },
   secondaryActions: {
     flexDirection: "row",
