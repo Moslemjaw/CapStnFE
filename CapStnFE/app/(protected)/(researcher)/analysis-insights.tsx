@@ -21,6 +21,7 @@ import {
   Correlation,
 } from "@/api/ai";
 import { getSurveyById } from "@/api/surveys";
+import { AnalysisSkeleton } from "@/components/Skeleton";
 
 interface SurveyWithName extends SurveySummary {
   surveyTitle: string;
@@ -104,17 +105,6 @@ export default function AnalysisInsights() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Loading insights...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   if (error || !analysis || !analysis.data) {
     return (
       <SafeAreaView style={styles.container}>
@@ -137,6 +127,7 @@ export default function AnalysisInsights() {
   );
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
@@ -247,6 +238,7 @@ export default function AnalysisInsights() {
         )}
       </ScrollView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 

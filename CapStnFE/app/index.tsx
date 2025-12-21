@@ -22,6 +22,7 @@ import AuthContext from "@/context/AuthContext";
 import UserInfo from "@/types/UserInfo";
 import { login } from "@/api/auth";
 import { storeToken, storeUser } from "@/api/storage";
+import { FadeInView } from "@/components/FadeInView";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -148,26 +149,13 @@ export default function Index() {
   };
 
 
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <SafeAreaView style={{ flex: 1 }}>
-      <LinearGradient
-        colors={["#EEF5FF", "#F9F6FE"]}
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      >
-        <ActivityIndicator size="large" color="#4A63D8" />
-      </LinearGradient>
-      </SafeAreaView>
-    );
-  }
-
   // If authenticated, redirect to protected routes
   if (isAuthenticated) {
     return <Redirect href={"/(protected)/(researcher)/(tabs)/" as any} />;
   }
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.safeArea}>
     <LinearGradient
       colors={["#EEF5FF", "#F9F6FE"]}
@@ -336,6 +324,7 @@ export default function Index() {
     </KeyboardAvoidingView>
     </LinearGradient>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
@@ -414,6 +403,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginBottom: 16,
+    alignSelf: "center",
   },
   featureHeadline: {
     fontSize: 20,
@@ -488,6 +478,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
   },
   loginButtonDisabled: {
     opacity: 0.6,

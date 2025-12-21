@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
 import {
   getSurveysByCreatorId,
   publishSurvey,
@@ -367,18 +368,8 @@ export default function AllSurveys() {
     );
   };
 
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading surveys...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
@@ -558,6 +549,7 @@ export default function AllSurveys() {
         )}
       </ScrollView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 

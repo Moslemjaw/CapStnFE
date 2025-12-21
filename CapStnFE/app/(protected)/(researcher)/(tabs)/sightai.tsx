@@ -10,7 +10,7 @@ import {
   Share,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,11 +19,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withSpring,
   withDelay,
   Easing,
-  interpolateColor,
-  runOnJS,
 } from "react-native-reanimated";
 import { getAllAnalyses, AnalysisResponse } from "@/api/ai";
 import { getResponsesByUserId } from "@/api/responses";
@@ -31,6 +28,7 @@ import { getUser } from "@/api/storage";
 import { getSurveyById } from "@/api/surveys";
 import { createAnalysis } from "@/api/ai";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import AnalysisContext from "@/context/AnalysisContext";
 
 interface SurveyWithTitle {
   surveyId: string;
@@ -49,6 +47,7 @@ interface InsightCard {
 export default function SightAI() {
   const router = useRouter();
   const bottomNavHeight = useBottomNavHeight();
+  const { setIsAnalyzing } = useContext(AnalysisContext);
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
   const [answeredSurveys, setAnsweredSurveys] = useState<SurveyWithTitle[]>([]);
   const [insightCards, setInsightCards] = useState<InsightCard[]>([]);
@@ -56,117 +55,111 @@ export default function SightAI() {
   const [refreshing, setRefreshing] = useState(false);
   const [analyzingAnswered, setAnalyzingAnswered] = useState(false);
   
-  // Animation values for dark mode transition
-  const opacity = useSharedValue(0);
-  const bgColor = useSharedValue(0); // 0 = light, 1 = dark
-  const scale = useSharedValue(0.99);
-  const translateY = useSharedValue(8);
-
-  // Staggered section animations
-  const headerOpacity = useSharedValue(0);
-  const headerScale = useSharedValue(0.99);
-  const headerTranslateY = useSharedValue(6);
-  const aiCardOpacity = useSharedValue(0);
-  const aiCardScale = useSharedValue(0.99);
-  const aiCardTranslateY = useSharedValue(6);
-  const statsOpacity = useSharedValue(0);
-  const statsScale = useSharedValue(0.99);
-  const statsTranslateY = useSharedValue(6);
-  const insightsOpacity = useSharedValue(0);
-  const insightsScale = useSharedValue(0.99);
-  const insightsTranslateY = useSharedValue(6);
-
-  // Very smooth, slow easing curves for fluid transitions
-  const smoothEasing = Easing.bezier(0.25, 0.46, 0.45, 0.94); // Ease-out-quad-like, very smooth
-  const ultraSmoothEasing = Easing.bezier(0.16, 1, 0.3, 1); // Even smoother, slower curve
+  // New fade overlay system for dark mode transition
+  const overlayOpacity = useSharedValue(0); // Dark overlay that fades in
   
-  // Smooth exit easing
-  const exitEasing = Easing.bezier(0.4, 0.0, 0.2, 1);
+  // Content opacity animations (opacity only, no transforms)
+  const contentOpacity = useSharedValue(0);
+  
+  // Staggered section animations (opacity only)
+  const headerOpacity = useSharedValue(0);
+  const aiCardOpacity = useSharedValue(0);
+  const statsOpacity = useSharedValue(0);
+  const insightsOpacity = useSharedValue(0);
+
+  // Ultra-smooth easing curves for fluid transitions
+  const entranceEasing = Easing.bezier(0.25, 0.1, 0.25, 1); // Smooth ease-in-out
+  const exitEasing = Easing.bezier(0.4, 0.0, 0.2, 1); // Smooth ease-out
 
   // Initialize all animations to hidden state immediately on mount
   // This prevents the sudden pop when content is already loaded
   useEffect(() => {
-    opacity.value = 0;
-    bgColor.value = 0;
-    scale.value = 0.99;
-    translateY.value = 8;
+    overlayOpacity.value = 0;
+    contentOpacity.value = 0;
     headerOpacity.value = 0;
-    headerScale.value = 0.99;
-    headerTranslateY.value = 6;
     aiCardOpacity.value = 0;
-    aiCardScale.value = 0.99;
-    aiCardTranslateY.value = 6;
     statsOpacity.value = 0;
-    statsScale.value = 0.99;
-    statsTranslateY.value = 6;
     insightsOpacity.value = 0;
-    insightsScale.value = 0.99;
-    insightsTranslateY.value = 6;
   }, []);
 
-  // Detect when page is focused for enhanced cascade transition
+  // Detect when page is focused for fade overlay transition
   useFocusEffect(
     useCallback(() => {
-      // Very slow, smooth background color transition
-      bgColor.value = withTiming(1, {
-        duration: 1200,
-        easing: ultraSmoothEasing,
+      // Dark overlay fades in first (1000ms duration for smooth transition)
+      overlayOpacity.value = withTiming(1, {
+        duration: 1000,
+        easing: entranceEasing,
       });
 
-      // Main content animation - very slow and fluid
-      const mainDuration = 1400;
-      opacity.value = withTiming(1, { duration: mainDuration, easing: ultraSmoothEasing });
-      scale.value = withTiming(1, { duration: mainDuration, easing: ultraSmoothEasing });
-      translateY.value = withTiming(0, { duration: mainDuration, easing: ultraSmoothEasing });
+      // Content fades in after overlay starts (150ms delay, 800ms duration)
+      contentOpacity.value = withDelay(150, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
 
-      // Header starts immediately - slow and fluid
-      const headerDuration = 1300;
-      headerOpacity.value = withTiming(1, { duration: headerDuration, easing: ultraSmoothEasing });
-      headerScale.value = withTiming(1, { duration: headerDuration, easing: ultraSmoothEasing });
-      headerTranslateY.value = withTiming(0, { duration: headerDuration, easing: ultraSmoothEasing });
+      // Header starts with content
+      headerOpacity.value = withDelay(150, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
 
-      // Cascade: AI Card starts after header (200ms delay for smooth wave effect)
-      const aiCardDuration = 1300;
-      aiCardOpacity.value = withDelay(200, withTiming(1, { duration: aiCardDuration, easing: ultraSmoothEasing }));
-      aiCardScale.value = withDelay(200, withTiming(1, { duration: aiCardDuration, easing: ultraSmoothEasing }));
-      aiCardTranslateY.value = withDelay(200, withTiming(0, { duration: aiCardDuration, easing: ultraSmoothEasing }));
+      // Staggered section animations with longer delays for smoother cascade
+      // AI Card: 120ms delay after header
+      aiCardOpacity.value = withDelay(270, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
 
-      // Stats start after AI Card (400ms total delay)
-      const statsDuration = 1300;
-      statsOpacity.value = withDelay(400, withTiming(1, { duration: statsDuration, easing: ultraSmoothEasing }));
-      statsScale.value = withDelay(400, withTiming(1, { duration: statsDuration, easing: ultraSmoothEasing }));
-      statsTranslateY.value = withDelay(400, withTiming(0, { duration: statsDuration, easing: ultraSmoothEasing }));
+      // Stats: 240ms delay after header
+      statsOpacity.value = withDelay(390, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
 
-      // Insights start after Stats (600ms total delay)
-      const insightsDuration = 1300;
-      insightsOpacity.value = withDelay(600, withTiming(1, { duration: insightsDuration, easing: ultraSmoothEasing }));
-      insightsScale.value = withDelay(600, withTiming(1, { duration: insightsDuration, easing: ultraSmoothEasing }));
-      insightsTranslateY.value = withDelay(600, withTiming(0, { duration: insightsDuration, easing: ultraSmoothEasing }));
+      // Insights: 360ms delay after header
+      insightsOpacity.value = withDelay(510, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
 
       // Load data when page is focused
       loadData();
 
       return () => {
-        // Very smooth, slow exit animations with coordinated fade-out
-        const exitDuration = 700;
-        opacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
-        bgColor.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
-        scale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
-        translateY.value = withTiming(8, { duration: exitDuration, easing: exitEasing });
+        // Coordinated exit animations when navigating away (slower for smoothness)
+        const exitDuration = 600;
         
-        // Smooth exit for section animations
-        headerOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
-        headerScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
-        headerTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
-        aiCardOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
-        aiCardScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
-        aiCardTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
-        statsOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
-        statsScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
-        statsTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
-        insightsOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
-        insightsScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
-        insightsTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
+        // Fade out overlay and content together
+        overlayOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        
+        contentOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        
+        // Fade out all sections simultaneously
+        headerOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        
+        aiCardOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        
+        statsOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        
+        insightsOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
       };
     }, [])
   );
@@ -317,6 +310,9 @@ export default function SightAI() {
             try {
               const surveyIds = answeredSurveys.map((s) => s.surveyId);
               const analysis = await createAnalysis(surveyIds);
+              
+              // Set analyzing state to trigger jelly effect
+              setIsAnalyzing(true);
 
               router.push({
                 pathname: "/(protected)/(researcher)/analysis-loading",
@@ -372,54 +368,30 @@ export default function SightAI() {
   }, 0);
 
 
-  // Animated styles
-  const animatedBgStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      bgColor.value,
-      [0, 1],
-      ["#FFFFFF", "#0F0F1E"]
-    ),
+  // Animated styles - fade overlay system
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
   }));
 
-  const animatedContentStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [
-      { scale: scale.value },
-      { translateY: translateY.value },
-    ],
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
   }));
 
-  // Section animated styles
+  // Section animated styles (opacity only)
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,
-    transform: [
-      { scale: headerScale.value },
-      { translateY: headerTranslateY.value },
-    ],
   }));
 
   const aiCardAnimatedStyle = useAnimatedStyle(() => ({
     opacity: aiCardOpacity.value,
-    transform: [
-      { scale: aiCardScale.value },
-      { translateY: aiCardTranslateY.value },
-    ],
   }));
 
   const statsAnimatedStyle = useAnimatedStyle(() => ({
     opacity: statsOpacity.value,
-    transform: [
-      { scale: statsScale.value },
-      { translateY: statsTranslateY.value },
-    ],
   }));
 
   const insightsAnimatedStyle = useAnimatedStyle(() => ({
     opacity: insightsOpacity.value,
-    transform: [
-      { scale: insightsScale.value },
-      { translateY: insightsTranslateY.value },
-    ],
   }));
 
   const formatTimeAgo = (dateString: string) => {
@@ -443,16 +415,24 @@ export default function SightAI() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.animatedBg, animatedBgStyle]}>
+      {/* Light background (visible when overlay is transparent) */}
+      <View style={styles.lightBackground} />
+      
+      {/* Dark overlay that fades in */}
+      <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
+      
+      {/* Content container */}
+      <View style={styles.contentContainer}>
         {/* Fixed Header Section */}
-        <View style={styles.fixedHeader}>
+        <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image source={require("@/assets/sightai.png")} style={styles.titleImage} resizeMode="contain" />
             </View>
             <Text style={styles.subtitle}>AI-powered insights and analysis</Text>
           </View>
-        </View>
+        </Animated.View>
+        
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
@@ -466,7 +446,7 @@ export default function SightAI() {
             />
           }
         >
-          <Animated.View style={animatedContentStyle}>
+          <Animated.View style={contentAnimatedStyle}>
 
             {/* AI-Powered Intelligence Card */}
             <Animated.View style={[styles.aiCardContainer, aiCardAnimatedStyle]}>
@@ -645,7 +625,7 @@ export default function SightAI() {
             </Animated.View>
           </Animated.View>
         </ScrollView>
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -653,11 +633,20 @@ export default function SightAI() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F0F1E",
   },
-  animatedBg: {
-    flex: 1,
+  lightBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#FFFFFF",
+    zIndex: 0,
+  },
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "#0F0F1E",
+    zIndex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    zIndex: 2,
   },
   loadingContainer: {
     flex: 1,
@@ -669,7 +658,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fixedHeader: {
-    backgroundColor: "#0F0F1E",
+    backgroundColor: "transparent",
     zIndex: 10,
     paddingBottom: 0,
     borderTopLeftRadius: 20,
@@ -722,6 +711,7 @@ const styles = StyleSheet.create({
   },
   aiIconContainer: {
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   aiIconCircle: {
@@ -760,6 +750,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+    textAlign: "center",
   },
   statsContainer: {
     flexDirection: "row",
@@ -773,16 +764,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
   statNumber: {
     fontSize: 24,
     fontWeight: "700",
     color: "#8B5CF6",
     marginBottom: 4,
+    textAlign: "center",
   },
   statLabel: {
     fontSize: 14,
     color: "#CCCCCC",
+    textAlign: "center",
   },
   section: {
     paddingHorizontal: 24,
@@ -865,6 +859,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+    textAlign: "center",
   },
   emptyContainer: {
     alignItems: "center",

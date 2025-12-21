@@ -33,6 +33,7 @@ import { getSurveyById, getSurveysByCreatorId } from "@/api/surveys";
 import { getAllAnalyses } from "@/api/ai";
 import { calculateStreak } from "@/utils/userProgress";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
 
 export default function ResearcherProfile() {
   const [user, setUser] = useState<User | null>(null);
@@ -436,6 +437,7 @@ export default function ResearcherProfile() {
   const imageUrl = getImageUrl(user?.image || "");
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
@@ -1045,6 +1047,7 @@ export default function ResearcherProfile() {
         </SafeAreaView>
       )}
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
@@ -1201,6 +1204,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -1213,6 +1217,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginTop: 12,
     marginBottom: 4,
+    textAlign: "center",
   },
   activityLabel: {
     fontSize: 14,
@@ -1375,6 +1380,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
+    flex: 1,
+    textAlign: "left",
   },
   closeButton: {
     padding: 4,

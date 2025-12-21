@@ -29,6 +29,7 @@ import { Question } from "@/api/questions";
 import { updateUserProgress } from "@/utils/userProgress";
 import { getUser } from "@/api/storage";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
 
 export default function SurveyView() {
   const router = useRouter();
@@ -320,17 +321,6 @@ export default function SurveyView() {
     }
   };
 
-  if (loading || checkingAnswered) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#4A63D8" />
-          <Text style={styles.loadingText}>Loading survey...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   if (error || !survey) {
     return (
       <SafeAreaView style={styles.container}>
@@ -356,6 +346,7 @@ export default function SurveyView() {
   }
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
@@ -668,6 +659,7 @@ export default function SurveyView() {
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
@@ -833,6 +825,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+    gap: 8,
   },
   questionNumber: {
     fontSize: 14,
@@ -856,6 +849,7 @@ const styles = StyleSheet.create({
     color: "#222222",
     marginBottom: 12,
     lineHeight: 24,
+    textAlign: "left",
   },
   questionType: {
     marginBottom: 12,
@@ -916,6 +910,7 @@ const styles = StyleSheet.create({
   optionButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-start",
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
@@ -982,6 +977,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.3,
+    textAlign: "center",
   },
   fixedCompletedSection: {
     position: "absolute",

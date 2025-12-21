@@ -147,5 +147,6 @@ const styles = StyleSheet.create({
   },
   arrowContainer: {
     alignItems: "center",
+    justifyContent: "center",
   },
 });

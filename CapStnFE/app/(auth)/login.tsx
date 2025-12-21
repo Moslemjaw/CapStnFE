@@ -413,6 +413,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginBottom: 16,
+    alignSelf: "center",
   },
   featureHeadline: {
     fontSize: 20,
@@ -487,6 +488,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
   },
   loginButtonDisabled: {
     opacity: 0.6,

@@ -106,6 +106,7 @@ export interface CreateSurveyData {
   rewardPoints: number;
   estimatedMinutes: number;
   creatorId: string;
+  despectipationPath?: string;
 }
 
 export const createSurvey = async (

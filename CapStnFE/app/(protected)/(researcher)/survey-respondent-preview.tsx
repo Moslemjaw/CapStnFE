@@ -181,7 +181,7 @@ export default function SurveyRespondentPreview() {
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomNavHeight + 8 }}
+        contentContainerStyle={{ paddingBottom: bottomNavHeight + 120 }}
       >
         {/* Survey Overview */}
         <View style={styles.overviewSection}>
@@ -352,7 +352,7 @@ export default function SurveyRespondentPreview() {
       </View>
 
       {/* Fixed Start Survey Button */}
-      <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight + 8 }]}>
+      <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight + 20 }]}>
         <TouchableOpacity style={styles.startButton} onPress={handleStartSurvey}>
           <LinearGradient
             colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
@@ -670,6 +670,8 @@ const styles = StyleSheet.create({
   infoGrid: {
     flexDirection: "row",
     gap: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   infoItem: {
     flex: 1,
@@ -688,6 +690,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 6,
     letterSpacing: -0.3,
+    textAlign: "center",
   },
   infoLabel: {
     fontSize: 10,
@@ -736,6 +739,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.3,
+    textAlign: "center",
   },
   infoSectionTitle: {
     fontSize: 15,

@@ -9,17 +9,19 @@ import {
   RefreshControl,
   Image,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getSurveyById, Survey } from "@/api/surveys";
 import { getResponsesBySurveyId } from "@/api/responses";
 import { createAnalysis, getAllAnalyses, AnalysisResponse } from "@/api/ai";
+import AnalysisContext from "@/context/AnalysisContext";
 
 export default function SurveyAnalyses() {
   const router = useRouter();
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>();
+  const { setIsAnalyzing } = useContext(AnalysisContext);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
   const [responseCount, setResponseCount] = useState(0);
@@ -106,6 +108,9 @@ export default function SurveyAnalyses() {
             setCreating(true);
             try {
               const analysis = await createAnalysis(surveyId);
+              
+              // Set analyzing state to trigger jelly effect
+              setIsAnalyzing(true);
 
               // Navigate to loading screen with analysis ID
               router.push({

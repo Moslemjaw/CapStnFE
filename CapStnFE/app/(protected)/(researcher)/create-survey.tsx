@@ -276,6 +276,7 @@ export default function CreateSurvey() {
           rewardPoints: calculateRewardPoints(),
           estimatedMinutes: 1,
           creatorId: user._id,
+          despectipationPath: "-",
         };
 
         const survey = await createSurvey(surveyData);
@@ -371,6 +372,7 @@ export default function CreateSurvey() {
           rewardPoints: calculateRewardPoints(),
           estimatedMinutes: 1,
           creatorId: user._id,
+          despectipationPath: "-",
         };
 
         const survey = await createSurvey(surveyData);
@@ -809,6 +811,7 @@ const styles = StyleSheet.create({
   questionCardHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 12,
     gap: 12,
   },
@@ -876,9 +879,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#6B7280",
+    textAlign: "center",
   },
   typeOptionTextActive: {
     color: "#FFFFFF",
+    textAlign: "center",
   },
   optionRow: {
     flexDirection: "row",
@@ -959,6 +964,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 8,
+    gap: 12,
   },
   requiredLabel: {
     fontSize: 14,
@@ -998,6 +1004,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+    textAlign: "center",
   },
   actionButtonsRow: {
     flexDirection: "row",
@@ -1025,6 +1032,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+    textAlign: "center",
   },
   archiveButton: {
     flex: 1,
@@ -1043,5 +1051,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#6B7280",
+    textAlign: "center",
   },
 });

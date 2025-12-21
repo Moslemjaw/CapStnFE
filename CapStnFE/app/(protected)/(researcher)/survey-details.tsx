@@ -20,6 +20,7 @@ import { getResponsesBySurveyId, Response } from "@/api/responses";
 import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
 
 export default function SurveyDetails() {
   const router = useRouter();
@@ -131,17 +132,6 @@ export default function SurveyDetails() {
     return `${minutes}m ${remainingSeconds}s`;
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading survey details...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   if (error || !survey) {
     return (
       <SafeAreaView style={styles.container}>
@@ -160,6 +150,7 @@ export default function SurveyDetails() {
   }
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
@@ -631,6 +622,7 @@ export default function SurveyDetails() {
         </Pressable>
       </Modal>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 

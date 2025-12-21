@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image, View, StyleSheet, Pressable, Text } from "react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useContext } from "react";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,6 +13,7 @@ import Animated, {
   Easing,
   interpolateColor,
 } from "react-native-reanimated";
+import AnalysisContext from "@/context/AnalysisContext";
 
 export default function GlobalBottomNav() {
   const router = useRouter();
@@ -238,6 +239,7 @@ export default function GlobalBottomNav() {
 
 function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
   const router = useRouter();
+  const { isAnalyzing } = useContext(AnalysisContext);
   const shadowOpacity = useSharedValue(0);
   const shadowRadius = useSharedValue(0);
   const jellyScaleX = useSharedValue(1);
@@ -358,7 +360,57 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       glowIntervalRef.current = null;
     }
 
-    if (!isFocused) {
+    // Priority: isAnalyzing > isFocused > normal state
+    if (isAnalyzing) {
+      // When analyzing: continuous pronounced jelly effect
+      // More noticeable than focused state - jiggling/jelly effect
+      jellyScaleX.value = withRepeat(
+        withSequence(
+          withTiming(0.92, {
+            duration: 900,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(1.08, {
+            duration: 900,
+            easing: Easing.inOut(Easing.ease),
+          })
+        ),
+        -1,
+        false
+      );
+      jellyScaleY.value = withRepeat(
+        withSequence(
+          withTiming(1.08, {
+            duration: 900,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(0.92, {
+            duration: 900,
+            easing: Easing.inOut(Easing.ease),
+          })
+        ),
+        -1,
+        false
+      );
+
+      // Enhanced glow during analysis
+      shadowOpacity.value = withRepeat(
+        withTiming(0.7, {
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        -1,
+        true
+      );
+      shadowRadius.value = withRepeat(
+        withTiming(30, {
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        -1,
+        true
+      );
+    } else if (!isFocused) {
       // When not focused: stop continuous animations, use interval-based
       shadowOpacity.value = withTiming(0, {
         duration: 300,
@@ -450,7 +502,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
         glowIntervalRef.current = null;
       }
     };
-  }, [isFocused]);
+  }, [isFocused, isAnalyzing]);
 
   const handlePress = () => {
     triggerJellyEffect(true, false, true);

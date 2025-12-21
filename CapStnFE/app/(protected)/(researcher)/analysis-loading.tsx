@@ -7,14 +7,16 @@ import {
   Alert,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getAnalysisById, AnalysisResponse } from "@/api/ai";
+import AnalysisContext from "@/context/AnalysisContext";
 
 export default function AnalysisLoading() {
   const router = useRouter();
+  const { setIsAnalyzing } = useContext(AnalysisContext);
   const { analysisId, type } = useLocalSearchParams<{
     analysisId: string;
     type: "single" | "multi";
@@ -50,6 +52,11 @@ export default function AnalysisLoading() {
         useNativeDriver: true,
       })
     ).start();
+
+    // Cleanup: clear analyzing state on unmount
+    return () => {
+      setIsAnalyzing(false);
+    };
   }, []);
 
   useEffect(() => {
@@ -69,6 +76,8 @@ export default function AnalysisLoading() {
 
       // Navigate to insights when ready
       if (analysis.status === "ready") {
+        // Clear analyzing state when analysis completes
+        setIsAnalyzing(false);
         setTimeout(() => {
           router.replace({
             pathname: "/(protected)/(researcher)/analysis-insights",
@@ -76,6 +85,8 @@ export default function AnalysisLoading() {
           } as any);
         }, 1000);
       } else if (analysis.status === "failed") {
+        // Clear analyzing state when analysis fails
+        setIsAnalyzing(false);
         Alert.alert(
           "Analysis Failed",
           "The analysis failed to complete. Please try again.",

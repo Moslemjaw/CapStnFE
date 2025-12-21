@@ -267,6 +267,7 @@ const styles = StyleSheet.create({
   },
   illustrationEmoji: {
     fontSize: 80,
+    textAlign: "center",
   },
   slideTitle: {
     fontSize: 32,
@@ -327,5 +328,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
   },
 });

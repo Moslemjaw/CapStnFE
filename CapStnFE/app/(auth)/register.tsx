@@ -961,6 +961,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
   },
   signUpButtonDisabled: {
     opacity: 0.6,
@@ -998,7 +999,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   checkboxContainer: {
-    marginTop: 2,
+    marginTop: 0,
+    justifyContent: "center",
   },
   checkbox: {
     width: 20,
@@ -1059,6 +1061,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
+    flex: 1,
+    textAlign: "left",
   },
   modalCloseButton: {
     padding: 4,

@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
 import { getPublishedSurveys } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { getResponsesBySurveyId, getResponsesByUserId } from "@/api/responses";
@@ -46,7 +47,7 @@ export default function ResearcherSurveys() {
     useState<QuestionCountFilter>("all");
   const [maxTimeFilter, setMaxTimeFilter] = useState<MaxTimeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [userStats, setUserStats] = useState<UserStats>({
@@ -427,6 +428,7 @@ export default function ResearcherSurveys() {
   const statusOptions: StatusFilter[] = ["all", "open", "answered"];
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
@@ -879,6 +881,7 @@ export default function ResearcherSurveys() {
         )}
       </ScrollView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
@@ -1062,6 +1065,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
     marginBottom: 10,
@@ -1117,6 +1121,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 4,
+    minHeight: 40,
   },
   filterButtonActive: {
     borderColor: "#4A63D8",
@@ -1132,6 +1137,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     color: "#6B7280",
+    textAlign: "center",
   },
   filterButtonTextActive: {
     color: "#222222",
@@ -1158,6 +1164,7 @@ const styles = StyleSheet.create({
   dropdownHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-start",
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -1191,6 +1198,7 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 14,
     color: "#374151",
+    textAlign: "left",
   },
   dropdownItemTextActive: {
     color: "#222222",
@@ -1215,10 +1223,12 @@ const styles = StyleSheet.create({
   statsLeft: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "center",
   },
   statsRight: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "center",
   },
   statsDivider: {
     width: 1,
@@ -1233,10 +1243,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#222222",
     marginBottom: 4,
+    textAlign: "center",
   },
   statsLabel: {
     fontSize: 12,
     color: "#505050",
+    textAlign: "center",
   },
   centerContainer: {
     flex: 1,
@@ -1337,25 +1349,27 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
     color: "#222222",
+    marginTop: 8,
     marginBottom: 8,
   },
   largeCardTitle: {
-    fontSize: 22,
+    fontSize: 24,
     paddingRight: 70,
   },
   smallCardTitle: {
-    fontSize: 15,
+    fontSize: 17,
     marginBottom: 4,
     paddingRight: 40,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#505050",
+    marginTop: 4,
     marginBottom: 12,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   cardDetails: {
     flexDirection: "row",
@@ -1373,11 +1387,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   detailText: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#505050",
   },
   smallDetailText: {
-    fontSize: 11,
+    fontSize: 12,
   },
   pointsTag: {
     position: "absolute",
@@ -1427,6 +1441,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
+    textAlign: "center",
   },
   emptySection: {
     alignItems: "center",

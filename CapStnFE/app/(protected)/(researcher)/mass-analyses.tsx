@@ -9,7 +9,7 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -22,6 +22,8 @@ import { getResponsesBySurveyId } from "@/api/responses";
 import { createAnalysis } from "@/api/ai";
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
+import { SurveyListSkeleton } from "@/components/Skeleton";
+import AnalysisContext from "@/context/AnalysisContext";
 
 interface SurveyWithResponses extends Survey {
   responseCount: number;
@@ -33,6 +35,7 @@ type TimeRangeFilter = "all" | "1-5" | "6-10" | "11-15" | "16-30" | "31+";
 
 export default function MassAnalyses() {
   const router = useRouter();
+  const { setIsAnalyzing } = useContext(AnalysisContext);
   const [user, setUser] = useState<User | null>(null);
   const [surveys, setSurveys] = useState<SurveyWithResponses[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -257,6 +260,9 @@ export default function MassAnalyses() {
             try {
               const surveyIds = selectedSurveys.map((s) => s._id);
               const analysis = await createAnalysis(surveyIds);
+              
+              // Set analyzing state to trigger jelly effect
+              setIsAnalyzing(true);
 
               // Navigate to loading screen
               router.push({
@@ -284,14 +290,7 @@ export default function MassAnalyses() {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Loading surveys...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <SurveyListSkeleton />;
   }
 
   if (error) {

@@ -3,11 +3,13 @@ import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
 
 export default function ResearcherHome() {
   const bottomNavHeight = useBottomNavHeight();
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
@@ -40,6 +42,7 @@ export default function ResearcherHome() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
@@ -74,30 +77,28 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    padding: 16,
+    paddingBottom: 12,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    height: 24,
+    width: 80,
+    marginLeft: -6,
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#505050",
-    marginBottom: 16,
   },
   divider: {
     height: 2,

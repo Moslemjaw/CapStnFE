@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
 import {
   getSurveysByCreatorId,
   publishSurvey,
@@ -325,18 +326,8 @@ export default function ResearcherResearch() {
     } as any);
   };
 
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading research data...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
@@ -460,6 +451,7 @@ export default function ResearcherResearch() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
@@ -734,9 +726,11 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 14,
     flex: 1,
+    justifyContent: "center",
   },
   headerStatItem: {
     alignItems: "center",
+    justifyContent: "center",
     minWidth: 80,
   },
   headerStatValueBlue: {
@@ -750,29 +744,34 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FF6FAE",
     marginBottom: 2,
+    textAlign: "center",
   },
   headerStatValueTeal: {
     fontSize: 20,
     fontWeight: "700",
     color: "#2BB6E9",
     marginBottom: 2,
+    textAlign: "center",
   },
   headerStatValueGreen: {
     fontSize: 20,
     fontWeight: "700",
     color: "#10B981",
     marginBottom: 2,
+    textAlign: "center",
   },
   headerStatValueGrey: {
     fontSize: 20,
     fontWeight: "700",
     color: "#6B7280",
     marginBottom: 2,
+    textAlign: "center",
   },
   headerStatLabel: {
     fontSize: 11,
     color: "#6B7280",
     textAlign: "center",
+    width: "100%",
   },
   headerCreateButton: {
     borderRadius: 8,
@@ -1035,6 +1034,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
+    textAlign: "center",
   },
   sightaiIcon: {
     width: 22,
