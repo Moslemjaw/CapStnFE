@@ -471,7 +471,7 @@ export default function SightAI() {
                   ) : (
                     <>
                       <Ionicons name="sparkles" size={18} color={Colors.background.primary} />
-                      <Text style={styles.analyzeButtonText}>Analyze My Surveys ({answeredSurveys.length})</Text>
+                      <Text style={styles.analyzeButtonText}>Analyze My Answered Surveys ({answeredSurveys.length})</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -481,7 +481,7 @@ export default function SightAI() {
                 <View style={styles.emptyContainer}>
                   <Ionicons name="analytics-outline" size={48} color={Colors.text.tertiary} />
                   <Text style={styles.emptyText}>No insights yet</Text>
-                  <Text style={styles.emptySubtext}>Analyze surveys to see insights here</Text>
+                  <Text style={styles.emptySubtext}>Analyze your answered surveys to see insights here</Text>
                 </View>
               ) : (
                 insightCards.map((card) => (

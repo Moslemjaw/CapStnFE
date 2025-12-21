@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   Image,
   Animated,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -345,6 +345,13 @@ export default function SurveyView() {
   return (
     <FadeInView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <Text style={styles.headerTitle}>Answer Survey</Text>
@@ -355,20 +362,20 @@ export default function SurveyView() {
           />
         </View>
 
-        <KeyboardAvoidingView
-          style={styles.keyboardView}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        <KeyboardAwareScrollView
+          innerRef={(ref) => { scrollViewRef.current = ref; }}
+          style={[styles.keyboardView, styles.scrollView]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: bottomNavHeight + (hasAnswered ? 140 : 100) },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
+          extraHeight={120}
         >
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.scrollView}
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: bottomNavHeight + (hasAnswered ? 140 : 100) },
-            ]}
-            showsVerticalScrollIndicator={false}
-          >
             {/* Survey Info */}
             <View style={styles.surveyInfo}>
               {survey.description && (
@@ -551,7 +558,6 @@ export default function SurveyView() {
                 ))
               )}
             </View>
-          </ScrollView>
 
           {/* Submit Button with Progress */}
           {!hasAnswered && (
@@ -641,7 +647,7 @@ export default function SurveyView() {
               </View>
             </View>
           )}
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </FadeInView>
   );

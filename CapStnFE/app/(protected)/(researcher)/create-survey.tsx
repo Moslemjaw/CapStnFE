@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Switch,
   Image,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -38,6 +38,8 @@ import {
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
+import { FadeInView } from "@/components/FadeInView";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 interface LocalQuestion {
   text: string;
@@ -45,6 +47,7 @@ interface LocalQuestion {
   options?: string[];
   isRequired: boolean;
   digitsOnly?: boolean; // For text questions
+  allowMultipleSelection?: boolean; // For multiple choice questions - true = can select multiple, false = single choice only
   logicType?: "any" | "exact" | "range";
   exactCount?: number;
   minCount?: number;
@@ -101,6 +104,7 @@ export default function CreateSurvey() {
         type: q.type === "text" ? "text" : "multiple_choice",
         options: q.options,
         isRequired: q.isRequired,
+        allowMultipleSelection: q.type === "multiple_choice" || q.type === "checkbox", // multiple_choice/checkbox = can select multiple
         logicType: "any", // Default, as we don't store this in the API yet
       }));
 
@@ -171,7 +175,15 @@ export default function CreateSurvey() {
           : ["", ""],
       // Reset digitsOnly when switching to choice
       digitsOnly: type === "text" ? question.digitsOnly : undefined,
+      // Default to single choice when switching to multiple choice
+      allowMultipleSelection: type === "multiple_choice" ? (question.allowMultipleSelection ?? false) : undefined,
     };
+    setQuestions(updatedQuestions);
+  };
+
+  const updateQuestionMultipleSelection = (index: number, allowMultiple: boolean) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[index] = { ...updatedQuestions[index], allowMultipleSelection: allowMultiple };
     setQuestions(updatedQuestions);
   };
 
@@ -235,6 +247,7 @@ export default function CreateSurvey() {
       type: "text",
       isRequired: true,
       digitsOnly: false,
+      allowMultipleSelection: false,
       logicType: "any",
     };
     setQuestions([...questions, newQuestion]);
@@ -275,11 +288,16 @@ export default function CreateSurvey() {
         // Create updated questions
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
+          // Map allowMultipleSelection to proper API type
+          let apiType: "text" | "multiple_choice" | "single_choice" | "dropdown" | "checkbox" = q.type;
+          if (q.type === "multiple_choice") {
+            apiType = q.allowMultipleSelection ? "multiple_choice" : "single_choice";
+          }
           const questionData: CreateQuestionData = {
             surveyId: surveyId,
             order: i + 1,
             text: q.text,
-            type: q.type,
+            type: apiType,
             options: q.options,
             isRequired: q.isRequired,
           };
@@ -305,11 +323,16 @@ export default function CreateSurvey() {
         // Create all questions
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
+          // Map allowMultipleSelection to proper API type
+          let apiType: "text" | "multiple_choice" | "single_choice" | "dropdown" | "checkbox" = q.type;
+          if (q.type === "multiple_choice") {
+            apiType = q.allowMultipleSelection ? "multiple_choice" : "single_choice";
+          }
           const questionData: CreateQuestionData = {
             surveyId: survey._id,
             order: i + 1,
             text: q.text,
-            type: q.type,
+            type: apiType,
             options: q.options,
             isRequired: q.isRequired,
           };
@@ -375,11 +398,16 @@ export default function CreateSurvey() {
         // Create updated questions
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
+          // Map allowMultipleSelection to proper API type
+          let apiType: "text" | "multiple_choice" | "single_choice" | "dropdown" | "checkbox" = q.type;
+          if (q.type === "multiple_choice") {
+            apiType = q.allowMultipleSelection ? "multiple_choice" : "single_choice";
+          }
           const questionData: CreateQuestionData = {
             surveyId: surveyId,
             order: i + 1,
             text: q.text,
-            type: q.type,
+            type: apiType,
             options: q.options,
             isRequired: q.isRequired,
           };
@@ -403,11 +431,16 @@ export default function CreateSurvey() {
         // Create all questions
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
+          // Map allowMultipleSelection to proper API type
+          let apiType: "text" | "multiple_choice" | "single_choice" | "dropdown" | "checkbox" = q.type;
+          if (q.type === "multiple_choice") {
+            apiType = q.allowMultipleSelection ? "multiple_choice" : "single_choice";
+          }
           const questionData: CreateQuestionData = {
             surveyId: survey._id,
             order: i + 1,
             text: q.text,
-            type: q.type,
+            type: apiType,
             options: q.options,
             isRequired: q.isRequired,
           };
@@ -435,7 +468,15 @@ export default function CreateSurvey() {
   };
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={[Colors.background.primary, Colors.surface.blueTint, Colors.surface.purpleTint]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -456,17 +497,16 @@ export default function CreateSurvey() {
           </View>
         </View>
       </View>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={0}
+      <KeyboardAwareScrollView
+        style={[styles.keyboardView, styles.scrollView]}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
+        extraHeight={120}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
           {/* Survey Information Section */}
           <View style={styles.section}>
             <View style={styles.fieldContainer}>
@@ -621,11 +661,55 @@ export default function CreateSurvey() {
                       <Ionicons name="add" size={20} color="#9CA3AF" />
                       <Text style={styles.addOptionText}>Add Option</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.singleChoiceButton}>
-                      <Text style={styles.singleChoiceButtonText}>
-                        Single choice only
-                      </Text>
-                    </TouchableOpacity>
+                    
+                    {/* Selection Type Toggle */}
+                    <View style={styles.selectionTypeContainer}>
+                      <Text style={styles.selectionTypeLabel}>Selection Type</Text>
+                      <View style={styles.selectionTypeToggle}>
+                        <TouchableOpacity
+                          style={[
+                            styles.selectionTypeOption,
+                            !question.allowMultipleSelection && styles.selectionTypeOptionActive,
+                          ]}
+                          onPress={() => updateQuestionMultipleSelection(index, false)}
+                        >
+                          <Ionicons 
+                            name="radio-button-on" 
+                            size={16} 
+                            color={!question.allowMultipleSelection ? "#FFFFFF" : "#9CA3AF"} 
+                          />
+                          <Text
+                            style={[
+                              styles.selectionTypeOptionText,
+                              !question.allowMultipleSelection && styles.selectionTypeOptionTextActive,
+                            ]}
+                          >
+                            Single
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.selectionTypeOption,
+                            question.allowMultipleSelection && styles.selectionTypeOptionActive,
+                          ]}
+                          onPress={() => updateQuestionMultipleSelection(index, true)}
+                        >
+                          <Ionicons 
+                            name="checkbox" 
+                            size={16} 
+                            color={question.allowMultipleSelection ? "#FFFFFF" : "#9CA3AF"} 
+                          />
+                          <Text
+                            style={[
+                              styles.selectionTypeOptionText,
+                              question.allowMultipleSelection && styles.selectionTypeOptionTextActive,
+                            ]}
+                          >
+                            Multiple
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </>
                 )}
 
@@ -667,10 +751,9 @@ export default function CreateSurvey() {
               </View>
             ))}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
 
-      {/* Action Buttons - Outside KeyboardAvoidingView to stay fixed */}
+      {/* Action Buttons - Fixed at bottom */}
       <View style={[styles.footer, { paddingBottom: bottomNavHeight + 48 }]}>
         <TouchableOpacity
           style={styles.addQuestionButton}
@@ -728,36 +811,30 @@ export default function CreateSurvey() {
         </View>
       </View>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: Colors.background.secondary,
     overflow: "visible",
   },
   fixedHeader: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
     zIndex: 10,
     paddingBottom: 0,
     borderTopWidth: 0,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    borderBottomLeftRadius: Borders.radius.xl,
+    borderBottomRightRadius: Borders.radius.xl,
+    borderBottomWidth: Borders.width.default,
+    borderBottomColor: Colors.border.light,
+    ...Shadows.md,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.lg,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
@@ -769,23 +846,21 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
-    paddingTop: 4,
+    paddingTop: Spacing.xxs,
   },
   titleImage: {
-    height: 32,
+    height: Spacing.icon.xl,
     width: 106,
-    marginLeft: -6,
+    marginLeft: -Spacing.xxs,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#222222",
-    marginBottom: 4,
-    lineHeight: 40,
+    ...Typography.styles.h1,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xxs,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: "#505050",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
   },
   keyboardView: {
     flex: 1,
@@ -794,262 +869,276 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    padding: Spacing.lg,
     paddingBottom: 220,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: Spacing.xxl,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
+    ...Typography.styles.h3,
+    color: Colors.text.primary,
   },
   questionCount: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#9CA3AF",
+    ...Typography.styles.caption,
+    color: Colors.text.tertiary,
   },
   fieldContainer: {
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
+    ...Typography.styles.label,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
   },
   required: {
-    color: "#EF4444",
+    color: Colors.status.error,
   },
   optional: {
-    color: "#9CA3AF",
-    fontWeight: "400",
+    color: Colors.text.tertiary,
+    fontWeight: Typography.fontWeight.normal,
   },
   input: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#111827",
+    backgroundColor: Colors.background.primary,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    borderRadius: Borders.radius.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
   },
   inputError: {
-    borderColor: "#EF4444",
+    borderColor: Colors.status.error,
   },
   textArea: {
     minHeight: 100,
-    paddingTop: 12,
+    paddingTop: Spacing.sm,
   },
   errorText: {
-    marginTop: 4,
-    fontSize: 12,
-    color: "#EF4444",
+    marginTop: Spacing.xxs,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.status.error,
   },
   questionCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    ...Shadows.sm,
   },
   questionCardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
-    gap: 12,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
   },
   questionNumberBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
+    width: Spacing.xxl,
+    height: Spacing.xxl,
+    borderRadius: Borders.radius.full,
+    backgroundColor: Colors.surface.blueTint,
     alignItems: "center",
     justifyContent: "center",
   },
   questionNumber: {
-    color: "#5FA9F5",
-    fontSize: 16,
-    fontWeight: "700",
+    color: Colors.primary.blue,
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
   },
   questionLabel: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: Typography.fontSize.caption,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   deleteQuestionButton: {
-    padding: 4,
+    padding: Spacing.xxs,
   },
   questionTextInput: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#111827",
-    marginBottom: 16,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Borders.radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
     minHeight: 44,
     textAlignVertical: "top",
   },
   questionTypeLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
+    ...Typography.styles.label,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
   },
   typeSelector: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   typeOption: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Borders.radius.full,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
   },
   typeOptionActive: {
-    backgroundColor: "#8A4DE8",
-    borderColor: "#8A4DE8",
+    backgroundColor: Colors.primary.purple,
+    borderColor: Colors.primary.purple,
   },
   typeOptionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6B7280",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.tertiary,
     textAlign: "center",
   },
   typeOptionTextActive: {
-    color: "#FFFFFF",
+    color: Colors.text.inverse,
     textAlign: "center",
   },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: Spacing.xs,
+    gap: Spacing.xs,
   },
   optionDot: {
-    marginRight: 4,
+    marginRight: Spacing.xxs,
   },
   optionInput: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: "#111827",
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Borders.radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
   },
   removeOptionButton: {
-    padding: 4,
+    padding: Spacing.xxs,
   },
   addOptionButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Borders.radius.sm,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
     borderStyle: "dashed",
-    marginBottom: 12,
-    gap: 8,
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
   },
   addOptionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#9CA3AF",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.tertiary,
   },
-  singleChoiceButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#8A4DE8",
-    marginBottom: 16,
+  selectionTypeContainer: {
+    marginBottom: Spacing.md,
   },
-  singleChoiceButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
+  selectionTypeLabel: {
+    ...Typography.styles.label,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
+  },
+  selectionTypeToggle: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+  },
+  selectionTypeOption: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Borders.radius.full,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    backgroundColor: Colors.background.primary,
+    gap: 6,
+  },
+  selectionTypeOptionActive: {
+    backgroundColor: Colors.primary.purple,
+    borderColor: Colors.primary.purple,
+  },
+  selectionTypeOptionText: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.tertiary,
+  },
+  selectionTypeOptionTextActive: {
+    color: Colors.text.inverse,
   },
   digitsOnlyButton: {
     alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 16,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Borders.radius.full,
+    backgroundColor: Colors.background.primary,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    marginBottom: Spacing.md,
   },
   digitsOnlyButtonActive: {
-    backgroundColor: "#8A4DE8",
-    borderColor: "#8A4DE8",
+    backgroundColor: Colors.primary.purple,
+    borderColor: Colors.primary.purple,
   },
   digitsOnlyButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6B7280",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.tertiary,
   },
   digitsOnlyButtonTextActive: {
-    color: "#FFFFFF",
+    color: Colors.text.inverse,
   },
   requiredRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 8,
-    gap: 12,
+    marginTop: Spacing.xs,
+    gap: Spacing.sm,
   },
   requiredLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#111827",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.primary,
   },
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    padding: Spacing.lg,
+    paddingTop: Spacing.md,
+    backgroundColor: Colors.background.primary,
+    borderTopWidth: Borders.width.default,
+    borderTopColor: Colors.border.default,
     overflow: "visible",
+    ...Shadows.lg,
   },
   addQuestionButton: {
-    borderRadius: 16,
+    borderRadius: Borders.radius.lg,
     overflow: "hidden",
-    marginBottom: 12,
-    shadowColor: "#4A63D8",
+    marginBottom: Spacing.sm,
+    shadowColor: Colors.primary.blue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -1059,27 +1148,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.xs,
   },
   addQuestionButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
     textAlign: "center",
   },
   actionButtonsRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: Spacing.xs,
     overflow: "visible",
   },
   previewButton: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: Borders.radius.lg,
     overflow: "hidden",
     borderWidth: 0,
-    shadowColor: "#A23DD8",
+    shadowColor: Colors.primary.purple,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
@@ -1089,15 +1178,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    gap: 8,
-    borderRadius: 16,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.xs,
+    borderRadius: Borders.radius.lg,
   },
   previewButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
     textAlign: "center",
   },
   archiveButton: {
@@ -1105,18 +1194,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    gap: 8,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Borders.radius.lg,
+    backgroundColor: Colors.background.primary,
+    borderWidth: Borders.width.thick,
+    borderColor: Colors.border.default,
+    gap: Spacing.xs,
   },
   archiveButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#6B7280",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.tertiary,
     textAlign: "center",
   },
 });

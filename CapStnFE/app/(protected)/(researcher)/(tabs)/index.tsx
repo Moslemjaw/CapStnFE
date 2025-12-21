@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity, StyleSheet as RNStyleSheet } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -93,6 +93,13 @@ export default function ResearcherHome() {
   return (
     <FadeInView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <View style={styles.headerTop}>
@@ -117,26 +124,54 @@ export default function ResearcherHome() {
         >
           {/* Stats Grid */}
           <View style={styles.statsGrid}>
-            <View style={[styles.statCard, { backgroundColor: Colors.surface.blueTint }]}>
+            <TouchableOpacity 
+              style={[styles.statCard, { backgroundColor: Colors.surface.blueTint }]}
+              onPress={() => router.push("/(protected)/(researcher)/(tabs)/surveys" as any)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="checkbox-outline" size={24} color={Colors.primary.blue} />
               <Text style={[styles.statValue, { color: Colors.primary.blue }]}>{stats.surveysAnswered}</Text>
               <Text style={styles.statLabel}>Answered</Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: Colors.surface.purpleTint }]}>
+              <View style={styles.statArrow}>
+                <Ionicons name="chevron-forward" size={12} color={Colors.primary.blue} style={{ opacity: 0.5 }} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.statCard, { backgroundColor: Colors.surface.purpleTint }]}
+              onPress={() => router.push("/(protected)/(researcher)/(tabs)/research" as any)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="create-outline" size={24} color={Colors.primary.purple} />
               <Text style={[styles.statValue, { color: Colors.primary.purple }]}>{stats.surveysCreated}</Text>
               <Text style={styles.statLabel}>Created</Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: Colors.surface.pinkTint }]}>
+              <View style={styles.statArrow}>
+                <Ionicons name="chevron-forward" size={12} color={Colors.primary.purple} style={{ opacity: 0.5 }} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.statCard, { backgroundColor: Colors.surface.pinkTint }]}
+              onPress={() => router.push("/(protected)/(researcher)/(tabs)/profile" as any)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="diamond-outline" size={24} color={Colors.primary.pink} />
               <Text style={[styles.statValue, { color: Colors.primary.pink }]}>{stats.totalPoints}</Text>
               <Text style={styles.statLabel}>Points</Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: Colors.surface.tealTint }]}>
+              <View style={styles.statArrow}>
+                <Ionicons name="chevron-forward" size={12} color={Colors.primary.pink} style={{ opacity: 0.5 }} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.statCard, { backgroundColor: Colors.surface.tealTint }]}
+              onPress={() => router.push("/(protected)/(researcher)/(tabs)/profile" as any)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="flash-outline" size={24} color={Colors.accent.teal} />
               <Text style={[styles.statValue, { color: Colors.accent.teal }]}>{stats.streak}</Text>
               <Text style={styles.statLabel}>Streak</Text>
-            </View>
+              <View style={styles.statArrow}>
+                <Ionicons name="chevron-forward" size={12} color={Colors.accent.teal} style={{ opacity: 0.5 }} />
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Quick Actions */}
@@ -305,6 +340,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
   },
   statValue: {
     fontFamily: Typography.fontFamily.bold,
@@ -316,6 +352,11 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.medium,
     fontSize: Typography.fontSize.captionSmall,
     color: Colors.text.secondary,
+  },
+  statArrow: {
+    position: "absolute",
+    top: 8,
+    right: 8,
   },
   section: {
     marginBottom: Spacing.xl,

@@ -4,7 +4,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image,
@@ -12,6 +11,7 @@ import {
   Modal,
   Pressable,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useContext, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -150,15 +150,16 @@ export default function Register() {
         colors={[Colors.background.secondary, Colors.surface.purpleTint]}
         style={styles.gradientContainer}
       >
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
+          extraHeight={120}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
             <View style={styles.content}>
               {/* Branding Section */}
               <View style={styles.brandingSection}>
@@ -360,68 +361,67 @@ export default function Register() {
                 </View>
               </View>
             </View>
-          </ScrollView>
+        </KeyboardAwareScrollView>
 
-          {/* Terms Modal */}
-          <Modal visible={showTermsModal} transparent animationType="slide" onRequestClose={() => setShowTermsModal(false)}>
-            <SafeAreaView style={styles.modalContainer}>
-              <Pressable style={styles.modalOverlay} onPress={() => setShowTermsModal(false)}>
-                <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-                  <View style={styles.modalHeader}>
-                    <View style={styles.modalDragIndicator} />
-                    <Text style={styles.modalTitle}>Terms & Conditions</Text>
-                    <TouchableOpacity onPress={() => setShowTermsModal(false)} style={styles.modalCloseButton}>
-                      <Ionicons name="close" size={24} color={Colors.text.secondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
-                    <Text style={styles.modalSectionTitle}>1. Acceptance of Terms</Text>
-                    <Text style={styles.modalText}>By accessing and using SIGHT, you agree to be bound by these Terms & Conditions.</Text>
-                    <Text style={styles.modalSectionTitle}>2. User Accounts</Text>
-                    <Text style={styles.modalText}>You are responsible for maintaining the confidentiality of your account credentials.</Text>
-                    <Text style={styles.modalSectionTitle}>3. Survey Creation & Responses</Text>
-                    <Text style={styles.modalText}>All survey content must be legal, ethical, and not violate anyone's rights.</Text>
-                    <Text style={styles.modalSectionTitle}>4. Points & Rewards</Text>
-                    <Text style={styles.modalText}>Points are non-transferable and non-refundable.</Text>
-                    <Text style={styles.modalSectionTitle}>5. AI Analysis</Text>
-                    <Text style={styles.modalText}>Analysis is provided "as is" and should be used as a research tool.</Text>
-                    <Text style={styles.modalFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
-                  </ScrollView>
-                </Pressable>
+        {/* Terms Modal */}
+        <Modal visible={showTermsModal} transparent animationType="slide" onRequestClose={() => setShowTermsModal(false)}>
+          <SafeAreaView style={styles.modalContainer}>
+            <Pressable style={styles.modalOverlay} onPress={() => setShowTermsModal(false)}>
+              <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalDragIndicator} />
+                  <Text style={styles.modalTitle}>Terms & Conditions</Text>
+                  <TouchableOpacity onPress={() => setShowTermsModal(false)} style={styles.modalCloseButton}>
+                    <Ionicons name="close" size={24} color={Colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
+                  <Text style={styles.modalSectionTitle}>1. Acceptance of Terms</Text>
+                  <Text style={styles.modalText}>By accessing and using SIGHT, you agree to be bound by these Terms & Conditions.</Text>
+                  <Text style={styles.modalSectionTitle}>2. User Accounts</Text>
+                  <Text style={styles.modalText}>You are responsible for maintaining the confidentiality of your account credentials.</Text>
+                  <Text style={styles.modalSectionTitle}>3. Survey Creation & Responses</Text>
+                  <Text style={styles.modalText}>All survey content must be legal, ethical, and not violate anyone's rights.</Text>
+                  <Text style={styles.modalSectionTitle}>4. Points & Rewards</Text>
+                  <Text style={styles.modalText}>Points are non-transferable and non-refundable.</Text>
+                  <Text style={styles.modalSectionTitle}>5. AI Analysis</Text>
+                  <Text style={styles.modalText}>Analysis is provided "as is" and should be used as a research tool.</Text>
+                  <Text style={styles.modalFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
+                </ScrollView>
               </Pressable>
-            </SafeAreaView>
-          </Modal>
+            </Pressable>
+          </SafeAreaView>
+        </Modal>
 
-          {/* Privacy Modal */}
-          <Modal visible={showPrivacyModal} transparent animationType="slide" onRequestClose={() => setShowPrivacyModal(false)}>
-            <SafeAreaView style={styles.modalContainer}>
-              <Pressable style={styles.modalOverlay} onPress={() => setShowPrivacyModal(false)}>
-                <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-                  <View style={styles.modalHeader}>
-                    <View style={styles.modalDragIndicator} />
-                    <Text style={styles.modalTitle}>Privacy Policy</Text>
-                    <TouchableOpacity onPress={() => setShowPrivacyModal(false)} style={styles.modalCloseButton}>
-                      <Ionicons name="close" size={24} color={Colors.text.secondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
-                    <Text style={styles.modalSectionTitle}>1. Introduction</Text>
-                    <Text style={styles.modalText}>At SIGHT, we take your privacy seriously.</Text>
-                    <Text style={styles.modalSectionTitle}>2. Information We Collect</Text>
-                    <Text style={styles.modalText}>We collect information you provide directly: name, email, profile images, and survey responses.</Text>
-                    <Text style={styles.modalSectionTitle}>3. How We Use Your Information</Text>
-                    <Text style={styles.modalText}>We use your data to provide and improve our services.</Text>
-                    <Text style={styles.modalSectionTitle}>4. Data Security</Text>
-                    <Text style={styles.modalText}>Your data is stored securely using industry-standard encryption.</Text>
-                    <Text style={styles.modalSectionTitle}>5. Your Rights</Text>
-                    <Text style={styles.modalText}>You have the right to access, update, and delete your data.</Text>
-                    <Text style={styles.modalFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
-                  </ScrollView>
-                </Pressable>
+        {/* Privacy Modal */}
+        <Modal visible={showPrivacyModal} transparent animationType="slide" onRequestClose={() => setShowPrivacyModal(false)}>
+          <SafeAreaView style={styles.modalContainer}>
+            <Pressable style={styles.modalOverlay} onPress={() => setShowPrivacyModal(false)}>
+              <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalDragIndicator} />
+                  <Text style={styles.modalTitle}>Privacy Policy</Text>
+                  <TouchableOpacity onPress={() => setShowPrivacyModal(false)} style={styles.modalCloseButton}>
+                    <Ionicons name="close" size={24} color={Colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
+                  <Text style={styles.modalSectionTitle}>1. Introduction</Text>
+                  <Text style={styles.modalText}>At SIGHT, we take your privacy seriously.</Text>
+                  <Text style={styles.modalSectionTitle}>2. Information We Collect</Text>
+                  <Text style={styles.modalText}>We collect information you provide directly: name, email, profile images, and survey responses.</Text>
+                  <Text style={styles.modalSectionTitle}>3. How We Use Your Information</Text>
+                  <Text style={styles.modalText}>We use your data to provide and improve our services.</Text>
+                  <Text style={styles.modalSectionTitle}>4. Data Security</Text>
+                  <Text style={styles.modalText}>Your data is stored securely using industry-standard encryption.</Text>
+                  <Text style={styles.modalSectionTitle}>5. Your Rights</Text>
+                  <Text style={styles.modalText}>You have the right to access, update, and delete your data.</Text>
+                  <Text style={styles.modalFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
+                </ScrollView>
               </Pressable>
-            </SafeAreaView>
-          </Modal>
-        </KeyboardAvoidingView>
+            </Pressable>
+          </SafeAreaView>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );

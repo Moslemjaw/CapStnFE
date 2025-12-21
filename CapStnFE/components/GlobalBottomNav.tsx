@@ -10,12 +10,49 @@ import Animated, {
   withSpring,
   withRepeat,
   withSequence,
+  withDelay,
   Easing,
   interpolateColor,
   cancelAnimation,
+  runOnJS,
 } from "react-native-reanimated";
 import AnalysisContext from "@/context/AnalysisContext";
-import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
+import { Colors, Typography, Spacing, Borders, Shadows, ZIndex } from "@/constants/design";
+
+// Animation configuration constants for smoother, more refined animations
+const ANIMATION_CONFIG = {
+  idle: {
+    scaleRange: { min: 0.99, max: 1.01 },
+    duration: { slow: 4000, medium: 600, fast: 300 },
+    shadowOpacity: { min: 0.05, max: 0.15 },
+    shadowRadius: { min: 6, max: 10 },
+  },
+  active: {
+    scaleRange: { min: 0.97, max: 1.03 },
+    duration: { slow: 2000, medium: 400, fast: 200 },
+    shadowOpacity: { min: 0.3, max: 0.6 },
+    shadowRadius: { min: 16, max: 24 },
+  },
+  analyzing: {
+    scaleRange: { min: 0.92, max: 1.08 },
+    duration: { cycle: 800 },
+    shadowOpacity: { min: 0.5, max: 0.85 },
+    shadowRadius: { min: 20, max: 35 },
+  },
+  press: {
+    spring: { damping: 12, stiffness: 200, mass: 0.8 },
+    bounce: { damping: 10, stiffness: 150, mass: 0.6 },
+  },
+};
+
+// Premium easing curves
+const EASING = {
+  smooth: Easing.bezier(0.25, 0.1, 0.25, 1),
+  easeInOut: Easing.bezier(0.42, 0, 0.58, 1),
+  easeOut: Easing.bezier(0, 0, 0.2, 1),
+  easeIn: Easing.bezier(0.4, 0, 1, 1),
+  organic: Easing.bezier(0.34, 1.56, 0.64, 1),
+};
 
 export default function GlobalBottomNav() {
   const router = useRouter();
@@ -241,6 +278,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
   const analyzingAnimationActive = useRef(false);
   const previousIsAnalyzing = useRef(false);
 
+  // Smoothly restore continuous breathing animation after press
   const restoreContinuousAnimation = () => {
     if (!pressAnimationActive.current) return;
     
@@ -262,116 +300,104 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     
     if (!currentIsAnalyzing && !currentIsAnalysisComplete) {
       if (isFocused) {
-        const startX = 0.95;
-        const startY = 1.05;
+        // Active state: Smoother, more prominent breathing
+        const cfg = ANIMATION_CONFIG.active;
         
         jellyScaleX.value = withSequence(
-          withTiming(startX, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.scaleRange.min, { duration: 300, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(0.95, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(1.05, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(1.0, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(0.95, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(1.0, { duration: cfg.duration.fast, easing: EASING.smooth })
             ),
             -1,
-            false
+            true
           )
         );
         jellyScaleY.value = withSequence(
-          withTiming(startY, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.scaleRange.max, { duration: 300, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(1.05, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(0.95, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(1.0, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(1.05, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(1.0, { duration: cfg.duration.fast, easing: EASING.smooth })
             ),
             -1,
-            false
+            true
           )
         );
         
         shadowOpacity.value = withSequence(
-          withTiming(0.4, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.shadowOpacity.min, { duration: 300, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(0.4, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(0.7, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(0.55, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(0.4, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.shadowOpacity.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.shadowOpacity.max, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming((cfg.shadowOpacity.min + cfg.shadowOpacity.max) / 2, { duration: cfg.duration.fast, easing: EASING.smooth })
             ),
             -1,
-            false
+            true
           )
         );
         shadowRadius.value = withSequence(
-          withTiming(18, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.shadowRadius.min, { duration: 300, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(18, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(25, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(21.5, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(18, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.shadowRadius.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.shadowRadius.max, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming((cfg.shadowRadius.min + cfg.shadowRadius.max) / 2, { duration: cfg.duration.fast, easing: EASING.smooth })
             ),
             -1,
-            false
+            true
           )
         );
       } else {
-        const startX = 0.99;
-        const startY = 1.01;
+        // Idle state: Very subtle, slow breathing
+        const cfg = ANIMATION_CONFIG.idle;
         
         jellyScaleX.value = withSequence(
-          withTiming(startX, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.scaleRange.min, { duration: 400, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(0.99, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(1.01, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(1.0, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(0.99, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
             ),
             -1,
-            false
+            true
           )
         );
         jellyScaleY.value = withSequence(
-          withTiming(startY, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.scaleRange.max, { duration: 400, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(1.01, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(0.99, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(1.0, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(1.01, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut })
             ),
             -1,
-            false
+            true
           )
         );
         shadowOpacity.value = withSequence(
-          withTiming(0.1, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.shadowOpacity.min, { duration: 400, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(0.1, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(0.2, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(0.15, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(0.1, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.shadowOpacity.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.shadowOpacity.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
             ),
             -1,
-            false
+            true
           )
         );
         shadowRadius.value = withSequence(
-          withTiming(8, { duration: 350, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
+          withTiming(cfg.shadowRadius.min, { duration: 400, easing: EASING.smooth }),
           withRepeat(
             withSequence(
-              withTiming(8, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(10, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-              withTiming(9, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-              withTiming(8, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+              withTiming(cfg.shadowRadius.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+              withTiming(cfg.shadowRadius.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
             ),
             -1,
-            false
+            true
           )
         );
       }
@@ -420,147 +446,139 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     currentAnimationState.current = targetState;
 
     if (isAnalysisComplete) {
-      shadowOpacity.value = withTiming(1.0, { duration: 400, easing: Easing.out(Easing.ease) });
-      shadowRadius.value = withTiming(50, { duration: 400, easing: Easing.out(Easing.ease) });
+      // Completion celebration - smooth burst then settle
+      shadowOpacity.value = withSequence(
+        withTiming(1.0, { duration: 300, easing: EASING.easeOut }),
+        withDelay(400, withTiming(0.5, { duration: 600, easing: EASING.smooth }))
+      );
+      shadowRadius.value = withSequence(
+        withTiming(45, { duration: 300, easing: EASING.easeOut }),
+        withDelay(400, withTiming(20, { duration: 600, easing: EASING.smooth }))
+      );
       jellyScaleX.value = withSequence(
-        withTiming(1.15, { duration: 400, easing: Easing.out(Easing.ease) }),
-        withTiming(1, { duration: 400, easing: Easing.in(Easing.ease) })
+        withTiming(1.12, { duration: 250, easing: EASING.organic }),
+        withTiming(0.95, { duration: 200, easing: EASING.easeInOut }),
+        withTiming(1.0, { duration: 350, easing: EASING.smooth })
       );
       jellyScaleY.value = withSequence(
-        withTiming(1.15, { duration: 400, easing: Easing.out(Easing.ease) }),
-        withTiming(1, { duration: 400, easing: Easing.in(Easing.ease) })
+        withTiming(1.12, { duration: 250, easing: EASING.organic }),
+        withTiming(0.95, { duration: 200, easing: EASING.easeInOut }),
+        withTiming(1.0, { duration: 350, easing: EASING.smooth })
       );
       analyzingAnimationActive.current = false;
     } else if (isAnalyzing) {
+      // Analyzing state - dynamic pulsing with organic feel
       analyzingAnimationActive.current = true;
+      const cfg = ANIMATION_CONFIG.analyzing;
       
       jellyScaleX.value = withRepeat(
         withSequence(
-          withTiming(0.90, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.10, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.0, { duration: 200, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(0.90, { duration: 400, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.scaleRange.min, { duration: cfg.duration.cycle, easing: EASING.easeInOut }),
+          withTiming(cfg.scaleRange.max, { duration: cfg.duration.cycle, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
       );
       jellyScaleY.value = withRepeat(
         withSequence(
-          withTiming(1.10, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.90, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.0, { duration: 200, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(1.10, { duration: 400, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.scaleRange.max, { duration: cfg.duration.cycle, easing: EASING.easeInOut }),
+          withTiming(cfg.scaleRange.min, { duration: cfg.duration.cycle, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
       );
 
       shadowOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.6, { duration: 800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.9, { duration: 800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.75, { duration: 200, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(0.6, { duration: 400, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.shadowOpacity.min, { duration: cfg.duration.cycle, easing: EASING.easeInOut }),
+          withTiming(cfg.shadowOpacity.max, { duration: cfg.duration.cycle, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
       );
       shadowRadius.value = withRepeat(
         withSequence(
-          withTiming(25, { duration: 800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(40, { duration: 800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(32.5, { duration: 200, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(25, { duration: 400, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.shadowRadius.min, { duration: cfg.duration.cycle, easing: EASING.easeInOut }),
+          withTiming(cfg.shadowRadius.max, { duration: cfg.duration.cycle, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
       );
     } else if (isFocused) {
+      // Active state - calm breathing with subtle glow
       analyzingAnimationActive.current = false;
-      jellyScaleX.value = withRepeat(
-        withSequence(
-          withTiming(0.95, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.05, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.0, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(0.95, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
-        ),
-        -1,
-        false
-      );
-      jellyScaleY.value = withRepeat(
-        withSequence(
-          withTiming(1.05, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.95, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.0, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(1.05, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
-        ),
-        -1,
-        false
-      );
-
-      shadowOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.4, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.7, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.55, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(0.4, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
-        ),
-        -1,
-        false
-      );
-      shadowRadius.value = withRepeat(
-        withSequence(
-          withTiming(18, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(25, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(21.5, { duration: 300, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(18, { duration: 500, easing: Easing.bezier(0.4, 0, 0.6, 1) })
-        ),
-        -1,
-        false
-      );
-    } else {
-      analyzingAnimationActive.current = false;
+      const cfg = ANIMATION_CONFIG.active;
       
       jellyScaleX.value = withRepeat(
         withSequence(
-          withTiming(0.99, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.01, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.0, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(0.99, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
       );
       jellyScaleY.value = withRepeat(
         withSequence(
-          withTiming(1.01, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.99, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(1.0, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(1.01, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
       );
 
       shadowOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.1, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.2, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(0.15, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(0.1, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.shadowOpacity.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.shadowOpacity.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
       );
       shadowRadius.value = withRepeat(
         withSequence(
-          withTiming(8, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(10, { duration: 3000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(9, { duration: 400, easing: Easing.bezier(0.33, 0, 0.67, 1) }),
-          withTiming(8, { duration: 600, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(cfg.shadowRadius.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.shadowRadius.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
         ),
         -1,
-        false
+        true
+      );
+    } else {
+      // Idle state - very subtle, peaceful breathing
+      analyzingAnimationActive.current = false;
+      const cfg = ANIMATION_CONFIG.idle;
+      
+      jellyScaleX.value = withRepeat(
+        withSequence(
+          withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
+        ),
+        -1,
+        true
+      );
+      jellyScaleY.value = withRepeat(
+        withSequence(
+          withTiming(cfg.scaleRange.max, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.scaleRange.min, { duration: cfg.duration.slow, easing: EASING.easeInOut })
+        ),
+        -1,
+        true
+      );
+
+      shadowOpacity.value = withRepeat(
+        withSequence(
+          withTiming(cfg.shadowOpacity.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.shadowOpacity.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
+        ),
+        -1,
+        true
+      );
+      shadowRadius.value = withRepeat(
+        withSequence(
+          withTiming(cfg.shadowRadius.min, { duration: cfg.duration.slow, easing: EASING.easeInOut }),
+          withTiming(cfg.shadowRadius.max, { duration: cfg.duration.slow, easing: EASING.easeInOut })
+        ),
+        -1,
+        true
       );
     }
   }, [isFocused, isAnalyzing, isAnalysisComplete]);
@@ -592,21 +610,20 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     jellyScaleX.value = 1;
     jellyScaleY.value = 1;
 
+    const { spring, bounce } = ANIMATION_CONFIG.press;
+
+    // Premium jelly press animation - smooth, organic, and satisfying
     jellyScaleX.value = withSequence(
-      withSpring(0.92, { damping: 10, stiffness: 180 }),
-      withSpring(1.08, { damping: 9, stiffness: 150 }),
-      withSpring(0.96, { damping: 11, stiffness: 200 }),
-      withSpring(1.04, { damping: 12, stiffness: 220 }),
-      withTiming(1.02, { duration: 400, easing: Easing.out(Easing.ease) }),
-      withTiming(1, { duration: 600, easing: Easing.bezier(0.33, 0, 0.67, 1) })
+      withSpring(0.88, spring),
+      withSpring(1.06, bounce),
+      withSpring(0.97, { ...spring, damping: 14 }),
+      withTiming(1, { duration: 300, easing: EASING.smooth })
     );
     jellyScaleY.value = withSequence(
-      withSpring(1.08, { damping: 10, stiffness: 180 }),
-      withSpring(0.92, { damping: 9, stiffness: 150 }),
-      withSpring(1.04, { damping: 11, stiffness: 200 }),
-      withSpring(0.96, { damping: 12, stiffness: 220 }),
-      withTiming(0.98, { duration: 400, easing: Easing.out(Easing.ease) }),
-      withTiming(1, { duration: 600, easing: Easing.bezier(0.33, 0, 0.67, 1) })
+      withSpring(1.12, spring),
+      withSpring(0.94, bounce),
+      withSpring(1.03, { ...spring, damping: 14 }),
+      withTiming(1, { duration: 300, easing: EASING.smooth })
     );
 
     const timeoutId = setTimeout(() => {
@@ -617,17 +634,19 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       if (pressAnimationActive.current && !currentIsAnalyzing && !currentIsAnalysisComplete) {
         restoreContinuousAnimation();
       }
-    }, 1700);
+    }, 1000);
     
     (pressAnimationActive as any).timeoutId = timeoutId;
 
+    // Glow flash effect on press
+    const targetCfg = isFocused ? ANIMATION_CONFIG.active : ANIMATION_CONFIG.idle;
     shadowOpacity.value = withSequence(
-      withTiming(0.95, { duration: 120, easing: Easing.out(Easing.ease) }),
-      withTiming(isFocused ? 0.7 : 0.2, { duration: 500, easing: Easing.in(Easing.ease) })
+      withTiming(0.9, { duration: 80, easing: EASING.easeOut }),
+      withTiming(targetCfg.shadowOpacity.max, { duration: 400, easing: EASING.smooth })
     );
     shadowRadius.value = withSequence(
-      withTiming(40, { duration: 120, easing: Easing.out(Easing.ease) }),
-      withTiming(isFocused ? 25 : 10, { duration: 500, easing: Easing.in(Easing.ease) })
+      withTiming(35, { duration: 80, easing: EASING.easeOut }),
+      withTiming(targetCfg.shadowRadius.max, { duration: 400, easing: EASING.smooth })
     );
 
     const isOnAnalysisPage = pathname && (
@@ -684,14 +703,17 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Borders.radius.xl,
     justifyContent: "space-around",
     alignItems: "flex-start",
-    ...Shadows.sm,
+    ...Shadows.md,
     width: "100%",
+    zIndex: ZIndex.header,
+    position: "relative",
   },
   navItem: {
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
     paddingTop: 5,
+    zIndex: ZIndex.card,
   },
   navLabel: {
     ...Typography.styles.micro,
@@ -703,9 +725,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   sightaiButtonContainer: {
-    top: -10,
+    top: -12,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: ZIndex.dropdown,
+    overflow: "visible",
   },
   glowContainer: {
     alignItems: "center",
@@ -715,7 +739,8 @@ const styles = StyleSheet.create({
       width: 0,
       height: 0,
     },
-    elevation: 10,
+    elevation: ZIndex.dropdown,
+    overflow: "visible",
   },
   sightaiLogo: {
     width: 85,

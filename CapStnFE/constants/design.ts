@@ -62,6 +62,17 @@ export const Colors = {
     pinkTint: "#FDF2F8",
     tealTint: "#F0FDFA",
     grayTint: "#F9FAFB",
+    error: "#FEE2E2",
+  },
+
+  // Status Colors (alias for semantic colors for convenience)
+  status: {
+    success: "#10B981",
+    successLight: "#D1FAE5",
+    error: "#EF4444",
+    errorLight: "#FEE2E2",
+    warning: "#F59E0B",
+    warningLight: "#FEF3C7",
   },
 
   // Dark Mode (SightAI)
@@ -131,6 +142,16 @@ export const Typography = {
     medium: "Inter_500Medium",
     semiBold: "Inter_600SemiBold",
     bold: "Inter_700Bold",
+  },
+
+  // Font Weights (for StyleSheet fontWeight property)
+  fontWeight: {
+    light: "300" as const,
+    regular: "400" as const,
+    normal: "400" as const,
+    medium: "500" as const,
+    semibold: "600" as const,
+    bold: "700" as const,
   },
 
   // Font Sizes
@@ -613,16 +634,29 @@ export const Borders = {
 // =============================================================================
 
 export const ZIndex = {
+  // Base layers
+  background: -1,
   base: 0,
-  card: 1,
+  content: 1,
+  card: 2,
+  default: 5,
+  
+  // Elevated layers
   sticky: 10,
   header: 20,
+  fixedButton: 25,
   dropdown: 30,
+  bottomNav: 35,
+  
+  // Modal layers
   modal: 40,
   popover: 50,
   toast: 60,
   tooltip: 70,
+  
+  // Maximum layers
   overlay: 100,
+  max: 999,
 };
 
 // =============================================================================

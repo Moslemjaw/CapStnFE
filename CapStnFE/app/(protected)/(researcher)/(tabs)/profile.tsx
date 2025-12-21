@@ -331,6 +331,13 @@ export default function ResearcherProfile() {
   return (
     <FadeInView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         {/* Fixed Header Section */}
         <View style={styles.fixedHeader}>
           <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
@@ -390,7 +397,11 @@ export default function ResearcherProfile() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Your Activity</Text>
             <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
+              <TouchableOpacity 
+                style={styles.statCard}
+                onPress={() => router.push("/(protected)/(researcher)/(tabs)/surveys" as any)}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.tealTint }]}>
                   <Ionicons name="checkmark-circle" size={22} color={Colors.accent.teal} />
                 </View>
@@ -398,7 +409,10 @@ export default function ResearcherProfile() {
                   {loadingActivity ? "..." : surveysAnswered}
                 </Text>
                 <Text style={styles.statLabel}>Answered</Text>
-              </View>
+                <View style={styles.statArrow}>
+                  <Ionicons name="chevron-forward" size={12} color={Colors.text.tertiary} />
+                </View>
+              </TouchableOpacity>
 
               <View style={styles.statCard}>
                 <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.blueTint }]}>
@@ -412,7 +426,11 @@ export default function ResearcherProfile() {
                 </Text>
               </View>
 
-              <View style={styles.statCard}>
+              <TouchableOpacity 
+                style={styles.statCard}
+                onPress={() => router.push("/(protected)/(researcher)/(tabs)/research" as any)}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.purpleTint }]}>
                   <Ionicons name="document-text" size={22} color={Colors.primary.purple} />
                 </View>
@@ -420,9 +438,16 @@ export default function ResearcherProfile() {
                   {loadingActivity ? "..." : surveysCreated}
                 </Text>
                 <Text style={styles.statLabel}>Created</Text>
-              </View>
+                <View style={styles.statArrow}>
+                  <Ionicons name="chevron-forward" size={12} color={Colors.text.tertiary} />
+                </View>
+              </TouchableOpacity>
 
-              <View style={styles.statCard}>
+              <TouchableOpacity 
+                style={styles.statCard}
+                onPress={() => router.push("/(protected)/(researcher)/(tabs)/sightai" as any)}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.pinkTint }]}>
                   <Ionicons name="sparkles" size={22} color={Colors.primary.pink} />
                 </View>
@@ -430,7 +455,10 @@ export default function ResearcherProfile() {
                   {loadingActivity ? "..." : aiAnalyses}
                 </Text>
                 <Text style={styles.statLabel}>Analyses</Text>
-              </View>
+                <View style={styles.statArrow}>
+                  <Ionicons name="chevron-forward" size={12} color={Colors.text.tertiary} />
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -799,6 +827,7 @@ const styles = StyleSheet.create({
     borderRadius: Borders.radius.lg,
     padding: Spacing.md,
     alignItems: "center",
+    position: "relative",
     ...Shadows.sm,
   },
   statIconContainer: {
@@ -817,6 +846,12 @@ const styles = StyleSheet.create({
   statLabel: {
     ...Typography.styles.caption,
     color: Colors.text.secondary,
+  },
+  statArrow: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    opacity: 0.5,
   },
   pointsCard: {
     borderRadius: Borders.radius.xl,

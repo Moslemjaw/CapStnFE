@@ -8,8 +8,17 @@ import {
   Modal,
   Pressable,
   Image,
+  Keyboard,
 } from "react-native";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  interpolate,
+  Extrapolation,
+} from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -55,6 +64,12 @@ export default function ResearcherSurveys() {
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Search input ref
+  const searchInputRef = useRef<TextInput>(null);
+
+  // Clear button animation
+  const clearButtonProgress = useSharedValue(0);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -192,63 +207,67 @@ export default function ResearcherSurveys() {
     }
   }, [featuredSurveys.length, user?._id]);
 
-  const filterSurveys = (surveys: SurveyWithMetadata[]) => {
-    let filtered = [...surveys];
+  const filterSurveys = useCallback(
+    (surveys: SurveyWithMetadata[]) => {
+      let filtered = [...surveys];
+      const query = searchQuery.trim().toLowerCase();
 
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(
-        (survey) =>
-          survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (survey.description && survey.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
+      if (query) {
+        filtered = filtered.filter(
+          (survey) =>
+            survey.title.toLowerCase().includes(query) ||
+            (survey.description && survey.description.toLowerCase().includes(query))
+        );
+      }
 
-    if (questionCountFilter !== "all") {
-      filtered = filtered.filter((survey) => {
-        const count = survey.questionCount || 0;
-        switch (questionCountFilter) {
-          case "1-5": return count >= 1 && count <= 5;
-          case "6-10": return count >= 6 && count <= 10;
-          case "11-15": return count >= 11 && count <= 15;
-          case "16+": return count >= 16;
-          default: return true;
-        }
-      });
-    }
+      if (questionCountFilter !== "all") {
+        filtered = filtered.filter((survey) => {
+          const count = survey.questionCount || 0;
+          switch (questionCountFilter) {
+            case "1-5": return count >= 1 && count <= 5;
+            case "6-10": return count >= 6 && count <= 10;
+            case "11-15": return count >= 11 && count <= 15;
+            case "16+": return count >= 16;
+            default: return true;
+          }
+        });
+      }
 
-    if (maxTimeFilter !== "all") {
-      filtered = filtered.filter((survey) => {
-        const minutes = survey.estimatedMinutes;
-        switch (maxTimeFilter) {
-          case "1-5": return minutes >= 1 && minutes <= 5;
-          case "5-10": return minutes > 5 && minutes <= 10;
-          case "10-15": return minutes > 10 && minutes <= 15;
-          case "15-30": return minutes > 15 && minutes <= 30;
-          case "30+": return minutes > 30;
-          default: return true;
-        }
-      });
-    }
+      if (maxTimeFilter !== "all") {
+        filtered = filtered.filter((survey) => {
+          const minutes = survey.estimatedMinutes;
+          switch (maxTimeFilter) {
+            case "1-5": return minutes >= 1 && minutes <= 5;
+            case "5-10": return minutes > 5 && minutes <= 10;
+            case "10-15": return minutes > 10 && minutes <= 15;
+            case "15-30": return minutes > 15 && minutes <= 30;
+            case "30+": return minutes > 30;
+            default: return true;
+          }
+        });
+      }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((survey) => {
-        if (statusFilter === "open") return !survey.isAnswered;
-        if (statusFilter === "answered") return survey.isAnswered;
-        return true;
-      });
-    }
+      if (statusFilter !== "all") {
+        filtered = filtered.filter((survey) => {
+          if (statusFilter === "open") return !survey.isAnswered;
+          if (statusFilter === "answered") return survey.isAnswered;
+          return true;
+        });
+      }
 
-    return filtered;
-  };
+      return filtered;
+    },
+    [searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
+  );
 
   const filteredFeatured = useMemo(
     () => filterSurveys(featuredSurveys),
-    [featuredSurveys, searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
+    [featuredSurveys, filterSurveys]
   );
 
   const filteredAvailable = useMemo(
     () => filterSurveys(availableSurveys),
-    [availableSurveys, searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
+    [availableSurveys, filterSurveys]
   );
 
   const handleSurveyAction = (survey: SurveyWithMetadata) => {
@@ -277,6 +296,41 @@ export default function ResearcherSurveys() {
     questionCountFilter !== "all" ||
     maxTimeFilter !== "all" ||
     statusFilter !== "all";
+
+  // Animate clear button when filters change
+  useEffect(() => {
+    clearButtonProgress.value = withSpring(hasActiveFilters ? 1 : 0, {
+      damping: 15,
+      stiffness: 200,
+      mass: 0.8,
+    });
+  }, [hasActiveFilters]);
+
+  const clearButtonAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      clearButtonProgress.value,
+      [0, 0.5, 1],
+      [0.6, 1.1, 1],
+      Extrapolation.CLAMP
+    );
+    const opacity = interpolate(
+      clearButtonProgress.value,
+      [0, 0.3, 1],
+      [0, 0.5, 1],
+      Extrapolation.CLAMP
+    );
+    const translateX = interpolate(
+      clearButtonProgress.value,
+      [0, 1],
+      [20, 0],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity,
+      transform: [{ scale }, { translateX }],
+    };
+  });
 
   const formatDuration = (ms: number): { value: string; label: string } => {
     const totalMinutes = ms / 60000;
@@ -331,6 +385,13 @@ export default function ResearcherSurveys() {
   return (
     <FadeInView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <View style={styles.headerTop}>
@@ -344,8 +405,9 @@ export default function ResearcherSurveys() {
 
           {/* Search Bar */}
           <View style={[styles.searchContainer, isSearchFocused && styles.searchContainerFocused]}>
-            <Ionicons name="search" size={18} color={Colors.text.tertiary} />
+            <Ionicons name="search" size={18} color={isSearchFocused ? Colors.primary.blue : Colors.text.tertiary} />
             <TextInput
+              ref={searchInputRef}
               style={styles.searchInput}
               placeholder="Search surveys..."
               value={searchQuery}
@@ -353,9 +415,18 @@ export default function ResearcherSurveys() {
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
               placeholderTextColor={Colors.text.tertiary}
+              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <TouchableOpacity 
+                onPress={() => {
+                  setSearchQuery("");
+                  searchInputRef.current?.focus();
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Ionicons name="close-circle" size={18} color={Colors.text.tertiary} />
               </TouchableOpacity>
             )}
@@ -366,6 +437,7 @@ export default function ResearcherSurveys() {
             <TouchableOpacity
               style={[styles.filterPill, questionCountFilter !== "all" && styles.filterPillActive]}
               onPress={() => {
+                Keyboard.dismiss();
                 setShowStatusDropdown(false);
                 setShowTimeDropdown(false);
                 setShowQuestionDropdown(!showQuestionDropdown);
@@ -389,6 +461,7 @@ export default function ResearcherSurveys() {
             <TouchableOpacity
               style={[styles.filterPill, maxTimeFilter !== "all" && styles.filterPillActive]}
               onPress={() => {
+                Keyboard.dismiss();
                 setShowStatusDropdown(false);
                 setShowQuestionDropdown(false);
                 setShowTimeDropdown(!showTimeDropdown);
@@ -412,6 +485,7 @@ export default function ResearcherSurveys() {
             <TouchableOpacity
               style={[styles.filterPill, statusFilter !== "all" && styles.filterPillActive]}
               onPress={() => {
+                Keyboard.dismiss();
                 setShowTimeDropdown(false);
                 setShowQuestionDropdown(false);
                 setShowStatusDropdown(!showStatusDropdown);
@@ -431,19 +505,25 @@ export default function ResearcherSurveys() {
                 color={statusFilter !== "all" ? Colors.semantic.success : Colors.text.tertiary}
               />
             </TouchableOpacity>
-
-            {hasActiveFilters && (
-              <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-                <Text style={styles.clearButtonText}>Clear</Text>
-              </TouchableOpacity>
-            )}
           </View>
+
+          {/* Clear Filters Button - Below filters */}
+          {hasActiveFilters && (
+            <Animated.View style={[styles.clearButtonRow, clearButtonAnimatedStyle]}>
+              <TouchableOpacity style={styles.clearButton} onPress={clearFilters} activeOpacity={0.7}>
+                <Ionicons name="close-circle" size={14} color={Colors.semantic.error} />
+                <Text style={styles.clearButtonText}>Clear All Filters</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </View>
 
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + Spacing.lg }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
         >
           {/* Filter Dropdowns */}
           <FilterDropdown
@@ -844,16 +924,25 @@ const styles = StyleSheet.create({
   filterPillTextActive: {
     color: Colors.text.primary,
   },
+  clearButtonRow: {
+    marginTop: Spacing.sm,
+    alignItems: "flex-start",
+  },
   clearButton: {
-    marginLeft: "auto",
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: `${Colors.semantic.error}12`,
+    paddingVertical: Spacing.xs + 2,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Spacing.button.borderRadiusPill,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: `${Colors.semantic.error}25`,
   },
   clearButtonText: {
-    fontFamily: Typography.fontFamily.medium,
-    fontSize: Typography.fontSize.captionSmall,
-    color: Colors.primary.blue,
-    textDecorationLine: "underline",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.semantic.error,
   },
   scrollView: {
     flex: 1,

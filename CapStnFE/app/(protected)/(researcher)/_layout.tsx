@@ -63,6 +63,41 @@ export default function ResearcherLayout() {
             presentation: "card",
           }}
         />
+        <Stack.Screen
+          name="all-surveys"
+          options={{
+            headerShown: false,
+            presentation: "card",
+          }}
+        />
+        <Stack.Screen
+          name="analysis-insights"
+          options={{
+            headerShown: false,
+            presentation: "card",
+          }}
+        />
+        <Stack.Screen
+          name="analysis-loading"
+          options={{
+            headerShown: false,
+            presentation: "card",
+          }}
+        />
+        <Stack.Screen
+          name="mass-analyses"
+          options={{
+            headerShown: false,
+            presentation: "card",
+          }}
+        />
+        <Stack.Screen
+          name="survey-analyses"
+          options={{
+            headerShown: false,
+            presentation: "card",
+          }}
+        />
       </Stack>
       <View style={styles.navContainer} pointerEvents="box-none">
         <GlobalBottomNav />

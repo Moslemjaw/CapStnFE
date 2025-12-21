@@ -4,7 +4,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   Dimensions,
   Image,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { Redirect, useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
@@ -161,15 +161,16 @@ export default function Index() {
       colors={["#EEF5FF", "#F9F6FE"]}
       style={styles.gradientContainer}
     >
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
+      extraHeight={120}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
         <View style={styles.contentContainer}>
           {/* Branding Section */}
           <View style={styles.brandingSection}>
@@ -320,8 +321,7 @@ export default function Index() {
             </View>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
     </LinearGradient>
     </SafeAreaView>
     </FadeInView>
@@ -389,17 +389,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 40,
     paddingVertical: 24,
-    backgroundColor: "rgba(238, 245, 255, 0.3)",
-    borderRadius: 16,
     marginHorizontal: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-  },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   icon: {
     marginBottom: 16,

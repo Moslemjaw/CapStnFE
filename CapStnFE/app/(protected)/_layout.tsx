@@ -12,9 +12,8 @@ export default function ProtectedLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="choose-path" />
+      <Stack.Screen name="tutorial" />
       <Stack.Screen name="(researcher)" />
-      <Stack.Screen name="(respondent)" />
-      {/* <Stack.Screen name="(tabs)" /> */}
     </Stack>
   );
 }

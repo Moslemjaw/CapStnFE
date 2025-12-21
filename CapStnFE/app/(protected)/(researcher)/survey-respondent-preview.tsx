@@ -115,6 +115,13 @@ export default function SurveyRespondentPreview() {
   return (
     <FadeInView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <View style={styles.headerTop}>
@@ -151,16 +158,11 @@ export default function SurveyRespondentPreview() {
                       style={styles.creatorImage}
                     />
                   ) : (
-                    <View style={styles.creatorAvatarPlaceholder}>
-                      <Text style={styles.creatorInitials}>
-                        {creator.name
-                          ?.split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()
-                          .slice(0, 2) || "U"}
-                      </Text>
-                    </View>
+                    <Image
+                      source={require("@/assets/logo.png")}
+                      style={styles.creatorImage}
+                      resizeMode="contain"
+                    />
                   )}
                 </View>
                 <View style={styles.creatorDetails}>

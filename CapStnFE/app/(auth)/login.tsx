@@ -4,7 +4,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   Dimensions,
   Image,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { Redirect, useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
@@ -165,15 +165,16 @@ export default function Login() {
         colors={[Colors.background.secondary, Colors.surface.purpleTint]}
         style={styles.gradientContainer}
       >
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
+          extraHeight={120}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
             <View style={styles.contentContainer}>
               {/* Branding Section */}
               <View style={styles.brandingSection}>
@@ -341,8 +342,7 @@ export default function Login() {
                 </View>
               </View>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -409,12 +409,9 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     alignItems: "center",
-    backgroundColor: Colors.background.primary,
-    borderRadius: Borders.radius.xl,
     paddingVertical: Spacing.xl,
     paddingHorizontal: Spacing.xxl,
     width: "100%",
-    ...Shadows.md,
   },
   featureIconContainer: {
     width: 56,
