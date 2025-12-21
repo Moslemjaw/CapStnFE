@@ -11,7 +11,7 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getSurveyById, deleteSurvey } from "@/api/surveys";
@@ -25,6 +25,7 @@ import { SurveyDetailsSkeleton } from "@/components/Skeleton";
 
 export default function SurveyDetails() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const bottomNavHeight = useBottomNavHeight();
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>();
   const [survey, setSurvey] = useState<Survey | null>(null);
@@ -156,15 +157,17 @@ export default function SurveyDetails() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Survey Details</Text>
+            <Text style={styles.headerSubtitle}>View and manage survey information</Text>
+          </View>
           <View style={styles.logoContainer}>
             <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
-          <Text style={styles.headerTitle}>Survey Details</Text>
-          <Text style={styles.headerSubtitle}>View and manage survey information</Text>
         </View>
       </View>
       <ScrollView
@@ -277,7 +280,7 @@ export default function SurveyDetails() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 24 }]}>
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.previewButton]}
@@ -309,11 +312,10 @@ export default function SurveyDetails() {
           {/* Fixed Header Section */}
           <View style={styles.modalFixedHeader}>
             <View style={styles.modalHeaderContent}>
-              <View style={styles.modalLogoContainer}>
-                <Image source={require("@/assets/title.png")} style={styles.modalTitleImage} resizeMode="contain" />
-              </View>
-              <View style={styles.modalHeaderTitleRow}>
-                <Text style={styles.modalHeaderTitle}>{survey?.title || "Survey"}</Text>
+              <View style={styles.modalHeaderTopRow}>
+                <View style={styles.modalLogoContainer}>
+                  <Image source={require("@/assets/title.png")} style={styles.modalTitleImage} resizeMode="contain" />
+                </View>
                 <TouchableOpacity
                   onPress={() => setShowPreviewModal(false)}
                   style={styles.modalCloseButton}
@@ -321,6 +323,7 @@ export default function SurveyDetails() {
                   <Ionicons name="close" size={24} color="#6B7280" />
                 </TouchableOpacity>
               </View>
+              <Text style={styles.modalHeaderTitle}>{survey?.title || "Survey"}</Text>
               <Text style={styles.modalHeaderSubtitle}>Survey preview</Text>
             </View>
           </View>
@@ -462,9 +465,24 @@ export default function SurveyDetails() {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              Response #{selectedResponse ? responses.findIndex((r) => r._id === selectedResponse._id) + 1 : ""}
-            </Text>
+            <View style={styles.responsePreviewMeta}>
+              {selectedResponse && (
+                <>
+                  <View style={styles.responsePreviewMetaItem}>
+                    <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+                    <Text style={styles.responsePreviewMetaText}>
+                      {formatDate(selectedResponse.submittedAt)}
+                    </Text>
+                  </View>
+                  <View style={styles.responsePreviewMetaItem}>
+                    <Ionicons name="time-outline" size={16} color="#6B7280" />
+                    <Text style={styles.responsePreviewMetaText}>
+                      {formatDuration(selectedResponse.durationMs)}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
             <TouchableOpacity
               onPress={() => {
                 setShowResponsePreviewModal(false);
@@ -481,22 +499,6 @@ export default function SurveyDetails() {
               style={styles.modalScrollView}
               contentContainerStyle={styles.modalScrollContent}
             >
-              <View style={styles.responsePreviewHeader}>
-                <View style={styles.responsePreviewMeta}>
-                  <View style={styles.responsePreviewMetaItem}>
-                    <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-                    <Text style={styles.responsePreviewMetaText}>
-                      {formatDate(selectedResponse.submittedAt)}
-                    </Text>
-                  </View>
-                  <View style={styles.responsePreviewMetaItem}>
-                    <Ionicons name="time-outline" size={16} color="#6B7280" />
-                    <Text style={styles.responsePreviewMetaText}>
-                      {formatDuration(selectedResponse.durationMs)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
 
               <View style={styles.previewQuestions}>
                 {questions.map((question, index) => {
@@ -668,8 +670,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     zIndex: 10,
     paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopWidth: 0,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     borderBottomWidth: 1,
@@ -684,25 +685,31 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   logoContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    paddingTop: 4,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    height: 32,
+    width: 106,
+    marginLeft: -6,
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
+    marginBottom: 4,
+    lineHeight: 40,
   },
   headerSubtitle: {
     fontSize: 16,
@@ -841,6 +848,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 16,
     flexWrap: "wrap",
+    flex: 1,
   },
   responsePreviewMetaItem: {
     flexDirection: "row",
@@ -969,19 +977,21 @@ const styles = StyleSheet.create({
     marginLeft: -8,
     marginTop: -4,
   },
-  modalHeaderTitleRow: {
+  modalHeaderTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 16,
   },
   modalHeaderTitle: {
     fontSize: 32,
     fontWeight: "700",
     color: "#222222",
+    marginBottom: 8,
   },
   modalCloseButton: {
-    padding: 4,
+    padding: 8,
+    marginRight: 0,
   },
   modalHeaderSubtitle: {
     fontSize: 16,
@@ -1132,11 +1142,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#111827",
-    marginBottom: 12,
+    marginBottom: 4,
     lineHeight: 24,
   },
   questionType: {
     marginBottom: 12,
+  },
+  previewQuestionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  previewQuestions: {
+    gap: 0,
   },
   questionTypeText: {
     fontSize: 12,
@@ -1232,6 +1261,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  closeButton: {
+    padding: 8,
+    marginLeft: 8,
   },
 });
 

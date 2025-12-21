@@ -13,11 +13,20 @@ import {
   Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState, useEffect } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { createSurvey, CreateSurveyData, getSurveyById, updateSurvey, unpublishSurvey } from "@/api/surveys";
+import {
+  createSurvey,
+  CreateSurveyData,
+  getSurveyById,
+  updateSurvey,
+  unpublishSurvey,
+} from "@/api/surveys";
 import {
   createQuestion,
   CreateQuestionData,
@@ -44,6 +53,7 @@ interface LocalQuestion {
 
 export default function CreateSurvey() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const bottomNavHeight = useBottomNavHeight();
   const { surveyId } = useLocalSearchParams<{ surveyId?: string }>();
   const [user, setUser] = useState<User | null>(null);
@@ -70,7 +80,7 @@ export default function CreateSurvey() {
 
   const loadSurveyForEdit = async () => {
     if (!surveyId) return;
-    
+
     setLoading(true);
     try {
       const [surveyData, questionsData] = await Promise.all([
@@ -84,7 +94,7 @@ export default function CreateSurvey() {
       // Populate form with survey data
       setTitle(surveyData.title);
       setDescription(surveyData.description || "");
-      
+
       // Convert API questions to LocalQuestion format
       const localQuestions: LocalQuestion[] = sortedQuestions.map((q) => ({
         text: q.text,
@@ -120,7 +130,6 @@ export default function CreateSurvey() {
     return questions.length;
   };
 
-
   const handleDeleteQuestion = (index: number) => {
     Alert.alert(
       "Delete Question",
@@ -144,14 +153,22 @@ export default function CreateSurvey() {
     setQuestions(updatedQuestions);
   };
 
-  const updateQuestionType = (index: number, type: "text" | "multiple_choice") => {
+  const updateQuestionType = (
+    index: number,
+    type: "text" | "multiple_choice"
+  ) => {
     const updatedQuestions = [...questions];
     const question = updatedQuestions[index];
     updatedQuestions[index] = {
       ...question,
       type,
       // Reset options if switching to text, ensure options exist if switching to choice
-      options: type === "text" ? undefined : (question.options && question.options.length >= 2 ? question.options : ["", ""]),
+      options:
+        type === "text"
+          ? undefined
+          : question.options && question.options.length >= 2
+          ? question.options
+          : ["", ""],
       // Reset digitsOnly when switching to choice
       digitsOnly: type === "text" ? question.digitsOnly : undefined,
     };
@@ -194,7 +211,11 @@ export default function CreateSurvey() {
     }
   };
 
-  const updateQuestionOption = (questionIndex: number, optionIndex: number, value: string) => {
+  const updateQuestionOption = (
+    questionIndex: number,
+    optionIndex: number,
+    value: string
+  ) => {
     const updatedQuestions = [...questions];
     const question = updatedQuestions[questionIndex];
     if (question.options) {
@@ -242,15 +263,15 @@ export default function CreateSurvey() {
           description: description.trim(),
           rewardPoints: calculateRewardPoints(),
         });
-        
+
         // Get existing questions and update/delete as needed
         const existingQuestions = await getQuestionsBySurveyId(surveyId);
-        
+
         // Delete all existing questions
         for (const q of existingQuestions) {
           await deleteQuestion(q._id);
         }
-        
+
         // Create updated questions
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
@@ -264,7 +285,7 @@ export default function CreateSurvey() {
           };
           await createQuestion(questionData);
         }
-        
+
         // Archive the survey
         await unpublishSurvey(surveyId);
         finalSurveyId = surveyId;
@@ -294,7 +315,7 @@ export default function CreateSurvey() {
           };
           await createQuestion(questionData);
         }
-        
+
         finalSurveyId = survey._id;
       }
 
@@ -312,7 +333,9 @@ export default function CreateSurvey() {
       console.error("Error archiving survey:", err);
       Alert.alert(
         "Error",
-        err.response?.data?.message || err.message || "Failed to archive survey. Please try again."
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to archive survey. Please try again."
       );
     } finally {
       setLoading(false);
@@ -340,15 +363,15 @@ export default function CreateSurvey() {
           description: description.trim(),
           rewardPoints: calculateRewardPoints(),
         });
-        
+
         // Get existing questions and update/delete as needed
         const existingQuestions = await getQuestionsBySurveyId(surveyId);
-        
+
         // Delete all existing questions
         for (const q of existingQuestions) {
           await deleteQuestion(q._id);
         }
-        
+
         // Create updated questions
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
@@ -362,7 +385,7 @@ export default function CreateSurvey() {
           };
           await createQuestion(questionData);
         }
-        
+
         finalSurveyId = surveyId;
       } else {
         // Create mode: Create new survey
@@ -390,7 +413,7 @@ export default function CreateSurvey() {
           };
           await createQuestion(questionData);
         }
-        
+
         finalSurveyId = survey._id;
       }
 
@@ -402,7 +425,9 @@ export default function CreateSurvey() {
       console.error("Error creating/updating survey for preview:", err);
       Alert.alert(
         "Error",
-        err.response?.data?.message || err.message || "Failed to create/update survey. Please try again."
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to create/update survey. Please try again."
       );
     } finally {
       setLoading(false);
@@ -410,15 +435,25 @@ export default function CreateSurvey() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>
+              {isEditMode ? "Edit Survey" : "Create Survey"}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              Build your survey with questions and options
+            </Text>
           </View>
-          <Text style={styles.headerTitle}>{isEditMode ? "Edit Survey" : "Create Survey"}</Text>
-          <Text style={styles.headerSubtitle}>Build your survey with questions and options</Text>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
       </View>
       <KeyboardAvoidingView
@@ -475,7 +510,8 @@ export default function CreateSurvey() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Questions</Text>
               <Text style={styles.questionCount}>
-                {questions.length} {questions.length === 1 ? "question" : "questions"}
+                {questions.length}{" "}
+                {questions.length === 1 ? "question" : "questions"}
               </Text>
             </View>
 
@@ -527,14 +563,16 @@ export default function CreateSurvey() {
                   <TouchableOpacity
                     style={[
                       styles.typeOption,
-                      question.type === "multiple_choice" && styles.typeOptionActive,
+                      question.type === "multiple_choice" &&
+                        styles.typeOptionActive,
                     ]}
                     onPress={() => updateQuestionType(index, "multiple_choice")}
                   >
                     <Text
                       style={[
                         styles.typeOptionText,
-                        question.type === "multiple_choice" && styles.typeOptionTextActive,
+                        question.type === "multiple_choice" &&
+                          styles.typeOptionTextActive,
                       ]}
                     >
                       Choice
@@ -547,18 +585,27 @@ export default function CreateSurvey() {
                   <>
                     {question.options?.map((option, optIndex) => (
                       <View key={optIndex} style={styles.optionRow}>
-                        <Ionicons name="ellipse" size={16} color="#8A4DE8" style={styles.optionDot} />
+                        <Ionicons
+                          name="ellipse"
+                          size={16}
+                          color="#8A4DE8"
+                          style={styles.optionDot}
+                        />
                         <TextInput
                           style={styles.optionInput}
                           placeholder={`Option ${optIndex + 1}`}
                           placeholderTextColor="#9CA3AF"
                           value={option}
-                          onChangeText={(text) => updateQuestionOption(index, optIndex, text)}
+                          onChangeText={(text) =>
+                            updateQuestionOption(index, optIndex, text)
+                          }
                         />
                         {question.options && question.options.length > 2 && (
                           <TouchableOpacity
                             style={styles.removeOptionButton}
-                            onPress={() => removeQuestionOption(index, optIndex)}
+                            onPress={() =>
+                              removeQuestionOption(index, optIndex)
+                            }
                           >
                             <Ionicons name="close" size={20} color="#6B7280" />
                           </TouchableOpacity>
@@ -573,7 +620,9 @@ export default function CreateSurvey() {
                       <Text style={styles.addOptionText}>Add Option</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.singleChoiceButton}>
-                      <Text style={styles.singleChoiceButtonText}>Single choice only</Text>
+                      <Text style={styles.singleChoiceButtonText}>
+                        Single choice only
+                      </Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -585,15 +634,18 @@ export default function CreateSurvey() {
                       styles.digitsOnlyButton,
                       question.digitsOnly && styles.digitsOnlyButtonActive,
                     ]}
-                    onPress={() => updateQuestionDigitsOnly(index, !question.digitsOnly)}
+                    onPress={() =>
+                      updateQuestionDigitsOnly(index, !question.digitsOnly)
+                    }
                   >
                     <Text
                       style={[
                         styles.digitsOnlyButtonText,
-                        question.digitsOnly && styles.digitsOnlyButtonTextActive,
+                        question.digitsOnly &&
+                          styles.digitsOnlyButtonTextActive,
                       ]}
                     >
-                      Digits only
+                      Numbers only
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -603,7 +655,9 @@ export default function CreateSurvey() {
                   <Text style={styles.requiredLabel}>Required</Text>
                   <Switch
                     value={question.isRequired}
-                    onValueChange={(value) => updateQuestionRequired(index, value)}
+                    onValueChange={(value) =>
+                      updateQuestionRequired(index, value)
+                    }
                     trackColor={{ false: "#D1D5DB", true: "#8A4DE8" }}
                     thumbColor="#FFFFFF"
                   />
@@ -614,7 +668,7 @@ export default function CreateSurvey() {
         </ScrollView>
 
         {/* Action Buttons */}
-        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
+        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 32 }]}>
           <TouchableOpacity
             style={styles.addQuestionButton}
             onPress={addNewQuestion}
@@ -671,7 +725,6 @@ export default function CreateSurvey() {
           </View>
         </View>
       </KeyboardAvoidingView>
-
     </SafeAreaView>
   );
 }
@@ -680,13 +733,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
+    overflow: "visible",
   },
   fixedHeader: {
     backgroundColor: "#FFFFFF",
     zIndex: 10,
     paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopWidth: 0,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     borderBottomWidth: 1,
@@ -701,25 +754,32 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerTextContainer: {
+    flex: 1,
+    paddingTop: 0,
   },
   logoContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    paddingTop: 4,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    height: 32,
+    width: 106,
+    marginLeft: -6,
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
+    marginBottom: 4,
+    lineHeight: 40,
   },
   headerSubtitle: {
     fontSize: 16,
@@ -981,6 +1041,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
+    overflow: "visible",
   },
   addQuestionButton: {
     borderRadius: 16,
@@ -1008,25 +1069,28 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
+    overflow: "visible",
   },
   previewButton: {
     flex: 1,
     borderRadius: 16,
     overflow: "hidden",
+    borderWidth: 0,
     shadowColor: "#A23DD8",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   previewButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     gap: 8,
+    borderRadius: 16,
   },
   previewButtonText: {
     fontSize: 16,
