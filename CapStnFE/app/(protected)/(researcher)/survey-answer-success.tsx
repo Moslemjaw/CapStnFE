@@ -119,12 +119,16 @@ export default function SurveyAnswerSuccess() {
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          <View style={styles.headerRow}>
+            <View style={styles.headerTextContainer}>
+              <View style={styles.logoContainer}>
+                <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+              </View>
+              <Text style={styles.headerTitle}>Success</Text>
+              <Text style={styles.headerSubtitle}>Survey completed successfully</Text>
+            </View>
+            <Image source={require("@/assets/logo.png")} style={styles.headerLogo} resizeMode="contain" />
           </View>
-          <Text style={styles.headerTitle}>Success</Text>
-          <Text style={styles.headerSubtitle}>Survey completed successfully</Text>
         </View>
       </View>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -137,7 +141,7 @@ export default function SurveyAnswerSuccess() {
               end={{ x: 1, y: 0 }}
               style={styles.iconGradient}
             >
-              <Ionicons name="checkmark" size={60} color="#FFFFFF" />
+              <Ionicons name="checkmark" size={40} color="#FFFFFF" />
             </LinearGradient>
           </View>
 
@@ -146,10 +150,7 @@ export default function SurveyAnswerSuccess() {
 
           {/* Thank You Message */}
           <Text style={styles.thankYouText}>
-            Thank you for sharing your insights.
-            {survey?.description
-              ? ` ${survey.description.slice(0, 50)}...`
-              : " Your response helps us understand better."}
+            Thank you for sharing your insights. Your response helps us understand better.
           </Text>
 
           {/* Points Earned Card */}
@@ -292,35 +293,47 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    padding: 16,
+    paddingBottom: 12,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-  },
-  titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#222222",
     marginBottom: 8,
   },
+  titleImage: {
+    height: 24,
+    width: 80,
+    marginLeft: -6,
+  },
+  headerLogo: {
+    width: 80,
+    height: 80,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 4,
+  },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#505050",
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 24,
+    padding: 16,
     alignItems: "center",
   },
   centerContainer: {
@@ -329,13 +342,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconContainer: {
-    marginBottom: 24,
-    marginTop: 16,
+    marginBottom: 12,
+    marginTop: 8,
   },
   iconGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#4A63D8",
@@ -345,25 +358,25 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: "center",
   },
   thankYouText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#505050",
     textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 24,
-    paddingHorizontal: 20,
+    marginBottom: 16,
+    lineHeight: 20,
+    paddingHorizontal: 16,
   },
   pointsCard: {
     width: "100%",
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -371,7 +384,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pointsCardGradient: {
-    padding: 24,
+    padding: 16,
     alignItems: "center",
   },
   coinsIconContainer: {
@@ -411,30 +424,30 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   pointsLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#FFFFFF",
-    marginTop: 12,
+    marginTop: 8,
     letterSpacing: 1,
   },
   pointsValue: {
-    fontSize: 48,
+    fontSize: 36,
     fontWeight: "700",
     color: "#FFFFFF",
-    marginTop: 8,
+    marginTop: 4,
   },
   pointsSubtext: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#FFFFFF",
     opacity: 0.9,
-    marginTop: 4,
+    marginTop: 2,
   },
   statsCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     width: "100%",
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     shadowColor: "#000",
@@ -447,18 +460,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   statsTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: "#222222",
   },
   statsItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: 12,
+    gap: 10,
   },
   statsLabel: {
     flex: 1,
@@ -483,33 +496,33 @@ const styles = StyleSheet.create({
   },
   greatJobCard: {
     backgroundColor: "#F3F0F7",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 14,
     width: "100%",
-    marginBottom: 24,
+    marginBottom: 16,
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 16,
+    gap: 12,
   },
   greatJobTextContainer: {
     flex: 1,
   },
   greatJobTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   greatJobText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#505050",
-    lineHeight: 20,
+    lineHeight: 18,
   },
   primaryButton: {
     width: "100%",
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: 10,
     shadowColor: "#4A63D8",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -520,11 +533,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 18,
+    paddingVertical: 14,
     gap: 8,
   },
   primaryButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
   },
@@ -536,13 +549,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 20,
-    paddingVertical: 18,
+    borderRadius: 16,
+    paddingVertical: 14,
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   secondaryButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     color: "#222222",
   },
