@@ -30,6 +30,7 @@ import { getResponsesBySurveyId } from "@/api/responses";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 interface SurveyWithMetadata extends Survey {
   responseCount: number;
@@ -373,6 +374,13 @@ export default function AllSurveys() {
   return (
     <FadeInView style={{ flex: 1 }}>
     <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={[Colors.background.primary, Colors.surface.blueTint, Colors.surface.purpleTint]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -938,8 +946,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   sightaiIcon: {
-    width: 22,
-    height: 22,
+    width: 36,
+    height: 36,
   },
   secondaryActions: {
     flexDirection: "row",

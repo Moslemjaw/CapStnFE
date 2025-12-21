@@ -5,38 +5,45 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Image,
 } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const TUTORIAL_SLIDES = [
   {
-    title: "Welcome to SIGHT",
-    description:
-      "Your platform for creating surveys and gathering meaningful insights.",
+    title: "Welcome to Sight",
+    description: "Your platform for creating surveys and gathering meaningful insights from data.",
     icon: "hand-left-outline" as const,
+    gradient: [Colors.surface.blueTint, Colors.background.secondary] as const,
+    iconColor: Colors.primary.blue,
   },
   {
     title: "Create Clean Surveys",
-    description:
-      "Design structured questions that lead to clear, meaningful results.",
+    description: "Design structured questions that lead to clear, actionable results.",
     icon: "document-text-outline" as const,
+    gradient: [Colors.surface.purpleTint, Colors.background.secondary] as const,
+    iconColor: Colors.primary.purple,
   },
   {
-    title: "Analyze Results",
-    description:
-      "Get instant insights from your survey responses with powerful analytics.",
-    icon: "analytics-outline" as const,
+    title: "AI-Powered Analysis",
+    description: "Get instant insights from your survey responses with SightAI analytics.",
+    icon: "sparkles-outline" as const,
+    gradient: [Colors.surface.pinkTint, Colors.background.secondary] as const,
+    iconColor: Colors.primary.pink,
   },
   {
-    title: "Get Started",
-    description: "Choose your path and start your journey with clarity.",
+    title: "Start Your Journey",
+    description: "Begin exploring, creating, and discovering insights today.",
     icon: "rocket-outline" as const,
+    gradient: [Colors.surface.tealTint, Colors.background.secondary] as const,
+    iconColor: Colors.accent.teal,
   },
 ];
 
@@ -70,17 +77,11 @@ export default function Tutorial() {
     };
   }, []);
 
-  // Handle scroll events to update current index
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / SCREEN_WIDTH);
-    if (
-      index !== currentSlideIndex &&
-      index >= 0 &&
-      index < TUTORIAL_SLIDES.length
-    ) {
+    if (index !== currentSlideIndex && index >= 0 && index < TUTORIAL_SLIDES.length) {
       setCurrentSlideIndex(index);
-      // Reset auto-slide timer when user manually swipes
       if (autoSlideTimerRef.current) {
         clearInterval(autoSlideTimerRef.current);
       }
@@ -101,88 +102,107 @@ export default function Tutorial() {
     router.replace("/(protected)/(researcher)/(tabs)/" as any);
   };
 
+  const handleNext = () => {
+    if (currentSlideIndex < TUTORIAL_SLIDES.length - 1) {
+      const nextIndex = currentSlideIndex + 1;
+      scrollViewRef.current?.scrollTo({
+        x: nextIndex * SCREEN_WIDTH,
+        animated: true,
+      });
+      setCurrentSlideIndex(nextIndex);
+    }
+  };
+
+  const handleSkip = () => {
+    router.replace("/(protected)/(researcher)/(tabs)/" as any);
+  };
+
+  const isLastSlide = currentSlideIndex === TUTORIAL_SLIDES.length - 1;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient
-        colors={["#EEF5FF", "#F9F6FE"]}
+        colors={TUTORIAL_SLIDES[currentSlideIndex].gradient}
         style={styles.gradientContainer}
       >
-        <View style={styles.contentContainer}>
-          {/* Carousel Section */}
-          <View style={styles.carouselSection}>
-            <ScrollView
-              ref={scrollViewRef}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              decelerationRate="fast"
-              style={styles.carouselScrollView}
-              contentContainerStyle={styles.carouselContent}
-            >
-              {TUTORIAL_SLIDES.map((slide, index) => (
-                <View key={index} style={styles.slideWrapper}>
-                  <View style={styles.slide}>
-                    {/* Icon Container */}
-                    <View style={styles.iconContainer}>
-                      <View style={styles.iconCard}>
-                        <Ionicons name={slide.icon} size={48} color="#4A63D8" />
-                      </View>
-                    </View>
+        {/* Skip Button */}
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
 
-                    {/* Title */}
-                    <Text style={styles.slideTitle}>{slide.title}</Text>
+        {/* Logo */}
+        <View style={styles.logoSection}>
+          <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
+        </View>
 
-                    {/* Description */}
-                    <Text style={styles.slideDescription}>
-                      {slide.description}
-                    </Text>
+        {/* Carousel */}
+        <View style={styles.carouselSection}>
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            style={styles.carouselScrollView}
+            contentContainerStyle={styles.carouselContent}
+          >
+            {TUTORIAL_SLIDES.map((slide, index) => (
+              <View key={index} style={styles.slideWrapper}>
+                <View style={styles.slide}>
+                  {/* Icon */}
+                  <View style={[styles.iconCard, { backgroundColor: Colors.background.primary }]}>
+                    <Ionicons name={slide.icon} size={48} color={slide.iconColor} />
                   </View>
-                </View>
-              ))}
-            </ScrollView>
 
-            {/* Carousel Indicators */}
-            <View style={styles.indicatorsContainer}>
-              {TUTORIAL_SLIDES.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicator,
-                    index === currentSlideIndex && styles.indicatorActive,
-                  ]}
-                >
-                  {index === currentSlideIndex && (
-                    <LinearGradient
-                      colors={["#5FA9F5", "#4A63D8"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.indicatorGradient}
-                    />
-                  )}
-                </View>
-              ))}
-            </View>
+                  {/* Title */}
+                  <Text style={styles.slideTitle}>{slide.title}</Text>
 
-            {/* Get Started Button */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                onPress={handleGetStarted}
-                activeOpacity={0.8}
-                style={styles.getStartedButton}
-              >
-                <LinearGradient
-                  colors={["#5FA9F5", "#4A63D8"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.buttonGradient}
-                >
-                  <Text style={styles.buttonText}>Get Started</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
+                  {/* Description */}
+                  <Text style={styles.slideDescription}>{slide.description}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Indicators */}
+          <View style={styles.indicatorsContainer}>
+            {TUTORIAL_SLIDES.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.indicator,
+                  index === currentSlideIndex && styles.indicatorActive,
+                  index === currentSlideIndex && { backgroundColor: TUTORIAL_SLIDES[index].iconColor },
+                ]}
+              />
+            ))}
           </View>
+        </View>
+
+        {/* Button Section */}
+        <View style={styles.buttonContainer}>
+          {isLastSlide ? (
+            <TouchableOpacity onPress={handleGetStarted} activeOpacity={0.8} style={styles.buttonWrapper}>
+              <LinearGradient
+                colors={[Colors.accent.sky, Colors.primary.blue]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.primaryButton}
+              >
+                <Text style={styles.primaryButtonText}>Get Started</Text>
+                <Ionicons name="arrow-forward" size={20} color={Colors.text.inverse} />
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleNext} activeOpacity={0.8} style={styles.buttonWrapper}>
+              <View style={styles.nextButton}>
+                <Text style={styles.nextButtonText}>Next</Text>
+                <Ionicons name="arrow-forward" size={20} color={Colors.primary.blue} />
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
       </LinearGradient>
     </SafeAreaView>
@@ -196,18 +216,36 @@ const styles = StyleSheet.create({
   gradientContainer: {
     flex: 1,
   },
-  contentContainer: {
-    flex: 1,
+  skipButton: {
+    position: "absolute",
+    top: Spacing.xl,
+    right: Spacing.page.paddingHorizontal,
+    zIndex: 10,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+  },
+  skipText: {
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
+    fontWeight: "500",
+  },
+  logoSection: {
+    alignItems: "center",
+    paddingTop: Spacing.huge,
+    marginBottom: Spacing.xl,
+  },
+  logo: {
+    width: 100,
+    height: 100,
   },
   carouselSection: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
   },
   carouselScrollView: {
     width: SCREEN_WIDTH,
-    flex: 1,
+    flexGrow: 0,
   },
   carouselContent: {
     alignItems: "center",
@@ -216,98 +254,85 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
   },
   slide: {
     alignItems: "center",
     justifyContent: "center",
-    flex: 1,
-    paddingTop: 60,
-  },
-  iconContainer: {
-    marginBottom: 48,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
   },
   iconCard: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-    backgroundColor: "rgba(238, 245, 255, 0.3)",
+    width: 100,
+    height: 100,
+    borderRadius: Borders.radius.xl,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: Spacing.xxl,
+    ...Shadows.md,
   },
   slideTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#111827",
+    ...Typography.styles.h1,
+    color: Colors.text.primary,
     textAlign: "center",
-    marginBottom: 16,
-    paddingHorizontal: 20,
+    marginBottom: Spacing.md,
   },
   slideDescription: {
-    fontSize: 16,
-    color: "#6B7280",
+    ...Typography.styles.bodyLarge,
+    color: Colors.text.secondary,
     textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: 40,
+    lineHeight: 26,
+    maxWidth: 300,
   },
   indicatorsContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
-    marginTop: 40,
-    marginBottom: 24,
+    gap: Spacing.xs,
+    marginTop: Spacing.xxl,
   },
   indicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#C8C8C8",
-    borderWidth: 0,
+    backgroundColor: Colors.border.default,
   },
   indicatorActive: {
-    borderWidth: 0,
-    width: 24,
-  },
-  indicatorGradient: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 4,
+    width: 28,
   },
   buttonContainer: {
-    width: "100%",
-    paddingHorizontal: 24,
-    marginTop: 20,
-    marginBottom: 40,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.xxxl,
+    paddingTop: Spacing.xl,
   },
-  getStartedButton: {
-    borderRadius: 16,
+  buttonWrapper: {
+    borderRadius: Borders.radius.lg,
     overflow: "hidden",
-    shadowColor: "#4A63D8",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    ...Shadows.primary,
   },
-  buttonGradient: {
-    paddingVertical: 16,
+  primaryButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: Spacing.md + 4,
+    gap: Spacing.xs,
   },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
+  primaryButtonText: {
+    ...Typography.styles.buttonLarge,
+    color: Colors.text.inverse,
+  },
+  nextButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md + 4,
+    gap: Spacing.xs,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.lg,
+    borderWidth: 2,
+    borderColor: Colors.primary.blue,
+  },
+  nextButtonText: {
+    ...Typography.styles.buttonLarge,
+    color: Colors.primary.blue,
   },
 });

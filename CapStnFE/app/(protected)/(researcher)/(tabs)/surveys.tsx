@@ -5,12 +5,20 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
   Modal,
   Pressable,
   Image,
+  Keyboard,
 } from "react-native";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  interpolate,
+  Extrapolation,
+} from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -24,6 +32,7 @@ import { getResponsesBySurveyId, getResponsesByUserId } from "@/api/responses";
 import { getUser } from "@/api/storage";
 import { SurveyWithMetadata } from "@/types/Survey";
 import User from "@/types/User";
+import { Colors, Typography, Spacing, Shadows } from "@/constants/design";
 
 type QuestionCountFilter = "all" | "1-5" | "6-10" | "11-15" | "16+";
 type MaxTimeFilter = "all" | "1-5" | "5-10" | "10-15" | "15-30" | "30+";
@@ -31,22 +40,17 @@ type StatusFilter = "all" | "open" | "answered";
 
 interface UserStats {
   surveysAnswered: number;
-  totalTimeSpent: number; // in milliseconds
+  totalTimeSpent: number;
 }
 
 export default function ResearcherSurveys() {
   const router = useRouter();
   const bottomNavHeight = useBottomNavHeight();
   const insets = useSafeAreaInsets();
-  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>(
-    []
-  );
-  const [availableSurveys, setAvailableSurveys] = useState<
-    SurveyWithMetadata[]
-  >([]);
+  const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>([]);
+  const [availableSurveys, setAvailableSurveys] = useState<SurveyWithMetadata[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [questionCountFilter, setQuestionCountFilter] =
-    useState<QuestionCountFilter>("all");
+  const [questionCountFilter, setQuestionCountFilter] = useState<QuestionCountFilter>("all");
   const [maxTimeFilter, setMaxTimeFilter] = useState<MaxTimeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(true);
@@ -59,8 +63,14 @@ export default function ResearcherSurveys() {
   const [showQuestionDropdown, setShowQuestionDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Load user on mount
+  // Search input ref
+  const searchInputRef = useRef<TextInput>(null);
+
+  // Clear button animation
+  const clearButtonProgress = useSharedValue(0);
+
   useEffect(() => {
     const loadUser = async () => {
       const userData = await getUser();
@@ -69,7 +79,6 @@ export default function ResearcherSurveys() {
     loadUser();
   }, []);
 
-  // Load surveys and stats when user is available
   useEffect(() => {
     if (user) {
       loadSurveys();
@@ -82,14 +91,10 @@ export default function ResearcherSurveys() {
     try {
       const responses = await getResponsesByUserId(user._id);
       const uniqueSurveys = new Set(responses.map((r) => r.surveyId));
-      const totalTimeMs = responses.reduce(
-        (sum, r) => sum + (r.durationMs || 0),
-        0
-      );
-
+      const totalTimeMs = responses.reduce((sum, r) => sum + (r.durationMs || 0), 0);
       setUserStats({
         surveysAnswered: uniqueSurveys.size,
-        totalTimeSpent: totalTimeMs, // Store in milliseconds
+        totalTimeSpent: totalTimeMs,
       });
     } catch (err) {
       console.error("Error loading user stats:", err);
@@ -108,12 +113,8 @@ export default function ResearcherSurveys() {
           console.error("Error fetching user responses:", err);
         }
       }
-
       const featured = await loadFeaturedSurveys(userResponses);
-      await loadAvailableSurveys(
-        featured.map((s) => s._id),
-        userResponses
-      );
+      await loadAvailableSurveys(featured.map((s) => s._id), userResponses);
     } catch (err: any) {
       console.error("Error loading surveys:", err);
       setError(err.message || "Failed to load surveys");
@@ -122,9 +123,7 @@ export default function ResearcherSurveys() {
     }
   };
 
-  const loadFeaturedSurveys = async (
-    userResponses: any[] = []
-  ): Promise<SurveyWithMetadata[]> => {
+  const loadFeaturedSurveys = async (userResponses: any[] = []): Promise<SurveyWithMetadata[]> => {
     const publishedSurveys = await getPublishedSurveys();
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -139,11 +138,7 @@ export default function ResearcherSurveys() {
             const submittedDate = new Date(response.submittedAt);
             return submittedDate >= oneWeekAgo;
           });
-
-          return {
-            ...survey,
-            responseCount: responsesThisWeek.length,
-          };
+          return { ...survey, responseCount: responsesThisWeek.length };
         } catch (err) {
           return { ...survey, responseCount: 0 };
         }
@@ -158,18 +153,10 @@ export default function ResearcherSurveys() {
       topSurveys.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
-          return {
-            ...survey,
-            questionCount: questions.length,
-            isAnswered,
-          };
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          return { ...survey, questionCount: questions.length, isAnswered };
         } catch (err) {
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return { ...survey, questionCount: 0, isAnswered };
         }
       })
@@ -179,12 +166,8 @@ export default function ResearcherSurveys() {
     return surveysWithMetadata;
   };
 
-  const loadAvailableSurveys = async (
-    featuredIds: string[] = [],
-    userResponses: any[] = []
-  ) => {
+  const loadAvailableSurveys = async (featuredIds: string[] = [], userResponses: any[] = []) => {
     if (!user?._id) return;
-
     const publishedSurveys = await getPublishedSurveys();
     const available = publishedSurveys.filter(
       (survey) => survey.creatorId !== user._id && !featuredIds.includes(survey._id)
@@ -194,18 +177,10 @@ export default function ResearcherSurveys() {
       available.map(async (survey) => {
         try {
           const questions = await getQuestionsBySurveyId(survey._id);
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
-          return {
-            ...survey,
-            questionCount: questions.length,
-            isAnswered,
-          };
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
+          return { ...survey, questionCount: questions.length, isAnswered };
         } catch (err) {
-          const isAnswered = userResponses.some(
-            (response) => response.surveyId === survey._id
-          );
+          const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
           return { ...survey, questionCount: 0, isAnswered };
         }
       })
@@ -232,100 +207,76 @@ export default function ResearcherSurveys() {
     }
   }, [featuredSurveys.length, user?._id]);
 
-  const filterSurveys = (surveys: SurveyWithMetadata[]) => {
-    let filtered = [...surveys];
+  const filterSurveys = useCallback(
+    (surveys: SurveyWithMetadata[]) => {
+      let filtered = [...surveys];
+      const query = searchQuery.trim().toLowerCase();
 
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(
-        (survey) =>
-          survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (survey.description &&
-            survey.description
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase()))
-      );
-    }
+      if (query) {
+        filtered = filtered.filter(
+          (survey) =>
+            survey.title.toLowerCase().includes(query) ||
+            (survey.description && survey.description.toLowerCase().includes(query))
+        );
+      }
 
-    if (questionCountFilter !== "all") {
-      filtered = filtered.filter((survey) => {
-        const count = survey.questionCount || 0;
-        switch (questionCountFilter) {
-          case "1-5":
-            return count >= 1 && count <= 5;
-          case "6-10":
-            return count >= 6 && count <= 10;
-          case "11-15":
-            return count >= 11 && count <= 15;
-          case "16+":
-            return count >= 16;
-          default:
-            return true;
-        }
-      });
-    }
+      if (questionCountFilter !== "all") {
+        filtered = filtered.filter((survey) => {
+          const count = survey.questionCount || 0;
+          switch (questionCountFilter) {
+            case "1-5": return count >= 1 && count <= 5;
+            case "6-10": return count >= 6 && count <= 10;
+            case "11-15": return count >= 11 && count <= 15;
+            case "16+": return count >= 16;
+            default: return true;
+          }
+        });
+      }
 
-    if (maxTimeFilter !== "all") {
-      filtered = filtered.filter((survey) => {
-        const minutes = survey.estimatedMinutes;
-        switch (maxTimeFilter) {
-          case "1-5":
-            return minutes >= 1 && minutes <= 5;
-          case "5-10":
-            return minutes > 5 && minutes <= 10;
-          case "10-15":
-            return minutes > 10 && minutes <= 15;
-          case "15-30":
-            return minutes > 15 && minutes <= 30;
-          case "30+":
-            return minutes > 30;
-          default:
-            return true;
-        }
-      });
-    }
+      if (maxTimeFilter !== "all") {
+        filtered = filtered.filter((survey) => {
+          const minutes = survey.estimatedMinutes;
+          switch (maxTimeFilter) {
+            case "1-5": return minutes >= 1 && minutes <= 5;
+            case "5-10": return minutes > 5 && minutes <= 10;
+            case "10-15": return minutes > 10 && minutes <= 15;
+            case "15-30": return minutes > 15 && minutes <= 30;
+            case "30+": return minutes > 30;
+            default: return true;
+          }
+        });
+      }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((survey) => {
-        if (statusFilter === "open") return !survey.isAnswered;
-        if (statusFilter === "answered") return survey.isAnswered;
-        return true;
-      });
-    }
+      if (statusFilter !== "all") {
+        filtered = filtered.filter((survey) => {
+          if (statusFilter === "open") return !survey.isAnswered;
+          if (statusFilter === "answered") return survey.isAnswered;
+          return true;
+        });
+      }
 
-    return filtered;
-  };
+      return filtered;
+    },
+    [searchQuery, questionCountFilter, maxTimeFilter, statusFilter]
+  );
 
   const filteredFeatured = useMemo(
     () => filterSurveys(featuredSurveys),
-    [
-      featuredSurveys,
-      searchQuery,
-      questionCountFilter,
-      maxTimeFilter,
-      statusFilter,
-    ]
+    [featuredSurveys, filterSurveys]
   );
 
   const filteredAvailable = useMemo(
     () => filterSurveys(availableSurveys),
-    [
-      availableSurveys,
-      searchQuery,
-      questionCountFilter,
-      maxTimeFilter,
-      statusFilter,
-    ]
+    [availableSurveys, filterSurveys]
   );
 
   const handleSurveyAction = (survey: SurveyWithMetadata) => {
-    // If user has already answered, go directly to view page showing their answers
     if (survey.isAnswered) {
       router.push({
         pathname: "/(protected)/(researcher)/survey-view",
         params: { surveyId: survey._id },
       } as any);
     } else {
-      // Otherwise, go to preview page
       router.push({
         pathname: "/(protected)/(researcher)/survey-respondent-preview",
         params: { surveyId: survey._id },
@@ -346,667 +297,552 @@ export default function ResearcherSurveys() {
     maxTimeFilter !== "all" ||
     statusFilter !== "all";
 
-  // Format duration: show minutes if < 60 min, hours if >= 60 min (with 2 decimals)
+  // Animate clear button when filters change
+  useEffect(() => {
+    clearButtonProgress.value = withSpring(hasActiveFilters ? 1 : 0, {
+      damping: 15,
+      stiffness: 200,
+      mass: 0.8,
+    });
+  }, [hasActiveFilters]);
+
+  const clearButtonAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      clearButtonProgress.value,
+      [0, 0.5, 1],
+      [0.6, 1.1, 1],
+      Extrapolation.CLAMP
+    );
+    const opacity = interpolate(
+      clearButtonProgress.value,
+      [0, 0.3, 1],
+      [0, 0.5, 1],
+      Extrapolation.CLAMP
+    );
+    const translateX = interpolate(
+      clearButtonProgress.value,
+      [0, 1],
+      [20, 0],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity,
+      transform: [{ scale }, { translateX }],
+    };
+  });
+
   const formatDuration = (ms: number): { value: string; label: string } => {
-    const totalMinutes = ms / 60000; // Convert milliseconds to minutes
+    const totalMinutes = ms / 60000;
     if (totalMinutes < 60) {
-      return {
-        value: totalMinutes.toFixed(2),
-        label: "Minutes",
-      };
+      return { value: Math.round(totalMinutes).toString(), label: "min" };
     } else {
       const hours = totalMinutes / 60;
-      return {
-        value: hours.toFixed(2),
-        label: "Hours",
-      };
+      return { value: hours.toFixed(1), label: "hrs" };
     }
   };
 
   const getQuestionLabel = (value: QuestionCountFilter) => {
     switch (value) {
-      case "all":
-        return "Questions";
-      case "1-5":
-        return "1-5 Q's";
-      case "6-10":
-        return "6-10 Q's";
-      case "11-15":
-        return "11-15 Q's";
-      case "16+":
-        return "16+ Q's";
-      default:
-        return "Questions";
+      case "all": return "Questions";
+      case "1-5": return "1-5";
+      case "6-10": return "6-10";
+      case "11-15": return "11-15";
+      case "16+": return "16+";
+      default: return "Questions";
     }
   };
 
   const getTimeLabel = (value: MaxTimeFilter) => {
     switch (value) {
-      case "all":
-        return "Duration";
-      case "1-5":
-        return "1-5 min";
-      case "5-10":
-        return "5-10 min";
-      case "10-15":
-        return "10-15 min";
-      case "15-30":
-        return "15-30 min";
-      case "30+":
-        return "30+ min";
-      default:
-        return "Duration";
+      case "all": return "Duration";
+      case "1-5": return "1-5 min";
+      case "5-10": return "5-10 min";
+      case "10-15": return "10-15 min";
+      case "15-30": return "15-30 min";
+      case "30+": return "30+ min";
+      default: return "Duration";
     }
   };
 
   const getStatusLabel = (value: StatusFilter) => {
     switch (value) {
-      case "all":
-        return "Status";
-      case "open":
-        return "Open";
-      case "answered":
-        return "Answered";
-      default:
-        return "Status";
+      case "all": return "Status";
+      case "open": return "Open";
+      case "answered": return "Answered";
+      default: return "Status";
     }
   };
 
-  const maxTimeOptions: MaxTimeFilter[] = [
-    "all",
-    "1-5",
-    "5-10",
-    "10-15",
-    "15-30",
-    "30+",
-  ];
-  const questionOptions: QuestionCountFilter[] = [
-    "all",
-    "1-5",
-    "6-10",
-    "11-15",
-    "16+",
-  ];
+  const maxTimeOptions: MaxTimeFilter[] = ["all", "1-5", "5-10", "10-15", "15-30", "30+"];
+  const questionOptions: QuestionCountFilter[] = ["all", "1-5", "6-10", "11-15", "16+"];
   const statusOptions: StatusFilter[] = ["all", "open", "answered"];
+
+  if (loading) {
+    return <SurveysSkeleton />;
+  }
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Fixed Header Section */}
-      <View style={styles.fixedHeader}>
+      <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <Text style={styles.title}>Explore Surveys</Text>
-          <View style={styles.logoContainer}>
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+          <View style={styles.headerTop}>
+            <Text style={styles.headerTitle}>Surveys</Text>
             <Image
               source={require("@/assets/title.png")}
               style={styles.titleImage}
               resizeMode="contain"
             />
           </View>
-        </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color="#505050"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
-          />
-        </View>
-
-        {/* Filters Section */}
-        <View style={styles.filtersSection}>
-          {hasActiveFilters && (
-            <View style={styles.filtersHeader}>
-              <TouchableOpacity onPress={clearFilters}>
-                <Text style={styles.clearAllText}>Clear All</Text>
+          {/* Search Bar */}
+          <View style={[styles.searchContainer, isSearchFocused && styles.searchContainerFocused]}>
+            <Ionicons name="search" size={18} color={isSearchFocused ? Colors.primary.blue : Colors.text.tertiary} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchInput}
+              placeholder="Search surveys..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              placeholderTextColor={Colors.text.tertiary}
+              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity 
+                onPress={() => {
+                  setSearchQuery("");
+                  searchInputRef.current?.focus();
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close-circle" size={18} color={Colors.text.tertiary} />
               </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
+
+          {/* Filter Pills */}
           <View style={styles.filtersRow}>
             <TouchableOpacity
-              style={[
-                styles.filterButton,
-                questionCountFilter !== "all" && styles.filterButtonActive,
-              ]}
+              style={[styles.filterPill, questionCountFilter !== "all" && styles.filterPillActive]}
               onPress={() => {
+                Keyboard.dismiss();
                 setShowStatusDropdown(false);
                 setShowTimeDropdown(false);
                 setShowQuestionDropdown(!showQuestionDropdown);
               }}
             >
-              <View style={styles.filterButtonContent}>
-                <Ionicons
-                  name="help-circle-outline"
-                  size={16}
-                  color={questionCountFilter !== "all" ? "#4A63D8" : "#6B7280"}
-                />
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    questionCountFilter !== "all" &&
-                      styles.filterButtonTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {getQuestionLabel(questionCountFilter)}
-                </Text>
-              </View>
+              <Ionicons
+                name="help-circle-outline"
+                size={16}
+                color={questionCountFilter !== "all" ? Colors.primary.blue : Colors.text.secondary}
+              />
+              <Text style={[styles.filterPillText, questionCountFilter !== "all" && styles.filterPillTextActive]}>
+                {getQuestionLabel(questionCountFilter)}
+              </Text>
               <Ionicons
                 name="chevron-down"
                 size={14}
-                color={questionCountFilter !== "all" ? "#4A63D8" : "#9CA3AF"}
+                color={questionCountFilter !== "all" ? Colors.primary.blue : Colors.text.tertiary}
               />
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={[
-                styles.filterButton,
-                maxTimeFilter !== "all" && styles.filterButtonActive,
-              ]}
+              style={[styles.filterPill, maxTimeFilter !== "all" && styles.filterPillActive]}
               onPress={() => {
+                Keyboard.dismiss();
                 setShowStatusDropdown(false);
                 setShowQuestionDropdown(false);
                 setShowTimeDropdown(!showTimeDropdown);
               }}
             >
-              <View style={styles.filterButtonContent}>
-                <Ionicons
-                  name="time-outline"
-                  size={16}
-                  color={maxTimeFilter !== "all" ? "#8A4DE8" : "#6B7280"}
-                />
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    maxTimeFilter !== "all" && styles.filterButtonTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {getTimeLabel(maxTimeFilter)}
-                </Text>
-              </View>
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={maxTimeFilter !== "all" ? Colors.primary.purple : Colors.text.secondary}
+              />
+              <Text style={[styles.filterPillText, maxTimeFilter !== "all" && styles.filterPillTextActive]}>
+                {getTimeLabel(maxTimeFilter)}
+              </Text>
               <Ionicons
                 name="chevron-down"
                 size={14}
-                color={maxTimeFilter !== "all" ? "#8A4DE8" : "#9CA3AF"}
+                color={maxTimeFilter !== "all" ? Colors.primary.purple : Colors.text.tertiary}
               />
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={[
-                styles.filterButton,
-                statusFilter !== "all" && styles.filterButtonActive,
-              ]}
+              style={[styles.filterPill, statusFilter !== "all" && styles.filterPillActive]}
               onPress={() => {
+                Keyboard.dismiss();
                 setShowTimeDropdown(false);
                 setShowQuestionDropdown(false);
                 setShowStatusDropdown(!showStatusDropdown);
               }}
             >
-              <View style={styles.filterButtonContent}>
-                <Ionicons
-                  name={
-                    statusFilter === "answered"
-                      ? "checkmark-circle-outline"
-                      : "filter-outline"
-                  }
-                  size={16}
-                  color={statusFilter !== "all" ? "#10B981" : "#6B7280"}
-                />
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    statusFilter !== "all" && styles.filterButtonTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {getStatusLabel(statusFilter)}
-                </Text>
-              </View>
+              <Ionicons
+                name={statusFilter === "answered" ? "checkmark-circle" : "funnel-outline"}
+                size={16}
+                color={statusFilter !== "all" ? Colors.semantic.success : Colors.text.secondary}
+              />
+              <Text style={[styles.filterPillText, statusFilter !== "all" && styles.filterPillTextActive]}>
+                {getStatusLabel(statusFilter)}
+              </Text>
               <Ionicons
                 name="chevron-down"
                 size={14}
-                color={statusFilter !== "all" ? "#10B981" : "#9CA3AF"}
+                color={statusFilter !== "all" ? Colors.semantic.success : Colors.text.tertiary}
               />
             </TouchableOpacity>
           </View>
+
+          {/* Clear Filters Button - Below filters */}
+          {hasActiveFilters && (
+            <Animated.View style={[styles.clearButtonRow, clearButtonAnimatedStyle]}>
+              <TouchableOpacity style={styles.clearButton} onPress={clearFilters} activeOpacity={0.7}>
+                <Ionicons name="close-circle" size={14} color={Colors.semantic.error} />
+                <Text style={styles.clearButtonText}>Clear All Filters</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: bottomNavHeight + 4 },
-        ]}
-      >
-        {/* Status Dropdown Modal */}
-        <Modal
-          visible={showStatusDropdown}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowStatusDropdown(false)}
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + Spacing.lg }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
         >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setShowStatusDropdown(false)}
-          >
-            <View style={styles.dropdownMenu}>
-              <View style={styles.dropdownHeader}>
-                <Ionicons name="filter-outline" size={18} color="#10B981" />
-                <Text style={styles.dropdownHeaderText}>Filter by Status</Text>
-              </View>
-              {statusOptions.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.dropdownItem,
-                    statusFilter === option && styles.dropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setStatusFilter(option);
-                    setShowStatusDropdown(false);
-                  }}
-                >
-                  <View style={styles.dropdownItemContent}>
-                    <Ionicons
-                      name={
-                        option === "answered"
-                          ? "checkmark-circle"
-                          : option === "open"
-                          ? "ellipse-outline"
-                          : "apps-outline"
-                      }
-                      size={18}
-                      color={statusFilter === option ? "#10B981" : "#6B7280"}
-                    />
-                    <Text
-                      style={[
-                        styles.dropdownItemText,
-                        statusFilter === option &&
-                          styles.dropdownItemTextActive,
-                      ]}
-                    >
-                      {option === "all"
-                        ? "All Surveys"
-                        : option === "open"
-                        ? "Not Answered"
-                        : "Already Answered"}
-                    </Text>
-                  </View>
-                  {statusFilter === option && (
-                    <Ionicons name="checkmark" size={20} color="#10B981" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
+          {/* Filter Dropdowns */}
+          <FilterDropdown
+            visible={showStatusDropdown}
+            onClose={() => setShowStatusDropdown(false)}
+            title="Filter by Status"
+            icon="funnel-outline"
+            iconColor={Colors.semantic.success}
+            options={statusOptions.map((option) => ({
+              value: option,
+              label: option === "all" ? "All Surveys" : option === "open" ? "Not Answered" : "Answered",
+              icon: option === "answered" ? "checkmark-circle" : option === "open" ? "ellipse-outline" : "apps-outline",
+            }))}
+            selectedValue={statusFilter}
+            onSelect={(value) => {
+              setStatusFilter(value as StatusFilter);
+              setShowStatusDropdown(false);
+            }}
+            accentColor={Colors.semantic.success}
+          />
 
-        {/* Time Dropdown Modal */}
-        <Modal
-          visible={showTimeDropdown}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowTimeDropdown(false)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setShowTimeDropdown(false)}
-          >
-            <View style={styles.dropdownMenu}>
-              <View style={styles.dropdownHeader}>
-                <Ionicons name="time-outline" size={18} color="#8A4DE8" />
-                <Text style={styles.dropdownHeaderText}>
-                  Filter by Duration
-                </Text>
-              </View>
-              {maxTimeOptions.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.dropdownItem,
-                    maxTimeFilter === option && styles.dropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setMaxTimeFilter(option);
-                    setShowTimeDropdown(false);
-                  }}
-                >
-                  <View style={styles.dropdownItemContent}>
-                    <Ionicons
-                      name="timer-outline"
-                      size={18}
-                      color={maxTimeFilter === option ? "#8A4DE8" : "#6B7280"}
-                    />
-                    <Text
-                      style={[
-                        styles.dropdownItemText,
-                        maxTimeFilter === option &&
-                          styles.dropdownItemTextActive,
-                      ]}
-                    >
-                      {option === "all" ? "Any Duration" : `${option} minutes`}
-                    </Text>
-                  </View>
-                  {maxTimeFilter === option && (
-                    <Ionicons name="checkmark" size={20} color="#8A4DE8" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
+          <FilterDropdown
+            visible={showTimeDropdown}
+            onClose={() => setShowTimeDropdown(false)}
+            title="Filter by Duration"
+            icon="time-outline"
+            iconColor={Colors.primary.purple}
+            options={maxTimeOptions.map((option) => ({
+              value: option,
+              label: option === "all" ? "Any Duration" : `${option} minutes`,
+              icon: "timer-outline",
+            }))}
+            selectedValue={maxTimeFilter}
+            onSelect={(value) => {
+              setMaxTimeFilter(value as MaxTimeFilter);
+              setShowTimeDropdown(false);
+            }}
+            accentColor={Colors.primary.purple}
+          />
 
-        {/* Question Dropdown Modal */}
-        <Modal
-          visible={showQuestionDropdown}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowQuestionDropdown(false)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setShowQuestionDropdown(false)}
-          >
-            <View style={styles.dropdownMenu}>
-              <View style={styles.dropdownHeader}>
-                <Ionicons
-                  name="help-circle-outline"
-                  size={18}
-                  color="#4A63D8"
-                />
-                <Text style={styles.dropdownHeaderText}>
-                  Filter by Questions
-                </Text>
-              </View>
-              {questionOptions.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.dropdownItem,
-                    questionCountFilter === option && styles.dropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setQuestionCountFilter(option);
-                    setShowQuestionDropdown(false);
-                  }}
-                >
-                  <View style={styles.dropdownItemContent}>
-                    <Ionicons
-                      name="list-outline"
-                      size={18}
-                      color={
-                        questionCountFilter === option ? "#4A63D8" : "#6B7280"
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.dropdownItemText,
-                        questionCountFilter === option &&
-                          styles.dropdownItemTextActive,
-                      ]}
-                    >
-                      {option === "all" ? "Any Number" : `${option} questions`}
-                    </Text>
-                  </View>
-                  {questionCountFilter === option && (
-                    <Ionicons name="checkmark" size={20} color="#4A63D8" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
+          <FilterDropdown
+            visible={showQuestionDropdown}
+            onClose={() => setShowQuestionDropdown(false)}
+            title="Filter by Questions"
+            icon="help-circle-outline"
+            iconColor={Colors.primary.blue}
+            options={questionOptions.map((option) => ({
+              value: option,
+              label: option === "all" ? "Any Number" : `${option} questions`,
+              icon: "list-outline",
+            }))}
+            selectedValue={questionCountFilter}
+            onSelect={(value) => {
+              setQuestionCountFilter(value as QuestionCountFilter);
+              setShowQuestionDropdown(false);
+            }}
+            accentColor={Colors.primary.blue}
+          />
 
-        {/* Stats Summary Card */}
-        <View style={styles.statsCard}>
-          <LinearGradient
-            colors={["#EEF5FF", "#E8D5FF"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.statsGradient}
-          >
-            <View style={styles.statsLeft}>
-              <View style={styles.statsIconContainer}>
-                <Ionicons name="checkmark-circle" size={24} color="#4A63D8" />
-              </View>
-              <Text style={styles.statsNumber}>
+          {/* Stats Summary */}
+          <View style={styles.statsContainer}>
+            <View style={[styles.statCard, { backgroundColor: Colors.surface.blueTint }]}>
+              <Ionicons name="checkbox-outline" size={24} color={Colors.primary.blue} />
+              <Text style={[styles.statValue, { color: Colors.primary.blue }]}>
                 {userStats.surveysAnswered}
               </Text>
-              <Text style={styles.statsLabel}>Surveys answered</Text>
+              <Text style={styles.statLabel}>Completed</Text>
             </View>
-            <View style={styles.statsDivider} />
-            <View style={styles.statsRight}>
-              <View style={styles.statsIconContainer}>
-                <Ionicons name="time" size={24} color="#8A4DE8" />
-              </View>
-              <Text style={styles.statsNumber}>
+            <View style={[styles.statCard, { backgroundColor: Colors.surface.purpleTint }]}>
+              <Ionicons name="hourglass-outline" size={24} color={Colors.primary.purple} />
+              <Text style={[styles.statValue, { color: Colors.primary.purple }]}>
                 {formatDuration(userStats.totalTimeSpent).value}
               </Text>
-              <Text style={styles.statsLabel}>
-                {formatDuration(userStats.totalTimeSpent).label} Spent
+              <Text style={styles.statLabel}>
+                {formatDuration(userStats.totalTimeSpent).label} spent
               </Text>
             </View>
-          </LinearGradient>
-        </View>
-
-        {/* Content */}
-        {loading ? (
-          <SurveysSkeleton />
-        ) : error ? (
-          <View style={styles.centerContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={loadSurveys} style={styles.retryButton}>
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.content}>
-            {/* Featured This Week Section */}
-            {filteredFeatured.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Featured This Week</Text>
-                  <View style={styles.top5Badge}>
-                    <Ionicons name="star" size={12} color="#FFFFFF" />
-                    <Text style={styles.top5Text}>Top 5</Text>
+
+          {/* Error State */}
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={48} color={Colors.semantic.error} />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={loadSurveys} style={styles.retryButton}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {/* Featured Section */}
+              {filteredFeatured.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Trending</Text>
+                    <View style={styles.trendingBadge}>
+                      <Ionicons name="trending-up" size={12} color={Colors.background.primary} />
+                      <Text style={styles.trendingBadgeText}>Top 5</Text>
+                    </View>
                   </View>
-                </View>
-                {/* Large Featured Card */}
-                {filteredFeatured[0] && (
-                  <View style={styles.largeFeaturedCard}>
+
+                  {/* Featured Hero Card */}
+                  {filteredFeatured[0] && (
                     <SurveyCard
                       survey={filteredFeatured[0]}
                       onPress={handleSurveyAction}
-                      isLarge={true}
+                      variant="hero"
                     />
-                  </View>
-                )}
-                {/* 2x2 Grid of Smaller Cards */}
-                {filteredFeatured.length > 1 && (
-                  <View style={styles.featuredGrid}>
-                    {filteredFeatured.slice(1, 5).map((survey) => (
-                      <View key={survey._id} style={styles.smallFeaturedCard}>
+                  )}
+
+                  {/* Featured Grid */}
+                  {filteredFeatured.length > 1 && (
+                    <View style={styles.featuredGrid}>
+                      {filteredFeatured.slice(1, 5).map((survey) => (
                         <SurveyCard
+                          key={survey._id}
                           survey={survey}
                           onPress={handleSurveyAction}
-                          isSmall={true}
+                          variant="compact"
                         />
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* All Surveys Section */}
-            <View style={styles.allSurveysSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.allSurveysTitle}>All Surveys</Text>
-              </View>
-              {filteredAvailable.length === 0 ? (
-                <View style={styles.emptySection}>
-                  <Ionicons
-                    name="document-text-outline"
-                    size={32}
-                    color="#9CA3AF"
-                  />
-                  <Text style={styles.emptySectionText}>
-                    {hasActiveFilters
-                      ? "No surveys match your filters"
-                      : "No available surveys"}
-                  </Text>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              ) : (
-                filteredAvailable.map((survey) => (
-                  <View key={survey._id} style={styles.allSurveyCard}>
+              )}
+
+              {/* All Surveys Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>All Surveys</Text>
+                {filteredAvailable.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="clipboard-outline" size={40} color={Colors.text.tertiary} />
+                    <Text style={styles.emptyText}>
+                      {hasActiveFilters ? "No surveys match your filters" : "No available surveys"}
+                    </Text>
+                  </View>
+                ) : (
+                  filteredAvailable.map((survey) => (
                     <SurveyCard
+                      key={survey._id}
                       survey={survey}
                       onPress={handleSurveyAction}
-                      isAllSurvey={true}
+                      variant="list"
                     />
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+                  ))
+                )}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
     </FadeInView>
   );
 }
+
+// Filter Dropdown Component
+interface FilterDropdownProps {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  icon: string;
+  iconColor: string;
+  options: { value: string; label: string; icon: string }[];
+  selectedValue: string;
+  onSelect: (value: string) => void;
+  accentColor: string;
+}
+
+const FilterDropdown: React.FC<FilterDropdownProps> = ({
+  visible,
+  onClose,
+  title,
+  icon,
+  iconColor,
+  options,
+  selectedValue,
+  onSelect,
+  accentColor,
+}) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <View style={styles.dropdownContainer}>
+        <View style={styles.dropdownHeader}>
+          <Ionicons name={icon as any} size={18} color={iconColor} />
+          <Text style={styles.dropdownTitle}>{title}</Text>
+        </View>
+        {options.map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            style={[styles.dropdownItem, selectedValue === option.value && styles.dropdownItemActive]}
+            onPress={() => onSelect(option.value)}
+          >
+            <View style={styles.dropdownItemContent}>
+              <Ionicons
+                name={option.icon as any}
+                size={18}
+                color={selectedValue === option.value ? accentColor : Colors.text.secondary}
+              />
+              <Text
+                style={[
+                  styles.dropdownItemText,
+                  selectedValue === option.value && { color: Colors.text.primary, fontFamily: Typography.fontFamily.semiBold },
+                ]}
+              >
+                {option.label}
+              </Text>
+            </View>
+            {selectedValue === option.value && (
+              <Ionicons name="checkmark" size={20} color={accentColor} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    </Pressable>
+  </Modal>
+);
 
 // Survey Card Component
 interface SurveyCardProps {
   survey: SurveyWithMetadata;
   onPress: (survey: SurveyWithMetadata) => void;
-  isLarge?: boolean;
-  isSmall?: boolean;
-  isAllSurvey?: boolean;
+  variant: "hero" | "compact" | "list";
 }
 
-const SurveyCard: React.FC<SurveyCardProps> = ({
-  survey,
-  onPress,
-  isLarge = false,
-  isSmall = false,
-  isAllSurvey = false,
-}) => {
-  const getPointsTagColor = (): [string, string] => {
+const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress, variant }) => {
+  const getPointsColor = (): string => {
     const points = survey.rewardPoints || 0;
-    if (points >= 100) return ["#FF6FAE", "#D13DB8"]; // Pink to Magenta
-    if (points >= 80) return ["#8A4DE8", "#A23DD8"]; // Violet to Purple
-    if (points >= 60) return ["#5FA9F5", "#4A63D8"]; // Sky Blue to Indigo
-    return ["#2BB6E9", "#35E0E6"]; // Teal to Cyan
+    if (points >= 100) return Colors.primary.pink;
+    if (points >= 80) return Colors.primary.purple;
+    if (points >= 60) return Colors.primary.blue;
+    return Colors.accent.teal;
   };
 
-  const formatResponseCount = (count: number): string => {
-    if (count >= 100) return "100+";
-    return count.toString();
-  };
+  const isHero = variant === "hero";
+  const isCompact = variant === "compact";
+  const isList = variant === "list";
 
   return (
     <TouchableOpacity
       style={[
         styles.card,
-        isLarge && styles.largeCard,
-        isSmall && styles.smallCard,
+        isHero && styles.cardHero,
+        isCompact && styles.cardCompact,
+        isList && styles.cardList,
       ]}
       onPress={() => onPress(survey)}
+      activeOpacity={0.7}
     >
-      {survey.isAnswered && (isAllSurvey || isLarge || isSmall) && (
-        <View style={styles.answeredTag}>
-          <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-          {isAllSurvey && <Text style={styles.answeredTagText}>Answered</Text>}
+      {/* Status Badge */}
+      {survey.isAnswered ? (
+        <View style={styles.statusBadgeCompleted}>
+          <Ionicons name="checkmark" size={12} color={Colors.background.primary} />
+          {!isCompact && <Text style={styles.statusBadgeText}>Done</Text>}
+        </View>
+      ) : (
+        <View style={[styles.pointsBadge, { backgroundColor: `${getPointsColor()}15` }]}>
+          <Text style={[styles.pointsBadgeText, { color: getPointsColor() }]}>
+            +{survey.rewardPoints || 0}
+          </Text>
         </View>
       )}
-      {!survey.isAnswered && (isLarge || isSmall) && (
-        <View style={styles.pointsTag}>
-          <LinearGradient
-            colors={getPointsTagColor()}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.pointsTagGradient}
-          >
-            <Text style={styles.pointsTagText}>
-              +{survey.rewardPoints || 0}
-            </Text>
-          </LinearGradient>
-        </View>
-      )}
+
+      {/* Title */}
       <Text
         style={[
           styles.cardTitle,
-          isLarge && styles.largeCardTitle,
-          isSmall && styles.smallCardTitle,
+          isHero && styles.cardTitleHero,
+          isCompact && styles.cardTitleCompact,
         ]}
-        numberOfLines={isSmall ? 2 : undefined}
+        numberOfLines={isCompact ? 2 : isHero ? 2 : 1}
       >
         {survey.title}
       </Text>
-      {survey.description && survey.description.trim() && !isSmall && (
-        <Text style={styles.cardDescription} numberOfLines={3}>
+
+      {/* Description (hero and list only) */}
+      {!isCompact && survey.description && survey.description.trim() && (
+        <Text style={styles.cardDescription} numberOfLines={2}>
           {survey.description}
         </Text>
       )}
-      <View style={[styles.cardDetails, isSmall && styles.smallCardDetails]}>
-        <View style={styles.detailItem}>
-          <Ionicons
-            name="people-outline"
-            size={isSmall ? 14 : 16}
-            color="#4A63D8"
-          />
-          <Text style={[styles.detailText, isSmall && styles.smallDetailText]}>
-            {formatResponseCount(survey.responseCount || 0)}{" "}
-            {isSmall ? "" : "answers"}
+
+      {/* Meta Info */}
+      <View style={[styles.cardMeta, isCompact && styles.cardMetaCompact]}>
+        <View style={styles.metaItem}>
+          <Ionicons name="stats-chart-outline" size={isCompact ? 14 : 16} color={Colors.primary.blue} />
+          <Text style={[styles.metaText, isCompact && styles.metaTextCompact]}>
+            {survey.responseCount || 0}
           </Text>
         </View>
-        <View style={styles.detailItem}>
-          <Ionicons
-            name="document-text-outline"
-            size={isSmall ? 14 : 16}
-            color="#4A63D8"
-          />
-          <Text style={[styles.detailText, isSmall && styles.smallDetailText]}>
-            {survey.questionCount || 0} {isSmall ? "Q" : "questions"}
+        <View style={styles.metaItem}>
+          <Ionicons name="layers-outline" size={isCompact ? 14 : 16} color={Colors.primary.purple} />
+          <Text style={[styles.metaText, isCompact && styles.metaTextCompact]}>
+            {survey.questionCount || 0}
           </Text>
         </View>
-        <View style={styles.detailItem}>
-          <Ionicons
-            name="time-outline"
-            size={isSmall ? 14 : 16}
-            color="#8A4DE8"
-          />
-          <Text style={[styles.detailText, isSmall && styles.smallDetailText]}>
+        <View style={styles.metaItem}>
+          <Ionicons name="timer-outline" size={isCompact ? 14 : 16} color={Colors.accent.teal} />
+          <Text style={[styles.metaText, isCompact && styles.metaTextCompact]}>
             {survey.estimatedMinutes}m
           </Text>
         </View>
       </View>
-      <TouchableOpacity
-        style={styles.viewButton}
-        onPress={() => onPress(survey)}
-      >
-        <LinearGradient
-          colors={["#5FA9F5", "#4A63D8"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.viewButtonGradient}
-        >
-          <Text style={styles.viewButtonText}>View</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+
+      {/* Action Button */}
+      {isCompact ? (
+        <TouchableOpacity style={styles.cardButtonCompact} onPress={() => onPress(survey)}>
+          <Text style={styles.cardButtonTextCompact}>
+            {survey.isAnswered ? "View" : "Start"}
+          </Text>
+          <Ionicons name="arrow-forward" size={12} color={Colors.primary.blue} />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.cardButton} onPress={() => onPress(survey)}>
+          <Text style={styles.cardButtonText}>
+            {survey.isAnswered ? "View Answers" : "Preview Survey"}
+          </Text>
+          <Ionicons name="arrow-forward" size={16} color={Colors.primary.blue} />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 };
@@ -1014,449 +850,372 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.secondary,
   },
-  fixedHeader: {
-    backgroundColor: "#FFFFFF",
-    zIndex: 10,
-    paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  header: {
+    backgroundColor: Colors.background.primary,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    borderBottomColor: Colors.border.light,
+  },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  headerTitle: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h2,
+    color: Colors.text.primary,
+    letterSpacing: Typography.letterSpacing.tight,
+  },
+  titleImage: {
+    height: 28,
+    width: 94,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: Spacing.button.borderRadius,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs + 2,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  searchContainerFocused: {
+    backgroundColor: Colors.background.primary,
+    borderColor: Colors.primary.blue,
+    ...Shadows.xs,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
+    marginLeft: Spacing.xs,
+    paddingVertical: 2,
+  },
+  filtersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  filterPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.background.tertiary,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Spacing.button.borderRadiusPill,
+    gap: 4,
+  },
+  filterPillActive: {
+    backgroundColor: Colors.surface.blueTint,
+  },
+  filterPillText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.text.secondary,
+  },
+  filterPillTextActive: {
+    color: Colors.text.primary,
+  },
+  clearButtonRow: {
+    marginTop: Spacing.sm,
+    alignItems: "flex-start",
+  },
+  clearButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: `${Colors.semantic.error}12`,
+    paddingVertical: Spacing.xs + 2,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Spacing.button.borderRadiusPill,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: `${Colors.semantic.error}25`,
+  },
+  clearButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.semantic.error,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 0,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+  statsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
   },
-  logoContainer: {
+  statCard: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.lg,
+    borderRadius: Spacing.card.borderRadius,
+  },
+  statValue: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h2,
+    marginTop: Spacing.xs,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.text.secondary,
+  },
+  section: {
+    marginBottom: Spacing.section.gap,
+  },
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: Spacing.section.headerGap,
+    gap: Spacing.xs,
   },
-  titleImage: {
-    height: 32,
-    width: 106,
-    marginLeft: -6,
+  sectionTitle: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.h4,
+    color: Colors.text.primary,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#222222",
+  trendingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.primary.pink,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 3,
+    borderRadius: Spacing.button.borderRadiusPill,
+    gap: 3,
   },
-  searchContainer: {
+  trendingBadgeText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.label,
+    color: Colors.background.primary,
+  },
+  featuredGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  card: {
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.card.borderRadius,
+    padding: Spacing.card.padding,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  cardHero: {
+    ...Shadows.sm,
+    borderColor: "transparent",
+  },
+  cardCompact: {
+    width: "48%",
+    padding: Spacing.card.paddingSmall,
+  },
+  cardList: {
+    borderColor: Colors.border.light,
+  },
+  statusBadgeCompleted: {
+    position: "absolute",
+    top: Spacing.sm,
+    right: Spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.semantic.success,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 3,
+    borderRadius: Spacing.button.borderRadiusPill,
+    gap: 3,
+  },
+  statusBadgeText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.label,
+    color: Colors.background.primary,
+  },
+  pointsBadge: {
+    position: "absolute",
+    top: Spacing.sm,
+    right: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 3,
+    borderRadius: Spacing.button.borderRadiusPill,
+  },
+  pointsBadgeText: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.captionSmall,
+  },
+  cardTitle: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodyLarge,
+    color: Colors.text.primary,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xs,
+    paddingRight: 60,
+  },
+  cardTitleHero: {
+    fontSize: Typography.fontSize.h4,
+    marginTop: Spacing.xl,
+  },
+  cardTitleCompact: {
+    fontSize: Typography.fontSize.body,
+    marginTop: Spacing.lg,
+    lineHeight: 20,
+  },
+  cardDescription: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: Spacing.sm,
+  },
+  cardMeta: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  cardMetaCompact: {
+    gap: Spacing.xs,
+    marginBottom: 0,
+    marginTop: "auto",
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  metaText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.secondary,
+  },
+  metaTextCompact: {
+    fontSize: Typography.fontSize.captionSmall,
+  },
+  cardButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    backgroundColor: Colors.surface.blueTint,
+    paddingVertical: Spacing.button.paddingVerticalSmall,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    gap: Spacing.xs,
   },
-  searchIcon: {
-    marginRight: 12,
+  cardButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.primary.blue,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#222222",
-  },
-  filtersSection: {
-    paddingHorizontal: 16,
-    marginBottom: 0,
-    paddingBottom: 16,
-  },
-  filtersHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  filtersLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#505050",
-    letterSpacing: 0.5,
-  },
-  clearAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#4A63D8",
-  },
-  filtersRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  filterButton: {
-    flex: 1,
+  cardButtonCompact: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    justifyContent: "center",
+    backgroundColor: Colors.surface.blueTint,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Spacing.button.borderRadiusPill,
     gap: 4,
-    minHeight: 40,
+    marginTop: Spacing.xs,
   },
-  filterButtonActive: {
-    borderColor: "#4A63D8",
-    backgroundColor: "#F0F4FF",
-  },
-  filterButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flex: 1,
-  },
-  filterButtonText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#6B7280",
-    textAlign: "center",
-  },
-  filterButtonTextActive: {
-    color: "#222222",
-    fontWeight: "600",
+  cardButtonTextCompact: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.primary.blue,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
     justifyContent: "center",
     alignItems: "center",
   },
-  dropdownMenu: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    minWidth: 220,
-    maxHeight: 350,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+  dropdownContainer: {
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.card.borderRadius,
+    minWidth: 260,
+    maxWidth: 320,
+    ...Shadows.lg,
     overflow: "hidden",
   },
   dropdownHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#F9FAFB",
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background.tertiary,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: Colors.border.light,
   },
-  dropdownHeaderText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#374151",
+  dropdownTitle: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.text.primary,
   },
   dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: Colors.border.light,
   },
   dropdownItemActive: {
-    backgroundColor: "#F0F9FF",
+    backgroundColor: Colors.surface.blueTint,
   },
   dropdownItemContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    flex: 1,
+    gap: Spacing.sm,
   },
   dropdownItemText: {
-    fontSize: 14,
-    color: "#374151",
-    textAlign: "left",
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.secondary,
   },
-  dropdownItemTextActive: {
-    color: "#222222",
-    fontWeight: "600",
-  },
-  statsCard: {
-    marginHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 12,
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statsGradient: {
-    flexDirection: "row",
-    padding: 20,
-  },
-  statsLeft: {
-    flex: 1,
+  errorContainer: {
     alignItems: "center",
-    justifyContent: "center",
-  },
-  statsRight: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statsDivider: {
-    width: 1,
-    backgroundColor: "rgba(74, 99, 216, 0.2)",
-    marginHorizontal: 20,
-  },
-  statsIconContainer: {
-    marginBottom: 8,
-  },
-  statsNumber: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#222222",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  statsLabel: {
-    fontSize: 12,
-    color: "#505050",
-    textAlign: "center",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    minHeight: 200,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: "#6B7280",
+    paddingVertical: Spacing.huge,
   },
   errorText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: "#EF4444",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.body,
+    color: Colors.semantic.error,
     textAlign: "center",
+    marginTop: Spacing.sm,
   },
   retryButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#4A63D8",
-    borderRadius: 8,
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary.blue,
+    paddingVertical: Spacing.button.paddingVerticalSmall,
+    paddingHorizontal: Spacing.button.paddingHorizontal,
+    borderRadius: Spacing.button.borderRadius,
   },
   retryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.background.primary,
   },
-  content: {
-    paddingBottom: 24,
-  },
-  sectionContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
-  },
-  allSurveysSection: {
-    marginTop: 0,
-    marginBottom: 32,
-    paddingHorizontal: 24,
-  },
-  sectionHeader: {
-    flexDirection: "row",
+  emptyContainer: {
     alignItems: "center",
-    marginBottom: 16,
+    paddingVertical: Spacing.xxl,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#222222",
-    marginRight: 12,
-  },
-  allSurveysTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#222222",
-    marginRight: 12,
-  },
-  top5Badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FF6FAE",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  top5Text: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  largeFeaturedCard: {
-    marginBottom: 16,
-  },
-  featuredGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  smallFeaturedCard: {
-    width: "48%",
-    minWidth: 150,
-  },
-  allSurveyCard: {
-    marginBottom: 16,
-    marginHorizontal: 0,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  largeCard: {
-    padding: 20,
-  },
-  smallCard: {
-    padding: 12,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#222222",
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  largeCardTitle: {
-    fontSize: 24,
-    paddingRight: 70,
-  },
-  smallCardTitle: {
-    fontSize: 17,
-    marginBottom: 4,
-    paddingRight: 40,
-  },
-  cardDescription: {
-    fontSize: 16,
-    color: "#505050",
-    marginTop: 4,
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  cardDetails: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 16,
-  },
-  smallCardDetails: {
-    gap: 8,
-    marginBottom: 10,
-  },
-  detailItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#505050",
-  },
-  smallDetailText: {
-    fontSize: 12,
-  },
-  pointsTag: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  pointsTagGradient: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  pointsTagText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  answeredTag: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#10B981",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-    minWidth: 24,
-    justifyContent: "center",
-  },
-  answeredTagText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  viewButton: {
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  viewButtonGradient: {
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  viewButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
-  },
-  emptySection: {
-    alignItems: "center",
-    paddingVertical: 32,
-  },
-  emptySectionText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
+  emptyText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.sm,
   },
 });

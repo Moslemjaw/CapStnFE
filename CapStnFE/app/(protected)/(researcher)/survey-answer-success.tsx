@@ -14,6 +14,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { getSurveyById } from "@/api/surveys";
 import { Survey } from "@/api/surveys";
+import { FadeInView } from "@/components/FadeInView";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 export default function SurveyAnswerSuccess() {
   const router = useRouter();
@@ -107,10 +109,18 @@ export default function SurveyAnswerSuccess() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <FadeInView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={[Colors.background.primary, Colors.surface.blueTint, Colors.surface.purpleTint]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
           <View style={styles.headerRow}>
             <View style={styles.headerTextContainer}>
               <View style={styles.logoContainer}>
@@ -264,36 +274,28 @@ export default function SurveyAnswerSuccess() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
   },
   fixedHeader: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
     zIndex: 10,
     paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    borderBottomLeftRadius: Borders.radius.xl,
+    borderBottomRightRadius: Borders.radius.xl,
+    borderBottomWidth: Borders.width.default,
+    borderBottomColor: Colors.border.light,
+    ...Shadows.md,
   },
   header: {
-    padding: 16,
-    paddingBottom: 12,
+    padding: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
   headerRow: {
     flexDirection: "row",
@@ -306,33 +308,32 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
   titleImage: {
-    height: 24,
+    height: Spacing.lg,
     width: 80,
-    marginLeft: -6,
+    marginLeft: -Spacing.xxs,
   },
   headerLogo: {
-    width: 80,
-    height: 80,
-    marginLeft: 12,
+    width: Spacing.avatar.lg + Spacing.md,
+    height: Spacing.avatar.lg + Spacing.md,
+    marginLeft: Spacing.sm,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#222222",
-    marginBottom: 4,
+    ...Typography.styles.h2,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xxs,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: "#505050",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: Spacing.md,
     alignItems: "center",
   },
   centerContainer: {
@@ -341,55 +342,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconContainer: {
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   iconGradient: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: Borders.radius.full,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#4A63D8",
+    shadowColor: Colors.primary.blue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#222222",
-    marginBottom: 8,
+    ...Typography.styles.h2,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
     textAlign: "center",
   },
   thankYouText: {
-    fontSize: 14,
-    color: "#505050",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
     textAlign: "center",
-    marginBottom: 16,
-    lineHeight: 20,
-    paddingHorizontal: 16,
+    marginBottom: Spacing.md,
+    lineHeight: Typography.lineHeight.body,
+    paddingHorizontal: Spacing.md,
   },
   pointsCard: {
     width: "100%",
-    borderRadius: 16,
+    borderRadius: Borders.radius.lg,
     overflow: "hidden",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    marginBottom: Spacing.md,
+    ...Shadows.lg,
   },
   pointsCardGradient: {
-    padding: 16,
+    padding: Spacing.md,
     alignItems: "center",
   },
   coinsIconContainer: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
   coinStack: {
     position: "relative",
@@ -400,8 +396,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 24,
     height: 24,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    borderRadius: Borders.radius.full,
+    backgroundColor: Colors.background.primary,
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.3)",
   },
@@ -423,106 +419,100 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   pointsLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginTop: 8,
+    fontSize: Typography.fontSize.label,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.inverse,
+    marginTop: Spacing.xs,
     letterSpacing: 1,
   },
   pointsValue: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginTop: 4,
+    fontSize: Typography.fontSize.display,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
+    marginTop: Spacing.xxs,
   },
   pointsSubtext: {
-    fontSize: 12,
-    color: "#FFFFFF",
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.inverse,
     opacity: 0.9,
     marginTop: 2,
   },
   statsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.lg,
+    padding: Spacing.md,
     width: "100%",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: Spacing.sm,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    ...Shadows.sm,
   },
   statsHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   statsTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222222",
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
   },
   statsItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 10,
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
   },
   statsLabel: {
     flex: 1,
-    fontSize: 14,
-    color: "#505050",
-    fontWeight: "500",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
+    fontWeight: Typography.fontWeight.medium,
   },
   statsValueContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: Spacing.xs,
   },
   statsValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222222",
+    ...Typography.styles.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
   statsPercentage: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#8A4DE8",
+    ...Typography.styles.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.primary.purple,
   },
   greatJobCard: {
-    backgroundColor: "#F3F0F7",
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: Colors.surface.purpleTint,
+    borderRadius: Borders.radius.md,
+    padding: Spacing.sm + 2,
     width: "100%",
-    marginBottom: 16,
+    marginBottom: Spacing.md,
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: Spacing.sm,
   },
   greatJobTextContainer: {
     flex: 1,
   },
   greatJobTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222222",
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   greatJobText: {
-    fontSize: 13,
-    color: "#505050",
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.secondary,
     lineHeight: 18,
   },
   primaryButton: {
     width: "100%",
-    borderRadius: 16,
+    borderRadius: Borders.radius.lg,
     overflow: "hidden",
-    marginBottom: 10,
-    shadowColor: "#4A63D8",
+    marginBottom: Spacing.xs,
+    shadowColor: Colors.primary.blue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -532,33 +522,33 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    gap: 8,
+    paddingVertical: Spacing.sm + 2,
+    gap: Spacing.xs,
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
   },
   secondaryButton: {
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 16,
-    paddingVertical: 14,
-    gap: 8,
-    marginBottom: 16,
+    backgroundColor: Colors.background.primary,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    borderRadius: Borders.radius.lg,
+    paddingVertical: Spacing.sm + 2,
+    gap: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#222222",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.primary,
   },
   bottomSpacer: {
-    height: 20,
+    height: 100,
   },
 });

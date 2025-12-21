@@ -1,7 +1,8 @@
 import React from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SkeletonCard, SkeletonText } from "./index";
+import { SkeletonCard } from "./SkeletonCard";
+import { SkeletonText } from "./SkeletonText";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 
 export const HomeSkeleton: React.FC = () => {

@@ -4,7 +4,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Pressable,
   Dimensions,
   Animated,
@@ -35,6 +34,7 @@ import { calculateStreak } from "@/utils/userProgress";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
 import { ProfileSkeleton } from "@/components/Skeleton";
+import { Colors, Typography, Spacing, Shadows, Borders } from "@/constants/design";
 
 export default function ResearcherProfile() {
   const [user, setUser] = useState<User | null>(null);
@@ -53,7 +53,7 @@ export default function ResearcherProfile() {
 
   // Activity metrics
   const [surveysAnswered, setSurveysAnswered] = useState<number>(0);
-  const [durationMs, setDurationMs] = useState<number>(0); // Store in milliseconds
+  const [durationMs, setDurationMs] = useState<number>(0);
   const [surveysCreated, setSurveysCreated] = useState<number>(0);
   const [aiAnalyses, setAiAnalyses] = useState<number>(0);
   const [loadingActivity, setLoadingActivity] = useState(false);
@@ -61,16 +61,16 @@ export default function ResearcherProfile() {
 
   // Format duration: show minutes if < 60 min, hours if >= 60 min
   const formatDuration = (ms: number): { value: string; label: string } => {
-    const totalMinutes = ms / 60000; // Convert milliseconds to minutes
+    const totalMinutes = ms / 60000;
     if (totalMinutes < 60) {
       return {
-        value: totalMinutes.toFixed(2),
+        value: totalMinutes.toFixed(1),
         label: "Minutes Spent",
       };
     } else {
       const hours = totalMinutes / 60;
       return {
-        value: hours.toFixed(2),
+        value: hours.toFixed(1),
         label: "Hours Spent",
       };
     }
@@ -82,8 +82,6 @@ export default function ResearcherProfile() {
   const termsOpacityAnim = useRef(new Animated.Value(0)).current;
   const privacyOpacityAnim = useRef(new Animated.Value(0)).current;
 
-  // Tab bar height is 60px as defined in _layout.tsx
-  // Tab bar extends into safe area, so we only subtract tab bar height
   const TAB_BAR_HEIGHT = 60;
   const popupHeight = Dimensions.get("window").height * 0.85 - TAB_BAR_HEIGHT;
 
@@ -152,38 +150,25 @@ export default function ResearcherProfile() {
   const calculateTotalAndWeeklyPoints = useCallback(async (userId: string) => {
     try {
       setLoadingWeeklyPoints(true);
-
-      // Get all user responses
       const responses = await getResponsesByUserId(userId);
-
-      // Get start of current week (Monday)
       const now = new Date();
       const dayOfWeek = now.getDay();
       const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
       const startOfWeek = new Date(now.setDate(diff));
       startOfWeek.setHours(0, 0, 0, 0);
 
-      // Filter responses from this week
       const weeklyResponses = responses.filter((response) => {
         if (!response.submittedAt) return false;
         const submittedDate = new Date(response.submittedAt);
         return submittedDate >= startOfWeek;
       });
 
-      // Get unique survey IDs from ALL responses to avoid duplicate fetches
       const uniqueSurveyIds = [...new Set(responses.map((r) => r.surveyId))];
-
-      // Fetch all surveys in parallel
       const surveyPromises = uniqueSurveyIds.map((surveyId) =>
-        getSurveyById(surveyId).catch((err) => {
-          console.error(`Error fetching survey ${surveyId}:`, err);
-          return null;
-        })
+        getSurveyById(surveyId).catch(() => null)
       );
-
       const surveys = await Promise.all(surveyPromises);
 
-      // Create a map of surveyId to rewardPoints
       const surveyPointsMap = new Map<string, number>();
       surveys.forEach((survey) => {
         if (survey) {
@@ -191,13 +176,11 @@ export default function ResearcherProfile() {
         }
       });
 
-      // Calculate total lifetime points
       const lifetimePoints = responses.reduce((sum, response) => {
         const points = surveyPointsMap.get(response.surveyId) || 0;
         return sum + points;
       }, 0);
 
-      // Calculate weekly points
       const weekPoints = weeklyResponses.reduce((sum, response) => {
         const points = surveyPointsMap.get(response.surveyId) || 0;
         return sum + points;
@@ -220,13 +203,10 @@ export default function ResearcherProfile() {
       setLoadingStreak(false);
       return;
     }
-
     try {
       setLoadingStreak(true);
       const streak = await calculateStreak(userId);
       setCurrentStreak(streak);
-
-      // Also update user in storage with calculated streak
       const userData = await getUser();
       if (userData) {
         const updatedUser = { ...userData, streakDays: streak };
@@ -244,74 +224,27 @@ export default function ResearcherProfile() {
   const loadActivityMetrics = useCallback(async (userId: string) => {
     try {
       setLoadingActivity(true);
-
-      // Get all responses to calculate surveys answered and hours spent
       const responses = await getResponsesByUserId(userId);
-      console.log("Profile: Total responses fetched:", responses.length);
-
-      // Get surveys created by user (to exclude from "answered")
       const createdSurveys = await getSurveysByCreatorId(userId);
       const createdSurveyIds = new Set(createdSurveys.map((s) => s._id));
-      console.log("Profile: Surveys created by user:", createdSurveys.length);
 
-      // Filter responses: exclude self-created surveys and spam
       const validResponses = responses.filter((r) => {
         const isNotSelfCreated = !createdSurveyIds.has(r.surveyId);
         const isNotSpam = !r.isFlaggedSpam;
         return isNotSelfCreated && isNotSpam;
       });
-      console.log(
-        "Profile: Valid responses (excluding self-created and spam):",
-        validResponses.length
-      );
 
-      // Calculate unique surveys answered (from valid responses only)
       const uniqueSurveyIds = new Set(validResponses.map((r) => r.surveyId));
-      const surveysAnsweredCount = uniqueSurveyIds.size;
-      setSurveysAnswered(surveysAnsweredCount);
-      console.log("Profile: Surveys answered:", surveysAnsweredCount);
+      setSurveysAnswered(uniqueSurveyIds.size);
 
-      // Calculate total time spent (sum valid durationMs)
-      const totalMs = validResponses.reduce((sum, r) => {
-        const duration = r.durationMs || 0;
-        if (!r.durationMs) {
-          console.warn("Profile: Response missing durationMs:", r._id);
-        }
-        return sum + duration;
-      }, 0);
+      const totalMs = validResponses.reduce((sum, r) => sum + (r.durationMs || 0), 0);
       setDurationMs(totalMs);
-      const formatted = formatDuration(totalMs);
-      console.log(
-        "Profile: Time spent:",
-        formatted.value,
-        formatted.label,
-        "(",
-        totalMs,
-        "ms)"
-      );
+      setSurveysCreated(createdSurveys.length);
 
-      // Surveys created
-      const surveysCreatedCount = createdSurveys.length;
-      setSurveysCreated(surveysCreatedCount);
-      console.log("Profile: Surveys created:", surveysCreatedCount);
-
-      // Get AI analyses count
       const analysesData = await getAllAnalyses();
-      // Use analyses.length as primary, count as fallback
-      const aiAnalysesCount =
-        analysesData.analyses?.length || analysesData.count || 0;
+      const aiAnalysesCount = analysesData.analyses?.length || analysesData.count || 0;
       setAiAnalyses(aiAnalysesCount);
-      console.log(
-        "Profile: AI analyses:",
-        aiAnalysesCount,
-        "(from analyses.length:",
-        analysesData.analyses?.length,
-        "or count:",
-        analysesData.count,
-        ")"
-      );
     } catch (err: any) {
-      // Don't show error for 401 - token will be cleared and user redirected to login
       if (err?.response?.status === 401) {
         console.log("Authentication expired - redirecting to login");
         return;
@@ -330,9 +263,8 @@ export default function ResearcherProfile() {
     setInitialLoading(true);
     const userData = await getUser();
     setUser(userData);
-    setImageError(false); // Reset image error when user changes
+    setImageError(false);
 
-    // Calculate total/weekly points, streak, and activity metrics if user exists
     if (userData?._id) {
       await Promise.all([
         calculateTotalAndWeeklyPoints(userData._id),
@@ -347,7 +279,6 @@ export default function ResearcherProfile() {
     loadUser();
   }, [loadUser]);
 
-  // Reload user data when screen comes into focus (e.g., after profile update)
   useFocusEffect(
     useCallback(() => {
       loadUser();
@@ -355,61 +286,14 @@ export default function ResearcherProfile() {
   );
 
   const handleLogout = async () => {
-    console.log("handleLogout called - showing alert");
-    // Alert.alert("Log Out", "Are you sure you want to log out?", [
-    //   {
-    //     text: "Cancel",
-    //     style: "cancel",
-    //     onPress: () => {
-    //       console.log("Logout cancelled");
-    //     },
-    //   },
-    //   {
-    //     text: "Log Out",
-    //     style: "destructive",
-    //     onPress: async () => {
-    //       console.log("Log Out button pressed in alert");
-    //       try {
-    //         console.log("About to call deleteToken()");
-    //         await deleteToken();
-    //         console.log("deleteToken() completed successfully");
-    //         setIsAuthenticated(false);
-    //         console.log("isAuthenticated set to false");
-    //         // Navigate directly to login page
-    //         router.replace("/(auth)/login" as any);
-    //         console.log("Navigation triggered");
-    //       } catch (error) {
-    //         console.error("Logout error:", error);
-    //         Alert.alert("Error", "Failed to log out. Please try again.");
-    //       }
-    //     },
-    //   },
-    // ]);
     await deleteToken();
     setIsAuthenticated(false);
     router.replace("/(auth)/login" as any);
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  // Calculate level and progress based on points
   const calculateLevel = (points: number) => {
-    // Level thresholds: 0-99: 1, 100-299: 2, 300-599: 3, 600-999: 4, 1000+: 5
     const thresholds = [0, 100, 300, 600, 1000];
-    const levelNames = [
-      "Beginner",
-      "Intermediate",
-      "Advanced",
-      "Expert",
-      "Master",
-    ];
+    const levelNames = ["Beginner", "Intermediate", "Advanced", "Expert", "Master"];
 
     let currentLevel = 1;
     for (let i = 0; i < thresholds.length; i++) {
@@ -417,18 +301,13 @@ export default function ResearcherProfile() {
         currentLevel = i + 1;
       }
     }
-
-    // Cap at level 5
     if (currentLevel > 5) currentLevel = 5;
 
-    // Calculate progress to next level
     const currentThreshold = thresholds[currentLevel - 1] || 0;
-    const nextThreshold =
-      thresholds[currentLevel] || thresholds[thresholds.length - 1];
+    const nextThreshold = thresholds[currentLevel] || thresholds[thresholds.length - 1];
     const progressPoints = points - currentThreshold;
     const neededPoints = nextThreshold - currentThreshold;
-    const progressPercent =
-      currentLevel >= 5 ? 100 : (progressPoints / neededPoints) * 100;
+    const progressPercent = currentLevel >= 5 ? 100 : (progressPoints / neededPoints) * 100;
 
     return {
       level: currentLevel,
@@ -451,177 +330,244 @@ export default function ResearcherProfile() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Fixed Header Section */}
-      <View style={styles.fixedHeader}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <Text style={styles.title}>Profile</Text>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/title.png")}
-              style={styles.titleImage}
-              resizeMode="contain"
-            />
+      <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Fixed Header Section */}
+        <View style={styles.fixedHeader}>
+          <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+            <Text style={styles.title}>Profile</Text>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("@/assets/title.png")}
+                style={styles.titleImage}
+                resizeMode="contain"
+              />
+            </View>
           </View>
-        </View>
-        <View style={styles.headerContent}>
-          {/* User Information */}
-          <View style={styles.headerUserInfo}>
-            <View style={styles.avatarContainer}>
-              {user?.image && !imageError && imageUrl ? (
-                <View style={styles.avatarImageWrapper}>
+
+          {/* User Profile Card */}
+          <View style={styles.userProfileCard}>
+            <View style={styles.avatarSection}>
+              <View style={styles.avatarWrapper}>
+                {user?.image && !imageError && imageUrl ? (
                   <Image
                     source={{ uri: imageUrl }}
-                    style={styles.avatarImage}
-                    onError={() => {
-                      setImageError(true);
-                    }}
-                    onLoad={() => {
-                      setImageError(false);
-                    }}
+                    style={styles.avatar}
+                    onError={() => setImageError(true)}
+                    onLoad={() => setImageError(false)}
                   />
-                </View>
-              ) : (
-                <View style={styles.avatarImageWrapper}>
+                ) : (
                   <Image
                     source={require("@/assets/logo.png")}
-                    style={styles.avatarImage}
+                    style={styles.avatar}
                     resizeMode="contain"
                   />
+                )}
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelBadgeText}>{levelInfo.level}</Text>
                 </View>
-              )}
+              </View>
             </View>
-            <View style={styles.userInfoContainer}>
-              <Text style={styles.userName}>
-                {user?.name || "Researcher Name"}
+            <View style={styles.userInfo}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {user?.name || "Researcher"}
               </Text>
-              <Text style={styles.userEmail}>
+              <Text style={styles.userEmail} numberOfLines={1}>
                 {user?.email || "researcher@example.com"}
               </Text>
+              <View style={styles.levelTag}>
+                <Text style={styles.levelTagText}>{levelInfo.levelName}</Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: bottomNavHeight },
-        ]}
-      >
-        <View style={styles.content}>
-          {/* Your Activity Section */}
-          <Text style={styles.sectionTitle}>Your Activity</Text>
-          <View style={styles.activityGrid}>
-            <View style={styles.activityCard}>
-              <Ionicons name="checkmark-circle" size={24} color="#7DD3FC" />
-              <Text style={styles.activityValue}>
-                {loadingActivity ? "..." : surveysAnswered}
-              </Text>
-              <Text style={styles.activityLabel}>Surveys Answered</Text>
-            </View>
-            <View style={styles.activityCard}>
-              <Ionicons name="time" size={24} color="#4A63D8" />
-              <Text style={styles.activityValue}>
-                {loadingActivity ? "..." : formatDuration(durationMs).value}
-              </Text>
-              <Text style={styles.activityLabel}>
-                {loadingActivity ? "..." : formatDuration(durationMs).label}
-              </Text>
-            </View>
-            <View style={styles.activityCard}>
-              <Ionicons name="document-text" size={24} color="#8B5CF6" />
-              <Text style={styles.activityValue}>
-                {loadingActivity ? "..." : surveysCreated}
-              </Text>
-              <Text style={styles.activityLabel}>Surveys Created</Text>
-            </View>
-            <View style={styles.activityCard}>
-              <Ionicons name="code-slash" size={24} color="#FF6FAE" />
-              <Text style={styles.activityValue}>
-                {loadingActivity ? "..." : aiAnalyses}
-              </Text>
-              <Text style={styles.activityLabel}>AI Analyses</Text>
-            </View>
-          </View>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + Spacing.xl }]}
+        >
+          {/* Activity Stats Grid */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Activity</Text>
+            <View style={styles.statsGrid}>
+              <TouchableOpacity 
+                style={styles.statCard}
+                onPress={() => router.push("/(protected)/(researcher)/(tabs)/surveys" as any)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.tealTint }]}>
+                  <Ionicons name="checkmark-circle" size={22} color={Colors.accent.teal} />
+                </View>
+                <Text style={styles.statValue}>
+                  {loadingActivity ? "..." : surveysAnswered}
+                </Text>
+                <Text style={styles.statLabel}>Answered</Text>
+                <View style={styles.statArrow}>
+                  <Ionicons name="chevron-forward" size={12} color={Colors.text.tertiary} />
+                </View>
+              </TouchableOpacity>
 
-          {/* Total Points Earned Section */}
-          <View style={styles.pointsCard}>
-            <LinearGradient
-              colors={["#8B5CF6", "#FF6FAE"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.pointsGradient}
-            >
-              <View style={styles.pointsContent}>
-                <View style={styles.pointsLeft}>
-                  <Text style={styles.pointsLabel}>Total Points Earned</Text>
-                  <Text style={styles.pointsValue}>
-                    {loadingWeeklyPoints ? "..." : totalPoints.toLocaleString()}
-                  </Text>
-                  <Text style={styles.pointsNextReward}>
-                    Next reward: {levelInfo.nextThreshold.toLocaleString()}{" "}
-                    points
-                  </Text>
-                  <View style={styles.pointsProgressBar}>
-                    <View
-                      style={[
-                        styles.pointsProgressFill,
-                        { width: `${levelInfo.progressPercent}%` },
-                      ]}
-                    />
-                  </View>
+              <View style={styles.statCard}>
+                <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.blueTint }]}>
+                  <Ionicons name="time" size={22} color={Colors.primary.blue} />
                 </View>
-                <View style={styles.pointsRight}>
-                  <Ionicons name="trophy" size={40} color="#FFFFFF" />
-                </View>
-              </View>
-            </LinearGradient>
-          </View>
-
-          {/* Settings & Legal Section */}
-          <Text style={styles.sectionTitle}>Settings & Legal</Text>
-          <View style={styles.settingsCard}>
-            <TouchableOpacity
-              style={[styles.settingsItem, styles.settingsItemWithBorder]}
-              activeOpacity={0.7}
-              onPress={() => setShowPrivacyModal(true)}
-            >
-              <View style={styles.settingsItemLeft}>
-                <Ionicons name="lock-closed" size={20} color="#6B7280" />
-                <Text style={styles.settingsItemText}>Privacy Policy</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.settingsItem, styles.settingsItemWithBorder]}
-              activeOpacity={0.7}
-              onPress={() => setShowTermsModal(true)}
-            >
-              <View style={styles.settingsItemLeft}>
-                <Ionicons name="document-text" size={20} color="#6B7280" />
-                <Text style={styles.settingsItemText}>Terms & Conditions</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.settingsItem}
-              activeOpacity={0.7}
-              onPress={handleLogout}
-            >
-              <View style={styles.settingsItemLeft}>
-                <View style={styles.logoutIconContainer}>
-                  <Ionicons name="add" size={16} color="#FFFFFF" />
-                </View>
-                <Text style={[styles.settingsItemText, styles.logoutText]}>
-                  Logout
+                <Text style={styles.statValue}>
+                  {loadingActivity ? "..." : formatDuration(durationMs).value}
+                </Text>
+                <Text style={styles.statLabel}>
+                  {loadingActivity ? "Minutes" : formatDuration(durationMs).label.split(" ")[0]}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#EF4444" />
-            </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.statCard}
+                onPress={() => router.push("/(protected)/(researcher)/(tabs)/research" as any)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.purpleTint }]}>
+                  <Ionicons name="document-text" size={22} color={Colors.primary.purple} />
+                </View>
+                <Text style={styles.statValue}>
+                  {loadingActivity ? "..." : surveysCreated}
+                </Text>
+                <Text style={styles.statLabel}>Created</Text>
+                <View style={styles.statArrow}>
+                  <Ionicons name="chevron-forward" size={12} color={Colors.text.tertiary} />
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.statCard}
+                onPress={() => router.push("/(protected)/(researcher)/(tabs)/sightai" as any)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.statIconContainer, { backgroundColor: Colors.surface.pinkTint }]}>
+                  <Ionicons name="sparkles" size={22} color={Colors.primary.pink} />
+                </View>
+                <Text style={styles.statValue}>
+                  {loadingActivity ? "..." : aiAnalyses}
+                </Text>
+                <Text style={styles.statLabel}>Analyses</Text>
+                <View style={styles.statArrow}>
+                  <Ionicons name="chevron-forward" size={12} color={Colors.text.tertiary} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Points & Progress Card */}
+          <View style={styles.section}>
+            <View style={styles.pointsCard}>
+              <LinearGradient
+                colors={[Colors.primary.purple, Colors.primary.pink]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.pointsGradient}
+              >
+                <View style={styles.pointsHeader}>
+                  <View>
+                    <Text style={styles.pointsLabel}>Total Points</Text>
+                    <Text style={styles.pointsValue}>
+                      {loadingWeeklyPoints ? "..." : totalPoints.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.trophyContainer}>
+                    <Ionicons name="trophy" size={36} color="rgba(255,255,255,0.9)" />
+                  </View>
+                </View>
+
+                <View style={styles.progressSection}>
+                  <View style={styles.progressHeader}>
+                    <Text style={styles.progressLabel}>
+                      Next: {levelInfo.nextThreshold.toLocaleString()} pts
+                    </Text>
+                    <Text style={styles.progressPercent}>
+                      {Math.round(levelInfo.progressPercent)}%
+                    </Text>
+                  </View>
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${levelInfo.progressPercent}%` }]} />
+                  </View>
+                </View>
+
+                <View style={styles.weeklyStats}>
+                  <View style={styles.weeklyStatItem}>
+                    <Ionicons name="flame" size={18} color="rgba(255,255,255,0.85)" />
+                    <Text style={styles.weeklyStatValue}>
+                      {loadingStreak ? "..." : currentStreak}
+                    </Text>
+                    <Text style={styles.weeklyStatLabel}>Day Streak</Text>
+                  </View>
+                  <View style={styles.weeklyDivider} />
+                  <View style={styles.weeklyStatItem}>
+                    <Ionicons name="trending-up" size={18} color="rgba(255,255,255,0.85)" />
+                    <Text style={styles.weeklyStatValue}>
+                      {loadingWeeklyPoints ? "..." : weeklyPoints}
+                    </Text>
+                    <Text style={styles.weeklyStatLabel}>This Week</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+          </View>
+
+          {/* Settings Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Settings & Legal</Text>
+            <View style={styles.settingsCard}>
+              <TouchableOpacity
+                style={styles.settingsItem}
+                activeOpacity={0.6}
+                onPress={() => setShowPrivacyModal(true)}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <View style={[styles.settingsIconContainer, { backgroundColor: Colors.surface.blueTint }]}>
+                    <Ionicons name="shield-checkmark" size={18} color={Colors.primary.blue} />
+                  </View>
+                  <Text style={styles.settingsItemText}>Privacy Policy</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+              </TouchableOpacity>
+
+              <View style={styles.settingsDivider} />
+
+              <TouchableOpacity
+                style={styles.settingsItem}
+                activeOpacity={0.6}
+                onPress={() => setShowTermsModal(true)}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <View style={[styles.settingsIconContainer, { backgroundColor: Colors.surface.purpleTint }]}>
+                    <Ionicons name="document-text" size={18} color={Colors.primary.purple} />
+                  </View>
+                  <Text style={styles.settingsItemText}>Terms & Conditions</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+              </TouchableOpacity>
+
+              <View style={styles.settingsDivider} />
+
+              <TouchableOpacity
+                style={styles.settingsItem}
+                activeOpacity={0.6}
+                onPress={handleLogout}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <View style={[styles.settingsIconContainer, { backgroundColor: Colors.semantic.errorLight }]}>
+                    <Ionicons name="log-out-outline" size={18} color={Colors.semantic.error} />
+                  </View>
+                  <Text style={[styles.settingsItemText, styles.logoutText]}>Sign Out</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.semantic.error} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Footer */}
@@ -634,424 +580,127 @@ export default function ResearcherProfile() {
               />
               <Text style={styles.footerBrandText}>sight</Text>
             </View>
-            <Text style={styles.footerVersion}>Version 1.3.4</Text>
-            <Text style={styles.footerCopyright}>
-              © 2023 Sight. All rights reserved.
-            </Text>
+            <Text style={styles.footerVersion}>Version 1.3.5</Text>
+            <Text style={styles.footerCopyright}>© 2024 Sight. All rights reserved.</Text>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Terms & Conditions Custom Popup */}
-      {showTermsModal && (
-        <SafeAreaView
-          style={styles.popupOverlayContainer}
-          edges={["bottom"]}
-          pointerEvents="box-none"
-        >
-          <Animated.View
-            style={[
-              styles.popupOverlay,
-              {
-                opacity: termsOpacityAnim,
-              },
-            ]}
-            pointerEvents="box-none"
-          >
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => setShowTermsModal(false)}
-            />
-            <Animated.View
-              style={[
-                styles.popupContent,
-                {
-                  height: popupHeight,
-                  transform: [
-                    {
+        {/* Terms & Conditions Modal */}
+        {showTermsModal && (
+          <SafeAreaView style={styles.popupOverlayContainer} edges={["bottom"]} pointerEvents="box-none">
+            <Animated.View style={[styles.popupOverlay, { opacity: termsOpacityAnim }]} pointerEvents="box-none">
+              <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowTermsModal(false)} />
+              <Animated.View
+                style={[
+                  styles.popupContent,
+                  {
+                    height: popupHeight,
+                    transform: [{
                       translateY: termsSlideAnim.interpolate({
                         inputRange: [0, 1],
                         outputRange: [popupHeight, 0],
                       }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <View style={styles.popupHeader}>
-                <Text style={styles.popupTitle}>Terms & Conditions</Text>
-                <TouchableOpacity
-                  onPress={() => setShowTermsModal(false)}
-                  style={styles.closeButton}
-                >
-                  <Ionicons name="close" size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.popupBody}>
-                <ScrollView
-                  style={styles.popupScrollView}
-                  contentContainerStyle={styles.popupScrollContent}
-                  showsVerticalScrollIndicator={true}
-                  bounces={true}
-                >
-                  <Text style={styles.popupSectionTitle}>
-                    1. Acceptance of Terms
-                  </Text>
+                    }],
+                  },
+                ]}
+              >
+                <View style={styles.popupHeader}>
+                  <View style={styles.popupDragIndicator} />
+                  <Text style={styles.popupTitle}>Terms & Conditions</Text>
+                  <TouchableOpacity onPress={() => setShowTermsModal(false)} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color={Colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.popupBody} contentContainerStyle={styles.popupScrollContent} showsVerticalScrollIndicator={true} bounces={true}>
+                  <Text style={styles.popupSectionTitle}>1. Acceptance of Terms</Text>
                   <Text style={styles.popupText}>
-                    By accessing and using SIGHT (Survey Insights & Global
-                    Health Technology), you agree to be bound by these Terms &
-                    Conditions. If you don't agree, that's totally fine - we'll
-                    miss you, but we understand. No hard feelings! (But
-                    seriously, you can't use the app without agreeing.)
+                    By accessing and using SIGHT (Survey Insights & Global Health Technology), you agree to be bound by these Terms & Conditions. If you don't agree, that's totally fine - we'll miss you, but we understand.
                   </Text>
-
                   <Text style={styles.popupSectionTitle}>2. User Accounts</Text>
                   <Text style={styles.popupText}>
-                    You are responsible for maintaining the confidentiality of
-                    your account credentials. We're not responsible if your cat
-                    walks across your keyboard and changes your password (though
-                    that would be impressive). Please use strong passwords -
-                    "password123" doesn't count as strong, no matter how much
-                    you believe it does.
+                    You are responsible for maintaining the confidentiality of your account credentials. Please use strong passwords - "password123" doesn't count as strong.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    3. Survey Creation & Responses
-                  </Text>
+                  <Text style={styles.popupSectionTitle}>3. Survey Creation & Responses</Text>
                   <Text style={styles.popupText}>
-                    As a researcher, you may create surveys and collect
-                    responses. As a respondent, you may participate in surveys.
-                    All survey content must be legal, ethical, and not violate
-                    anyone's rights. We reserve the right to remove surveys that
-                    ask inappropriate questions (like "What's your favorite
-                    color?" when the survey is about medical research - that's
-                    just confusing).
+                    As a researcher, you may create surveys and collect responses. All survey content must be legal, ethical, and not violate anyone's rights.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    4. Points & Rewards System
-                  </Text>
+                  <Text style={styles.popupSectionTitle}>4. Points & Rewards System</Text>
                   <Text style={styles.popupText}>
-                    Points are awarded for completing surveys and can be used
-                    within the platform. Points are non-transferable,
-                    non-refundable, and cannot be exchanged for actual money (we
-                    know, we're disappointed too). Attempting to game the system
-                    will result in point deduction - we have trust scores for a
-                    reason!
+                    Points are awarded for completing surveys and can be used within the platform. Points are non-transferable and non-refundable.
                   </Text>
-
                   <Text style={styles.popupSectionTitle}>5. AI Analysis</Text>
                   <Text style={styles.popupText}>
-                    Our AI analysis features use advanced algorithms to provide
-                    insights. While our AI is smart, it's not psychic - it can't
-                    predict lottery numbers or tell you if it's going to rain
-                    tomorrow. The analysis is provided "as is" and should be
-                    used as a tool to aid your research, not as the sole basis
-                    for life-changing decisions.
+                    Our AI analysis features use advanced algorithms to provide insights. The analysis is provided "as is" and should be used as a tool to aid your research.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    6. Survey Ownership & Public Nature
-                  </Text>
+                  <Text style={styles.popupSectionTitle}>6. Survey Ownership</Text>
                   <Text style={styles.popupText}>
-                    All surveys created on SIGHT, including all survey content,
-                    questions, responses, and any information contained within
-                    them, are public and owned by us. By creating or
-                    participating in surveys on this platform, you acknowledge
-                    that all survey data will be used, analyzed, and owned by
-                    SIGHT. We may use this information for research, analysis,
-                    publication, or any other purpose we deem appropriate. Your
-                    participation constitutes your agreement to this public
-                    ownership model. Think of it like contributing to a public
-                    research database - your input helps everyone, but the data
-                    belongs to the platform (that's us, by the way).
+                    All surveys created on SIGHT, including all survey content, questions, responses, and any information contained within them, are public and owned by us.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    7. Prohibited Activities
-                  </Text>
-                  <Text style={styles.popupText}>
-                    You agree not to: spam surveys, create fake accounts,
-                    attempt to hack our systems, or use the platform for illegal
-                    activities. Basically, don't be a villain. We're trying to
-                    do good research here, not create chaos.
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    8. Service Availability
-                  </Text>
-                  <Text style={styles.popupText}>
-                    We strive for 99.9% uptime, but sometimes things break
-                    (servers have bad days too). We're not liable for temporary
-                    service interruptions, though we'll do our best to fix
-                    things quickly. If the app is down, take it as a sign to go
-                    outside and touch some grass.
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    9. Limitation of Liability
-                  </Text>
-                  <Text style={styles.popupText}>
-                    SIGHT is provided "as is" without warranties. We're not
-                    liable for any indirect, incidental, or consequential
-                    damages. In other words, if you make a bad business decision
-                    based on survey data, that's on you, not us. We're here to
-                    help, but we're not fortune tellers.
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    10. Changes to Terms
-                  </Text>
-                  <Text style={styles.popupText}>
-                    We may update these terms from time to time. We'll notify
-                    you of significant changes, but it's your responsibility to
-                    review them periodically. If you continue using SIGHT after
-                    changes, you're accepting the new terms. (Pro tip: actually
-                    read them - you might learn something!)
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    11. Contact Information
-                  </Text>
-                  <Text style={styles.popupText}>
-                    If you have questions about these terms, please contact our
-                    support team. We're here to help (and we promise we're
-                    friendlier than this legal document makes us sound).
-                  </Text>
-
-                  <Text style={styles.popupFooterText}>
-                    Last Updated: {new Date().toLocaleDateString()}
-                  </Text>
+                  <Text style={styles.popupFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
                 </ScrollView>
-              </View>
+              </Animated.View>
             </Animated.View>
-          </Animated.View>
-        </SafeAreaView>
-      )}
+          </SafeAreaView>
+        )}
 
-      {/* Privacy Policy Custom Popup */}
-      {showPrivacyModal && (
-        <SafeAreaView
-          style={styles.popupOverlayContainer}
-          edges={["bottom"]}
-          pointerEvents="box-none"
-        >
-          <Animated.View
-            style={[
-              styles.popupOverlay,
-              {
-                opacity: privacyOpacityAnim,
-              },
-            ]}
-            pointerEvents="box-none"
-          >
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => setShowPrivacyModal(false)}
-            />
-            <Animated.View
-              style={[
-                styles.popupContent,
-                {
-                  height: popupHeight,
-                  transform: [
-                    {
+        {/* Privacy Policy Modal */}
+        {showPrivacyModal && (
+          <SafeAreaView style={styles.popupOverlayContainer} edges={["bottom"]} pointerEvents="box-none">
+            <Animated.View style={[styles.popupOverlay, { opacity: privacyOpacityAnim }]} pointerEvents="box-none">
+              <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowPrivacyModal(false)} />
+              <Animated.View
+                style={[
+                  styles.popupContent,
+                  {
+                    height: popupHeight,
+                    transform: [{
                       translateY: privacySlideAnim.interpolate({
                         inputRange: [0, 1],
                         outputRange: [popupHeight, 0],
                       }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <View style={styles.popupHeader}>
-                <Text style={styles.popupTitle}>Privacy Policy</Text>
-                <TouchableOpacity
-                  onPress={() => setShowPrivacyModal(false)}
-                  style={styles.closeButton}
-                >
-                  <Ionicons name="close" size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.popupBody}>
-                <ScrollView
-                  style={styles.popupScrollView}
-                  contentContainerStyle={styles.popupScrollContent}
-                  showsVerticalScrollIndicator={true}
-                  bounces={true}
-                >
+                    }],
+                  },
+                ]}
+              >
+                <View style={styles.popupHeader}>
+                  <View style={styles.popupDragIndicator} />
+                  <Text style={styles.popupTitle}>Privacy Policy</Text>
+                  <TouchableOpacity onPress={() => setShowPrivacyModal(false)} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color={Colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.popupBody} contentContainerStyle={styles.popupScrollContent} showsVerticalScrollIndicator={true} bounces={true}>
                   <Text style={styles.popupSectionTitle}>1. Introduction</Text>
                   <Text style={styles.popupText}>
-                    At SIGHT, we take your privacy seriously. Like, really
-                    seriously. We know your data is important to you, and it's
-                    important to us too. This Privacy Policy explains how we
-                    collect, use, and protect your information. Spoiler alert:
-                    we're not selling your data to aliens (or anyone else, for
-                    that matter).
+                    At SIGHT, we take your privacy seriously. This Privacy Policy explains how we collect, use, and protect your information.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    2. Information We Collect
-                  </Text>
+                  <Text style={styles.popupSectionTitle}>2. Information We Collect</Text>
                   <Text style={styles.popupText}>
-                    We collect information you provide directly: name, email,
-                    profile images, survey responses, and account activity. We
-                    also collect technical data like device information and
-                    usage patterns. We don't collect your thoughts (yet - that
-                    technology is still in development, and honestly, we're not
-                    sure we want to know what you're thinking about during
-                    boring surveys).
+                    We collect information you provide directly: name, email, profile images, survey responses, and account activity.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    3. How We Use Your Information
-                  </Text>
+                  <Text style={styles.popupSectionTitle}>3. How We Use Your Information</Text>
                   <Text style={styles.popupText}>
-                    We use your data to: provide and improve our services,
-                    process survey responses, generate AI analyses, send you
-                    notifications (only the important ones, we promise), and
-                    maintain your account. We use aggregated, anonymized data
-                    for analytics - your individual responses are kept private
-                    unless you explicitly share them.
+                    We use your data to provide and improve our services, process survey responses, and generate AI analyses.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    4. Data Storage & Security
-                  </Text>
+                  <Text style={styles.popupSectionTitle}>4. Data Storage & Security</Text>
                   <Text style={styles.popupText}>
-                    Your data is stored securely using industry-standard
-                    encryption. We use MongoDB for data storage and implement
-                    security measures to protect against unauthorized access.
-                    While we can't guarantee 100% security (no one can, really),
-                    we do our best. Think of it like locking your front door -
-                    it doesn't guarantee nothing bad will happen, but it sure
-                    helps!
+                    Your data is stored securely using industry-standard encryption. We implement security measures to protect against unauthorized access.
                   </Text>
-
                   <Text style={styles.popupSectionTitle}>5. Data Sharing</Text>
                   <Text style={styles.popupText}>
-                    We don't sell your personal information. Period. We may
-                    share aggregated, anonymized data with researchers (that's
-                    the whole point of the platform), but your individual
-                    identity remains protected. The only exception is if
-                    required by law - and even then, we'll put up a good fight
-                    (legally speaking).
+                    We don't sell your personal information. Period. We may share aggregated, anonymized data with researchers.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    6. Survey Responses
-                  </Text>
+                  <Text style={styles.popupSectionTitle}>6. Your Rights</Text>
                   <Text style={styles.popupText}>
-                    Your survey responses are shared with the survey creator
-                    (the researcher) in anonymized form. Researchers can see
-                    your answers but not your personal identifying information
-                    unless you explicitly provide it in a response. Think of it
-                    like a secret admirer - they know what you said, but not who
-                    you are (unless you tell them).
+                    You have the right to access your data, update your information, delete your account, and request a copy of your data.
                   </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    7. AI Analysis & Processing
-                  </Text>
-                  <Text style={styles.popupText}>
-                    We use OpenAI's GPT-4 for AI analysis. When we send data to
-                    OpenAI, it's processed according to their privacy policies.
-                    We ensure that personal identifiers are removed before
-                    processing. The AI doesn't know your name, email, or that
-                    embarrassing photo from 2012 (we don't either, thankfully).
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    8. Cookies & Tracking
-                  </Text>
-                  <Text style={styles.popupText}>
-                    We use authentication tokens (JWT) to keep you logged in.
-                    These aren't cookies in the traditional sense, but they
-                    serve a similar purpose. We don't use third-party tracking
-                    cookies or sell your browsing data. Your activity stays
-                    between you and us (and our servers, but they're sworn to
-                    secrecy).
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>9. Your Rights</Text>
-                  <Text style={styles.popupText}>
-                    You have the right to: access your data, update your
-                    information, delete your account, and request a copy of your
-                    data. You can also opt out of certain communications. Just
-                    contact us - we're reasonable people (most of the time).
-                    We'll process your request within 30 days, or sooner if we
-                    can (we're not monsters, we just have a lot of requests
-                    sometimes).
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    10. Children's Privacy
-                  </Text>
-                  <Text style={styles.popupText}>
-                    SIGHT is not intended for users under 13 years of age. If
-                    you're under 13, please get your parent's permission (and
-                    maybe ask them to help you read this - it's pretty long, we
-                    know). We don't knowingly collect data from children, and if
-                    we find out we have, we'll delete it faster than you can say
-                    "privacy violation."
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    11. International Data Transfers
-                  </Text>
-                  <Text style={styles.popupText}>
-                    Your data may be processed and stored in different
-                    countries. We ensure appropriate safeguards are in place to
-                    protect your data regardless of where it's processed. Your
-                    data travels more than most people do (and probably has
-                    better security too).
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    12. Data Retention
-                  </Text>
-                  <Text style={styles.popupText}>
-                    We retain your data as long as your account is active or as
-                    needed to provide services. If you delete your account,
-                    we'll delete your personal data within 30 days, though some
-                    anonymized data may remain for research purposes. Think of
-                    it like cleaning your room - most stuff goes, but some
-                    things (like aggregated statistics) stick around because
-                    they're useful.
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>
-                    13. Changes to Privacy Policy
-                  </Text>
-                  <Text style={styles.popupText}>
-                    We may update this Privacy Policy from time to time. We'll
-                    notify you of significant changes via email or in-app
-                    notification. Continued use of SIGHT after changes means you
-                    accept the updated policy. We recommend checking back
-                    occasionally - not because we're trying to hide anything,
-                    but because privacy laws evolve (and so do we).
-                  </Text>
-
-                  <Text style={styles.popupSectionTitle}>14. Contact Us</Text>
-                  <Text style={styles.popupText}>
-                    If you have privacy concerns or questions, please contact
-                    our privacy team. We're here to help and we take your
-                    concerns seriously. We might even respond faster than your
-                    internet service provider (that's a low bar, but we'll take
-                    it).
-                  </Text>
-
-                  <Text style={styles.popupFooterText}>
-                    Last Updated: {new Date().toLocaleDateString()}
-                  </Text>
+                  <Text style={styles.popupFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
                 </ScrollView>
-              </View>
+              </Animated.View>
             </Animated.View>
-          </Animated.View>
-        </SafeAreaView>
-      )}
-    </SafeAreaView>
+          </SafeAreaView>
+        )}
+      </SafeAreaView>
     </FadeInView>
   );
 }
@@ -1059,43 +708,27 @@ export default function ResearcherProfile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.secondary,
   },
   fixedHeader: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
     zIndex: 10,
-    paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    borderBottomLeftRadius: Borders.radius.xl,
+    borderBottomRightRadius: Borders.radius.xl,
+    ...Shadows.md,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 0,
+    paddingTop: Spacing.lg,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.md,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  headerContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
   },
   logoContainer: {
     flexDirection: "row",
@@ -1107,257 +740,273 @@ const styles = StyleSheet.create({
     marginLeft: -6,
   },
   title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#222222",
+    ...Typography.styles.h2,
+    color: Colors.text.primary,
   },
-  headerUserInfo: {
+  userProfileCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 24,
-    marginTop: 8,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.lg,
+    gap: Spacing.lg,
   },
-  content: {
-    flex: 1,
-    padding: 24,
-  },
-  // User Information Card
-  userCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
-    flexDirection: "row",
+  avatarSection: {
     alignItems: "center",
-    gap: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  avatarContainer: {
-    marginRight: 0,
-  },
-  avatarImageWrapper: {
+  avatarWrapper: {
     position: "relative",
   },
   avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: "#E0F2FE",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarImage: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-  },
-  avatarText: {
-    fontSize: 36,
-    fontWeight: "600",
-    color: "#0C4A6E",
-  },
-  verificationBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#7DD3FC",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     borderWidth: 3,
-    borderColor: "#FFFFFF",
+    borderColor: Colors.background.primary,
+  },
+  levelBadge: {
+    position: "absolute",
+    bottom: -4,
+    right: -4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary.purple,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 3,
+    borderColor: Colors.background.primary,
   },
-  userInfoContainer: {
+  levelBadgeText: {
+    ...Typography.styles.captionSmall,
+    color: Colors.text.inverse,
+    fontWeight: "700",
+  },
+  userInfo: {
     flex: 1,
-    justifyContent: "center",
   },
   userName: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-    textAlign: "left",
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
+    marginBottom: 2,
   },
   userEmail: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "left",
+    ...Typography.styles.bodySmall,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
   },
-  // Section Title
+  levelTag: {
+    alignSelf: "flex-start",
+    backgroundColor: Colors.surface.purpleTint,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Borders.radius.full,
+  },
+  levelTagText: {
+    ...Typography.styles.captionSmall,
+    color: Colors.primary.purple,
+    fontWeight: "600",
+  },
+  section: {
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    marginBottom: Spacing.xl,
+  },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 16,
+    ...Typography.styles.h5,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
-  // Activity Section
-  activityGrid: {
+  statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 32,
-    gap: 12,
+    gap: Spacing.sm,
   },
-  activityCard: {
-    width: "47%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
+  statCard: {
+    flex: 1,
+    minWidth: "45%",
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.lg,
+    padding: Spacing.md,
     alignItems: "center",
+    position: "relative",
+    ...Shadows.sm,
+  },
+  statIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    alignItems: "center",
+    marginBottom: Spacing.sm,
   },
-  activityValue: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111827",
-    marginTop: 12,
-    marginBottom: 4,
-    textAlign: "center",
+  statValue: {
+    ...Typography.styles.h3,
+    color: Colors.text.primary,
+    marginBottom: 2,
   },
-  activityLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
+  statLabel: {
+    ...Typography.styles.caption,
+    color: Colors.text.secondary,
   },
-  // Points Card
+  statArrow: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    opacity: 0.5,
+  },
   pointsCard: {
-    marginBottom: 32,
-    borderRadius: 16,
+    borderRadius: Borders.radius.xl,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    ...Shadows.lg,
   },
   pointsGradient: {
-    padding: 24,
+    padding: Spacing.xl,
   },
-  pointsContent: {
+  pointsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: Spacing.lg,
+  },
+  pointsLabel: {
+    ...Typography.styles.caption,
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: 4,
+  },
+  pointsValue: {
+    fontSize: Typography.fontSize.display,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.inverse,
+    lineHeight: 48,
+  },
+  trophyContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  progressSection: {
+    marginBottom: Spacing.lg,
+  },
+  progressHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: Spacing.xs,
   },
-  pointsLeft: {
-    flex: 1,
+  progressLabel: {
+    ...Typography.styles.captionSmall,
+    color: "rgba(255,255,255,0.75)",
   },
-  pointsLabel: {
-    fontSize: 14,
+  progressPercent: {
+    ...Typography.styles.captionSmall,
+    color: "rgba(255,255,255,0.9)",
     fontWeight: "600",
-    color: "#FFFFFF",
-    opacity: 0.9,
-    marginBottom: 8,
   },
-  pointsValue: {
-    fontSize: 48,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 8,
-  },
-  pointsNextReward: {
-    fontSize: 12,
-    color: "#FFFFFF",
-    opacity: 0.9,
-    marginBottom: 12,
-  },
-  pointsProgressBar: {
+  progressTrack: {
     height: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "rgba(255,255,255,0.25)",
     borderRadius: 3,
     overflow: "hidden",
   },
-  pointsProgressFill: {
+  progressFill: {
     height: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.text.inverse,
     borderRadius: 3,
   },
-  pointsRight: {
-    marginLeft: 16,
+  weeklyStats: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: Borders.radius.md,
+    paddingVertical: Spacing.sm,
   },
-  // Settings Section
+  weeklyStatItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  weeklyStatValue: {
+    ...Typography.styles.h5,
+    color: Colors.text.inverse,
+  },
+  weeklyStatLabel: {
+    ...Typography.styles.captionSmall,
+    color: "rgba(255,255,255,0.7)",
+  },
+  weeklyDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
   settingsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    marginBottom: 32,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.lg,
+    ...Shadows.sm,
     overflow: "hidden",
   },
   settingsItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
-  settingsItemWithBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+  settingsDivider: {
+    height: 1,
+    backgroundColor: Colors.border.light,
+    marginHorizontal: Spacing.md,
   },
   settingsItemLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: Spacing.sm,
   },
-  settingsItemText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#111827",
-  },
-  logoutIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: "#EF4444",
+  settingsIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: Borders.radius.sm,
     justifyContent: "center",
     alignItems: "center",
   },
-  logoutText: {
-    color: "#EF4444",
+  settingsItemText: {
+    ...Typography.styles.body,
+    color: Colors.text.primary,
   },
-  // Footer
+  logoutText: {
+    color: Colors.semantic.error,
+  },
   footer: {
     alignItems: "center",
-    marginTop: 24,
-    marginBottom: 16,
+    paddingVertical: Spacing.xl,
   },
   footerBranding: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
-    gap: 8,
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
   },
   footerLogo: {
     width: 24,
     height: 24,
   },
   footerBrandText: {
-    fontSize: 16,
+    ...Typography.styles.body,
     fontWeight: "600",
-    color: "#8B5CF6",
+    color: Colors.primary.purple,
   },
   footerVersion: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginBottom: 4,
+    ...Typography.styles.captionSmall,
+    color: Colors.text.tertiary,
+    marginBottom: 2,
   },
   footerCopyright: {
-    fontSize: 12,
-    color: "#9CA3AF",
+    ...Typography.styles.captionSmall,
+    color: Colors.text.tertiary,
   },
-  // Popup Styles
+  // Modal Styles
   popupOverlayContainer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1000,
@@ -1368,25 +1017,35 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   popupContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: Colors.background.primary,
+    borderTopLeftRadius: Borders.radius.xxl,
+    borderTopRightRadius: Borders.radius.xxl,
     width: "100%",
+  },
+  popupDragIndicator: {
+    position: "absolute",
+    top: Spacing.xs,
+    left: "50%",
+    marginLeft: -20,
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border.default,
   },
   popupHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: Colors.border.light,
   },
   popupTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
     flex: 1,
-    textAlign: "left",
   },
   closeButton: {
     padding: 4,
@@ -1394,31 +1053,26 @@ const styles = StyleSheet.create({
   popupBody: {
     flex: 1,
   },
-  popupScrollView: {
-    flex: 1,
-  },
   popupScrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.xxl,
   },
   popupSectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginTop: 20,
-    marginBottom: 8,
+    ...Typography.styles.h5,
+    color: Colors.text.primary,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xs,
   },
   popupText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#374151",
-    marginBottom: 16,
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
+    lineHeight: 22,
+    marginBottom: Spacing.sm,
   },
   popupFooterText: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginTop: 20,
-    marginBottom: 20,
+    ...Typography.styles.captionSmall,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xl,
     textAlign: "center",
     fontStyle: "italic",
   },

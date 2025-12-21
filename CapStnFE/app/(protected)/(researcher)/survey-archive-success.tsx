@@ -9,15 +9,18 @@ import {
   ScrollView,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { getSurveyById, publishSurvey } from "@/api/surveys";
 import { Survey } from "@/api/surveys";
+import { FadeInView } from "@/components/FadeInView";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 export default function SurveyArchiveSuccess() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { surveyId, questionCount, points, estimatedMinutes } =
     useLocalSearchParams<{
       surveyId: string;
@@ -85,10 +88,18 @@ export default function SurveyArchiveSuccess() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <FadeInView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={[Colors.background.primary, Colors.surface.blueTint, Colors.surface.purpleTint]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <View style={styles.logoContainer}>
             <Image
               source={require("@/assets/title.png")}
@@ -199,141 +210,127 @@ export default function SurveyArchiveSuccess() {
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
+    </FadeInView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
   },
   fixedHeader: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
     zIndex: 10,
     paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    borderBottomLeftRadius: Borders.radius.xl,
+    borderBottomRightRadius: Borders.radius.xl,
+    borderBottomWidth: Borders.width.default,
+    borderBottomColor: Colors.border.light,
+    ...Shadows.md,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   titleImage: {
-    height: 28,
+    height: Spacing.xl,
     width: 92,
-    marginLeft: -8,
-    marginTop: -4,
+    marginLeft: -Spacing.xs,
+    marginTop: -Spacing.xxs,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#222222",
-    marginBottom: 8,
+    ...Typography.styles.h1,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: "#505050",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    padding: Spacing.lg,
     alignItems: "center",
+    paddingBottom: 100,
   },
   iconContainer: {
-    marginBottom: 32,
+    marginBottom: Spacing.xxl,
   },
   iconGradient: {
     width: 120,
     height: 120,
-    borderRadius: 60,
+    borderRadius: Borders.radius.full,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#4A63D8",
+    shadowColor: Colors.primary.blue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 12,
+    ...Typography.styles.h2,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
     textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 24,
-    paddingHorizontal: 8,
+    marginBottom: Spacing.xxl,
+    lineHeight: Typography.lineHeight.body,
+    paddingHorizontal: Spacing.xs,
   },
   summaryCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Borders.radius.lg,
+    padding: Spacing.lg,
     width: "100%",
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    marginBottom: Spacing.xxl,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
   },
   summaryTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#6B7280",
+    fontSize: Typography.fontSize.caption,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.tertiary,
     textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: 12,
+    marginBottom: Spacing.sm,
     textAlign: "center",
   },
   surveyTitleText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 20,
+    ...Typography.styles.h3,
+    color: Colors.text.primary,
+    marginBottom: Spacing.lg,
     textAlign: "center",
   },
   summaryModules: {
     flexDirection: "row",
-    gap: 12,
+    gap: Spacing.sm,
   },
   summaryModule: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.md,
+    padding: Spacing.md,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    ...Shadows.xs,
   },
   timeIconContainer: {
     position: "relative",
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
   timeEditIcon: {
     position: "absolute",
@@ -341,24 +338,23 @@ const styles = StyleSheet.create({
     right: -4,
   },
   moduleValue: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
+    ...Typography.styles.h2,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xxs,
   },
   moduleLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B7280",
+    fontSize: Typography.fontSize.caption,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.tertiary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   publishButton: {
-    borderRadius: 16,
+    borderRadius: Borders.radius.lg,
     overflow: "hidden",
     width: "100%",
-    marginBottom: 12,
-    shadowColor: "#A23DD8",
+    marginBottom: Spacing.sm,
+    shadowColor: Colors.primary.purple,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -368,40 +364,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    gap: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.xs,
   },
   publishButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
   },
   editButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Borders.radius.lg,
+    backgroundColor: Colors.background.primary,
+    borderWidth: Borders.width.thick,
+    borderColor: Colors.border.default,
     width: "100%",
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: Spacing.md,
+    gap: Spacing.xs,
   },
   editButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#6B7280",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.tertiary,
   },
   backLink: {
-    paddingVertical: 12,
+    paddingVertical: Spacing.sm,
   },
   backLinkText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#4A63D8",
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.primary.blue,
   },
 });

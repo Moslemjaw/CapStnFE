@@ -3,11 +3,14 @@ import {
   Text,
   View,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import React from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 export default function ChoosePath() {
   const router = useRouter();
@@ -22,50 +25,126 @@ export default function ChoosePath() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Choose Your Path</Text>
-          <Text style={styles.subtitle}>
-            Select how you want to use the platform
+      <LinearGradient
+        colors={[Colors.background.secondary, Colors.surface.blueTint]}
+        style={styles.gradientContainer}
+      >
+        <View style={styles.content}>
+          {/* Logo */}
+          <View style={styles.logoSection}>
+            <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
+          </View>
+
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Choose Your Path</Text>
+            <Text style={styles.subtitle}>
+              Select how you want to use the platform today
+            </Text>
+          </View>
+
+          {/* Path Options */}
+          <View style={styles.optionsContainer}>
+            {/* Researcher Card */}
+            <TouchableOpacity
+              style={styles.optionCard}
+              onPress={() => handlePathSelection("researcher")}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[Colors.surface.blueTint, Colors.background.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardGradient}
+              >
+                <View style={styles.cardContent}>
+                  <View style={[styles.iconCircle, { backgroundColor: Colors.surface.blueTint }]}>
+                    <Ionicons name="flask-outline" size={36} color={Colors.primary.blue} />
+                  </View>
+                  
+                  <View style={styles.cardTextSection}>
+                    <Text style={styles.optionTitle}>Researcher</Text>
+                    <Text style={styles.optionDescription}>
+                      Create surveys, collect data, and analyze responses with AI-powered insights
+                    </Text>
+                  </View>
+
+                  <View style={[styles.arrowCircle, { backgroundColor: Colors.primary.blue }]}>
+                    <Ionicons name="arrow-forward" size={20} color={Colors.text.inverse} />
+                  </View>
+                </View>
+
+                <View style={styles.featuresList}>
+                  <View style={styles.featureItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.semantic.success} />
+                    <Text style={styles.featureText}>Create unlimited surveys</Text>
+                  </View>
+                  <View style={styles.featureItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.semantic.success} />
+                    <Text style={styles.featureText}>AI-powered analysis</Text>
+                  </View>
+                  <View style={styles.featureItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.semantic.success} />
+                    <Text style={styles.featureText}>Export and share results</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Respondent Card */}
+            <TouchableOpacity
+              style={styles.optionCard}
+              onPress={() => handlePathSelection("respondent")}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[Colors.surface.tealTint, Colors.background.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardGradient}
+              >
+                <View style={styles.cardContent}>
+                  <View style={[styles.iconCircle, { backgroundColor: Colors.surface.tealTint }]}>
+                    <Ionicons name="person-outline" size={36} color={Colors.accent.teal} />
+                  </View>
+                  
+                  <View style={styles.cardTextSection}>
+                    <Text style={styles.optionTitle}>Respondent</Text>
+                    <Text style={styles.optionDescription}>
+                      Participate in surveys, earn points, and share your valuable insights
+                    </Text>
+                  </View>
+
+                  <View style={[styles.arrowCircle, { backgroundColor: Colors.accent.teal }]}>
+                    <Ionicons name="arrow-forward" size={20} color={Colors.text.inverse} />
+                  </View>
+                </View>
+
+                <View style={styles.featuresList}>
+                  <View style={styles.featureItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.semantic.success} />
+                    <Text style={styles.featureText}>Earn points per survey</Text>
+                  </View>
+                  <View style={styles.featureItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.semantic.success} />
+                    <Text style={styles.featureText}>Personal insights</Text>
+                  </View>
+                  <View style={styles.featureItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.semantic.success} />
+                    <Text style={styles.featureText}>Track your progress</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer note */}
+          <Text style={styles.footerNote}>
+            You can switch between roles anytime from your profile
           </Text>
         </View>
-
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={() => handlePathSelection("researcher")}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconContainer, styles.researcherIcon]}>
-              <Ionicons name="flask-outline" size={48} color="#3B82F6" />
-            </View>
-            <Text style={styles.optionTitle}>Researcher</Text>
-            <Text style={styles.optionDescription}>
-              Create surveys, collect data, and analyze responses
-            </Text>
-            <View style={styles.arrowContainer}>
-              <Ionicons name="arrow-forward" size={24} color="#3B82F6" />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={() => handlePathSelection("respondent")}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconContainer, styles.respondentIcon]}>
-              <Ionicons name="person-outline" size={48} color="#22C55E" />
-            </View>
-            <Text style={styles.optionTitle}>Respondent</Text>
-            <Text style={styles.optionDescription}>
-              Participate in surveys and share your insights
-            </Text>
-            <View style={styles.arrowContainer}>
-              <Ionicons name="arrow-forward" size={24} color="#22C55E" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -73,80 +152,110 @@ export default function ChoosePath() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+  },
+  gradientContainer: {
+    flex: 1,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 24,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
+  },
+  logoSection: {
+    alignItems: "center",
+    marginBottom: Spacing.xl,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    marginBottom: Spacing.sm,
+  },
+  titleImage: {
+    height: 28,
+    width: 100,
   },
   header: {
     alignItems: "center",
-    marginBottom: 48,
+    marginBottom: Spacing.xxl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 12,
+    ...Typography.styles.h1,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
     textAlign: "center",
-    lineHeight: 24,
   },
   optionsContainer: {
-    gap: 20,
+    gap: Spacing.lg,
+    flex: 1,
+    justifyContent: "center",
   },
   optionCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
+    borderRadius: Borders.radius.xl,
+    overflow: "hidden",
+    ...Shadows.lg,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  cardGradient: {
+    padding: Spacing.lg,
+    borderRadius: Borders.radius.xl,
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
-    alignSelf: "center",
   },
-  researcherIcon: {
-    backgroundColor: "#DBEAFE",
-  },
-  respondentIcon: {
-    backgroundColor: "#DCFCE7",
+  cardTextSection: {
+    flex: 1,
+    marginHorizontal: Spacing.md,
   },
   optionTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    textAlign: "center",
-    marginBottom: 12,
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
+    marginBottom: 4,
   },
   optionDescription: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 20,
+    ...Typography.styles.bodySmall,
+    color: Colors.text.secondary,
+    lineHeight: 20,
   },
-  arrowContainer: {
-    alignItems: "center",
+  arrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
+    alignItems: "center",
+  },
+  featuresList: {
+    gap: Spacing.xs,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
+  },
+  featureItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  featureText: {
+    ...Typography.styles.bodySmall,
+    color: Colors.text.secondary,
+  },
+  footerNote: {
+    ...Typography.styles.caption,
+    color: Colors.text.tertiary,
+    textAlign: "center",
+    marginTop: Spacing.xl,
   },
 });

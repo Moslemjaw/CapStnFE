@@ -4,7 +4,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image,
@@ -12,6 +11,7 @@ import {
   Modal,
   Pressable,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useContext, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -22,6 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 import AuthContext from "@/context/AuthContext";
 import { register } from "@/api/auth";
 import { storeToken, storeUser } from "@/api/storage";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -35,6 +36,13 @@ export default function Register() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [confirmPasswordBlurred, setConfirmPasswordBlurred] = useState(false);
+  
+  // Focus states
+  const [nameFocused, setNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
+  
   const router = useRouter();
   const { setIsAuthenticated } = useContext(AuthContext);
 
@@ -43,7 +51,6 @@ export default function Register() {
     mutationFn: () => register({ email, password }, image || "", name),
     onSuccess: async (data) => {
       await storeToken(data.token);
-      // Store user data if available (normalize id to _id)
       if (data?.user) {
         const normalizedUser = {
           ...data.user,
@@ -70,24 +77,15 @@ export default function Register() {
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert(
-        "Validation Error",
-        "Passwords do not match. Please try again."
-      );
+      Alert.alert("Validation Error", "Passwords do not match. Please try again.");
       return;
     }
     if (password.length < 8) {
-      Alert.alert(
-        "Validation Error",
-        "Password must be at least 8 characters long."
-      );
+      Alert.alert("Validation Error", "Password must be at least 8 characters long.");
       return;
     }
     if (!agreedToTerms) {
-      Alert.alert(
-        "Agreement Required",
-        "Please agree to the Terms & Conditions and Privacy Policy to continue."
-      );
+      Alert.alert("Agreement Required", "Please agree to the Terms & Conditions and Privacy Policy to continue.");
       return;
     }
     mutate();
@@ -95,710 +93,335 @@ export default function Register() {
 
   const pickImage = async () => {
     try {
-      // Request permissions for media library
-      const { status: libraryStatus } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (libraryStatus !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "We need access to your photos to set a profile picture."
-        );
+        Alert.alert("Permission Required", "We need access to your photos to set a profile picture.");
         return;
       }
 
-      // Show action sheet to choose between camera and library
-      Alert.alert(
-        "Select Profile Picture",
-        "Choose an option",
-        [
-          {
-            text: "Camera",
-            onPress: async () => {
-              // Request camera permissions
-              const { status: cameraStatus } =
-                await ImagePicker.requestCameraPermissionsAsync();
-
-              if (cameraStatus !== "granted") {
-                Alert.alert(
-                  "Permission Required",
-                  "We need access to your camera to take a profile picture."
-                );
-                return;
-              }
-
-              // Launch camera with square crop (1:1) for circular profile picture
-              const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1], // Square aspect ratio for circular profile display
-                quality: 0.8,
-              });
-
-              if (!result.canceled && result.assets[0]) {
-                setImage(result.assets[0].uri);
-              }
-            },
+      Alert.alert("Select Profile Picture", "Choose an option", [
+        {
+          text: "Camera",
+          onPress: async () => {
+            const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+            if (cameraStatus !== "granted") {
+              Alert.alert("Permission Required", "We need access to your camera to take a profile picture.");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets[0]) {
+              setImage(result.assets[0].uri);
+            }
           },
-          {
-            text: "Photo Library",
-            onPress: async () => {
-              // Launch image library with square crop (1:1) for circular profile picture
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1], // Square aspect ratio for circular profile display
-                quality: 0.8,
-              });
-
-              if (!result.canceled && result.assets[0]) {
-                setImage(result.assets[0].uri);
-              }
-            },
+        },
+        {
+          text: "Photo Library",
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets[0]) {
+              setImage(result.assets[0].uri);
+            }
           },
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-        ],
-        { cancelable: true }
-      );
+        },
+        { text: "Cancel", style: "cancel" },
+      ]);
     } catch (error) {
       console.error("Error picking image:", error);
       Alert.alert("Error", "Failed to pick image. Please try again.");
     }
   };
 
+  const isFormValid = name && email && password && confirmPassword && password === confirmPassword && password.length >= 8 && agreedToTerms;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient
-        colors={["#EEF5FF", "#F9F6FE"]}
+        colors={[Colors.background.secondary, Colors.surface.purpleTint]}
         style={styles.gradientContainer}
       >
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
+          extraHeight={120}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
             <View style={styles.content}>
               {/* Branding Section */}
               <View style={styles.brandingSection}>
                 <View style={styles.logoContainer}>
-                  <Image
-                    source={require("@/assets/logo.png")}
-                    style={styles.logo}
-                    resizeMode="contain"
-                  />
+                  <Image source={require("@/assets/logo.png")} style={styles.logo} resizeMode="contain" />
                 </View>
-                <View style={styles.titleContainer}>
-                  <Text style={styles.title}>Join </Text>
-                  <Image
-                    source={require("@/assets/title.png")}
-                    style={styles.titleImage}
-                    resizeMode="contain"
-                  />
+                <View style={styles.titleRow}>
+                  <Text style={styles.joinText}>Join </Text>
+                  <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
                 </View>
-                <Text style={styles.subtitle}>
-                  Create your account and start exploring
-                </Text>
+                <Text style={styles.subtitle}>Create your account and start exploring</Text>
               </View>
 
-              {/* Profile Avatar Upload */}
-              <View style={styles.profilePicContainer}>
-                <View style={styles.avatarWrapper}>
-                  <TouchableOpacity
-                    style={styles.profilePicButton}
-                    onPress={pickImage}
-                    activeOpacity={0.8}
-                  >
-                    {image ? (
-                      <Image
-                        source={{ uri: image }}
-                        style={styles.profilePic}
-                      />
-                    ) : (
-                      <LinearGradient
-                        colors={["#EEF5FF", "#E8D5FF"]}
-                        style={styles.profilePicPlaceholder}
-                      >
-                        <Ionicons
-                          name="person-outline"
-                          size={48}
-                          color="#FFFFFF"
-                        />
-                      </LinearGradient>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.cameraIconButton}
-                    onPress={pickImage}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.cameraIconContainer}>
-                      <Ionicons
-                        name="camera-outline"
-                        size={20}
-                        color="#FFFFFF"
-                      />
-                    </View>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.optionalText}>Optional</Text>
+              {/* Profile Avatar */}
+              <View style={styles.avatarSection}>
+                <TouchableOpacity style={styles.avatarButton} onPress={pickImage} activeOpacity={0.8}>
+                  {image ? (
+                    <Image source={{ uri: image }} style={styles.avatarImage} />
+                  ) : (
+                    <LinearGradient
+                      colors={[Colors.surface.blueTint, Colors.surface.purpleTint]}
+                      style={styles.avatarPlaceholder}
+                    >
+                      <Ionicons name="person-outline" size={40} color={Colors.primary.purple} />
+                    </LinearGradient>
+                  )}
+                  <View style={styles.cameraButton}>
+                    <Ionicons name="camera" size={16} color={Colors.text.inverse} />
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.optionalText}>Tap to add photo (optional)</Text>
               </View>
 
+              {/* Form */}
               <View style={styles.form}>
                 {error && (
                   <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle" size={18} color={Colors.semantic.error} />
                     <Text style={styles.errorText}>
-                      {error?.response?.data?.message ||
-                        error?.message ||
-                        "Registration failed. Please try again."}
+                      {error?.response?.data?.message || error?.message || "Registration failed. Please try again."}
                     </Text>
                   </View>
                 )}
 
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Full Name"
-                    placeholderTextColor="#969696"
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email Address"
-                    placeholderTextColor="#969696"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <View style={styles.passwordContainer}>
+                {/* Name Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Name</Text>
+                  <View style={[styles.inputContainer, nameFocused && styles.inputContainerFocused]}>
+                    <Ionicons name="person-outline" size={20} color={nameFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
-                      style={styles.passwordInput}
-                      placeholder="Password"
-                      placeholderTextColor="#969696"
+                      style={styles.input}
+                      placeholder="Your full name"
+                      placeholderTextColor={Colors.text.tertiary}
+                      value={name}
+                      onChangeText={setName}
+                      onFocus={() => setNameFocused(true)}
+                      onBlur={() => setNameFocused(false)}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                    />
+                  </View>
+                </View>
+
+                {/* Email Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email</Text>
+                  <View style={[styles.inputContainer, emailFocused && styles.inputContainerFocused]}>
+                    <Ionicons name="mail-outline" size={20} color={emailFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="you@example.com"
+                      placeholderTextColor={Colors.text.tertiary}
+                      value={email}
+                      onChangeText={setEmail}
+                      onFocus={() => setEmailFocused(true)}
+                      onBlur={() => setEmailFocused(false)}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                </View>
+
+                {/* Password Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <View style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}>
+                    <Ionicons name="lock-closed-outline" size={20} color={passwordFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Create a password"
+                      placeholderTextColor={Colors.text.tertiary}
                       value={password}
                       onChangeText={setPassword}
+                      onFocus={() => setPasswordFocused(true)}
+                      onBlur={() => setPasswordFocused(false)}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
-                    <TouchableOpacity
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeIcon}
-                    >
-                      <Ionicons
-                        name={showPassword ? "eye-off-outline" : "eye-outline"}
-                        size={20}
-                        color="#969696"
-                      />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={Colors.text.tertiary} />
                     </TouchableOpacity>
                   </View>
                   {password.length > 0 && password.length < 8 && (
-                    <Text style={styles.errorValidationText}>
-                      Password must be at least 8 characters
-                    </Text>
+                    <View style={styles.validationRow}>
+                      <Ionicons name="close-circle" size={14} color={Colors.semantic.error} />
+                      <Text style={styles.errorValidationText}>At least 8 characters required</Text>
+                    </View>
                   )}
                   {password.length >= 8 && (
-                    <Text style={styles.helperText}>At least 8 characters</Text>
+                    <View style={styles.validationRow}>
+                      <Ionicons name="checkmark-circle" size={14} color={Colors.semantic.success} />
+                      <Text style={styles.successValidationText}>Password meets requirements</Text>
+                    </View>
                   )}
                 </View>
 
-                <View style={styles.inputContainer}>
-                  <View style={styles.passwordContainer}>
+                {/* Confirm Password Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Confirm Password</Text>
+                  <View style={[styles.inputContainer, confirmPasswordFocused && styles.inputContainerFocused]}>
+                    <Ionicons name="lock-closed-outline" size={20} color={confirmPasswordFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
-                      style={styles.passwordInput}
-                      placeholder="Retype Password"
-                      placeholderTextColor="#969696"
+                      style={styles.input}
+                      placeholder="Retype your password"
+                      placeholderTextColor={Colors.text.tertiary}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
-                      onBlur={() => setConfirmPasswordBlurred(true)}
+                      onFocus={() => setConfirmPasswordFocused(true)}
+                      onBlur={() => { setConfirmPasswordFocused(false); setConfirmPasswordBlurred(true); }}
                       secureTextEntry={!showConfirmPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
-                    <TouchableOpacity
-                      onPress={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      style={styles.eyeIcon}
-                    >
-                      <Ionicons
-                        name={
-                          showConfirmPassword
-                            ? "eye-off-outline"
-                            : "eye-outline"
-                        }
-                        size={20}
-                        color="#969696"
-                      />
+                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeButton}>
+                      <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color={Colors.text.tertiary} />
                     </TouchableOpacity>
                   </View>
-                  {confirmPasswordBlurred && password !== confirmPassword && (
-                    <Text style={styles.errorValidationText}>
-                      Passwords do not match
-                    </Text>
+                  {confirmPasswordBlurred && password !== confirmPassword && confirmPassword.length > 0 && (
+                    <View style={styles.validationRow}>
+                      <Ionicons name="close-circle" size={14} color={Colors.semantic.error} />
+                      <Text style={styles.errorValidationText}>Passwords do not match</Text>
+                    </View>
+                  )}
+                  {confirmPassword.length > 0 && password === confirmPassword && (
+                    <View style={styles.validationRow}>
+                      <Ionicons name="checkmark-circle" size={14} color={Colors.semantic.success} />
+                      <Text style={styles.successValidationText}>Passwords match</Text>
+                    </View>
                   )}
                 </View>
 
-                {/* Terms & Privacy Agreement */}
+                {/* Terms Agreement */}
                 <View style={styles.agreementContainer}>
                   <TouchableOpacity
-                    style={styles.checkboxContainer}
+                    style={styles.checkboxButton}
                     onPress={() => setAgreedToTerms(!agreedToTerms)}
                     activeOpacity={0.7}
                   >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        agreedToTerms && styles.checkboxChecked,
-                      ]}
-                    >
-                      {agreedToTerms && (
-                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                      )}
+                    <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+                      {agreedToTerms && <Ionicons name="checkmark" size={14} color={Colors.text.inverse} />}
                     </View>
                   </TouchableOpacity>
                   <Text style={styles.agreementText}>
                     I agree to the{" "}
-                    <Text
-                      style={styles.linkText}
-                      onPress={() => setShowTermsModal(true)}
-                    >
-                      Terms & Conditions
-                    </Text>{" "}
-                    and{" "}
-                    <Text
-                      style={styles.linkText}
-                      onPress={() => setShowPrivacyModal(true)}
-                    >
-                      Privacy Policy
-                    </Text>
+                    <Text style={styles.linkText} onPress={() => setShowTermsModal(true)}>Terms & Conditions</Text>
+                    {" "}and{" "}
+                    <Text style={styles.linkText} onPress={() => setShowPrivacyModal(true)}>Privacy Policy</Text>
                   </Text>
                 </View>
 
+                {/* Register Button */}
                 <TouchableOpacity
                   onPress={handleRegistration}
-                  disabled={isPending}
+                  disabled={isPending || !isFormValid}
                   activeOpacity={0.8}
+                  style={styles.signUpButtonWrapper}
                 >
                   <LinearGradient
-                    colors={["#5FA9F5", "#4A63D8"]}
+                    colors={isPending || !isFormValid ? [Colors.text.tertiary, Colors.text.tertiary] : [Colors.accent.sky, Colors.primary.blue]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={[
-                      styles.signUpButton,
-                      isPending && styles.signUpButtonDisabled,
-                    ]}
+                    style={styles.signUpButton}
                   >
                     <Text style={styles.signUpButtonText}>
-                      {isPending ? "Creating Account..." : "Sign Up"}
+                      {isPending ? "Creating Account..." : "Create Account"}
                     </Text>
+                    {!isPending && <Ionicons name="arrow-forward" size={20} color={Colors.text.inverse} />}
                   </LinearGradient>
                 </TouchableOpacity>
 
+                {/* Login Link */}
                 <View style={styles.bottomLinkContainer}>
-                  <Text style={styles.bottomLinkText}>
-                    Already have an account?{" "}
-                    <Text
-                      style={styles.loginLink}
-                      onPress={() => router.navigate("/(auth)/login")}
-                    >
-                      Log In
-                    </Text>
-                  </Text>
+                  <Text style={styles.bottomLinkText}>Already have an account? </Text>
+                  <TouchableOpacity onPress={() => router.navigate("/(auth)/login")}>
+                    <Text style={styles.loginLink}>Sign In</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
-          </ScrollView>
+        </KeyboardAwareScrollView>
 
-          {/* Terms & Conditions Modal */}
-          <Modal
-            visible={showTermsModal}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setShowTermsModal(false)}
-          >
-            <SafeAreaView style={styles.modalContainer}>
-              <Pressable
-                style={styles.modalOverlay}
-                onPress={() => setShowTermsModal(false)}
-              >
-                <Pressable
-                  style={styles.modalContent}
-                  onPress={(e) => e.stopPropagation()}
-                >
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Terms & Conditions</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowTermsModal(false)}
-                      style={styles.modalCloseButton}
-                    >
-                      <Ionicons name="close" size={24} color="#6B7280" />
-                    </TouchableOpacity>
-                  </View>
-                  <ScrollView
-                    style={styles.modalBody}
-                    contentContainerStyle={styles.modalScrollContent}
-                    showsVerticalScrollIndicator={true}
-                  >
-                    <Text style={styles.modalSectionTitle}>
-                      1. Acceptance of Terms
-                    </Text>
-                    <Text style={styles.modalText}>
-                      By accessing and using SIGHT (Survey Insights & Global
-                      Health Technology), you agree to be bound by these Terms &
-                      Conditions. If you don't agree, that's totally fine -
-                      we'll miss you, but we understand. No hard feelings! (But
-                      seriously, you can't use the app without agreeing.)
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      2. User Accounts
-                    </Text>
-                    <Text style={styles.modalText}>
-                      You are responsible for maintaining the confidentiality of
-                      your account credentials. We're not responsible if your
-                      cat walks across your keyboard and changes your password
-                      (though that would be impressive). Please use strong
-                      passwords - "password123" doesn't count as strong, no
-                      matter how much you believe it does.
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      3. Survey Creation & Responses
-                    </Text>
-                    <Text style={styles.modalText}>
-                      As a researcher, you may create surveys and collect
-                      responses. As a respondent, you may participate in
-                      surveys. All survey content must be legal, ethical, and
-                      not violate anyone's rights. We reserve the right to
-                      remove surveys that ask inappropriate questions (like
-                      "What's your favorite color?" when the survey is about
-                      medical research - that's just confusing).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      4. Points & Rewards System
-                    </Text>
-                    <Text style={styles.modalText}>
-                      Points are awarded for completing surveys and can be used
-                      within the platform. Points are non-transferable,
-                      non-refundable, and cannot be exchanged for actual money
-                      (we know, we're disappointed too). Attempting to game the
-                      system will result in point deduction - we have trust
-                      scores for a reason!
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>5. AI Analysis</Text>
-                    <Text style={styles.modalText}>
-                      Our AI analysis features use advanced algorithms to
-                      provide insights. While our AI is smart, it's not psychic
-                      - it can't predict lottery numbers or tell you if it's
-                      going to rain tomorrow. The analysis is provided "as is"
-                      and should be used as a tool to aid your research, not as
-                      the sole basis for life-changing decisions.
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      6. Survey Ownership & Public Nature
-                    </Text>
-                    <Text style={styles.modalText}>
-                      All surveys created on SIGHT, including all survey
-                      content, questions, responses, and any information
-                      contained within them, are public and owned by us. By
-                      creating or participating in surveys on this platform, you
-                      acknowledge that all survey data will be used, analyzed,
-                      and owned by SIGHT. We may use this information for
-                      research, analysis, publication, or any other purpose we
-                      deem appropriate. Your participation constitutes your
-                      agreement to this public ownership model. Think of it like
-                      contributing to a public research database - your input
-                      helps everyone, but the data belongs to the platform
-                      (that's us, by the way).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      7. Prohibited Activities
-                    </Text>
-                    <Text style={styles.modalText}>
-                      You agree not to: spam surveys, create fake accounts,
-                      attempt to hack our systems, or use the platform for
-                      illegal activities. Basically, don't be a villain. We're
-                      trying to do good research here, not create chaos.
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      8. Service Availability
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We strive for 99.9% uptime, but sometimes things break
-                      (servers have bad days too). We're not liable for
-                      temporary service interruptions, though we'll do our best
-                      to fix things quickly. If the app is down, take it as a
-                      sign to go outside and touch some grass.
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      9. Limitation of Liability
-                    </Text>
-                    <Text style={styles.modalText}>
-                      SIGHT is provided "as is" without warranties. We're not
-                      liable for any indirect, incidental, or consequential
-                      damages. In other words, if you make a bad business
-                      decision based on survey data, that's on you, not us.
-                      We're here to help, but we're not fortune tellers.
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      10. Changes to Terms
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We may update these terms from time to time. We'll notify
-                      you of significant changes, but it's your responsibility
-                      to review them periodically. If you continue using SIGHT
-                      after changes, you're accepting the new terms. (Pro tip:
-                      actually read them - you might learn something!)
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      11. Contact Information
-                    </Text>
-                    <Text style={styles.modalText}>
-                      If you have questions about these terms, please contact
-                      our support team. We're here to help (and we promise we're
-                      friendlier than this legal document makes us sound).
-                    </Text>
-
-                    <Text style={styles.modalFooterText}>
-                      Last Updated: {new Date().toLocaleDateString()}
-                    </Text>
-                  </ScrollView>
-                </Pressable>
+        {/* Terms Modal */}
+        <Modal visible={showTermsModal} transparent animationType="slide" onRequestClose={() => setShowTermsModal(false)}>
+          <SafeAreaView style={styles.modalContainer}>
+            <Pressable style={styles.modalOverlay} onPress={() => setShowTermsModal(false)}>
+              <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalDragIndicator} />
+                  <Text style={styles.modalTitle}>Terms & Conditions</Text>
+                  <TouchableOpacity onPress={() => setShowTermsModal(false)} style={styles.modalCloseButton}>
+                    <Ionicons name="close" size={24} color={Colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
+                  <Text style={styles.modalSectionTitle}>1. Acceptance of Terms</Text>
+                  <Text style={styles.modalText}>By accessing and using SIGHT, you agree to be bound by these Terms & Conditions.</Text>
+                  <Text style={styles.modalSectionTitle}>2. User Accounts</Text>
+                  <Text style={styles.modalText}>You are responsible for maintaining the confidentiality of your account credentials.</Text>
+                  <Text style={styles.modalSectionTitle}>3. Survey Creation & Responses</Text>
+                  <Text style={styles.modalText}>All survey content must be legal, ethical, and not violate anyone's rights.</Text>
+                  <Text style={styles.modalSectionTitle}>4. Points & Rewards</Text>
+                  <Text style={styles.modalText}>Points are non-transferable and non-refundable.</Text>
+                  <Text style={styles.modalSectionTitle}>5. AI Analysis</Text>
+                  <Text style={styles.modalText}>Analysis is provided "as is" and should be used as a research tool.</Text>
+                  <Text style={styles.modalFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
+                </ScrollView>
               </Pressable>
-            </SafeAreaView>
-          </Modal>
+            </Pressable>
+          </SafeAreaView>
+        </Modal>
 
-          {/* Privacy Policy Modal */}
-          <Modal
-            visible={showPrivacyModal}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setShowPrivacyModal(false)}
-          >
-            <SafeAreaView style={styles.modalContainer}>
-              <Pressable
-                style={styles.modalOverlay}
-                onPress={() => setShowPrivacyModal(false)}
-              >
-                <Pressable
-                  style={styles.modalContent}
-                  onPress={(e) => e.stopPropagation()}
-                >
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Privacy Policy</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowPrivacyModal(false)}
-                      style={styles.modalCloseButton}
-                    >
-                      <Ionicons name="close" size={24} color="#6B7280" />
-                    </TouchableOpacity>
-                  </View>
-                  <ScrollView
-                    style={styles.modalBody}
-                    contentContainerStyle={styles.modalScrollContent}
-                    showsVerticalScrollIndicator={true}
-                  >
-                    <Text style={styles.modalSectionTitle}>
-                      1. Introduction
-                    </Text>
-                    <Text style={styles.modalText}>
-                      At SIGHT, we take your privacy seriously. Like, really
-                      seriously. We know your data is important to you, and it's
-                      important to us too. This Privacy Policy explains how we
-                      collect, use, and protect your information. Spoiler alert:
-                      we're not selling your data to aliens (or anyone else, for
-                      that matter).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      2. Information We Collect
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We collect information you provide directly: name, email,
-                      profile images, survey responses, and account activity. We
-                      also collect technical data like device information and
-                      usage patterns. We don't collect your thoughts (yet - that
-                      technology is still in development, and honestly, we're
-                      not sure we want to know what you're thinking about during
-                      boring surveys).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      3. How We Use Your Information
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We use your data to: provide and improve our services,
-                      process survey responses, generate AI analyses, send you
-                      notifications (only the important ones, we promise), and
-                      maintain your account. We use aggregated, anonymized data
-                      for analytics - your individual responses are kept private
-                      unless you explicitly share them.
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      4. Data Storage & Security
-                    </Text>
-                    <Text style={styles.modalText}>
-                      Your data is stored securely using industry-standard
-                      encryption. We use MongoDB for data storage and implement
-                      security measures to protect against unauthorized access.
-                      While we can't guarantee 100% security (no one can,
-                      really), we do our best. Think of it like locking your
-                      front door - it doesn't guarantee nothing bad will happen,
-                      but it sure helps!
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      5. Data Sharing
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We don't sell your personal information. Period. We may
-                      share aggregated, anonymized data with researchers (that's
-                      the whole point of the platform), but your individual
-                      identity remains protected. The only exception is if
-                      required by law - and even then, we'll put up a good fight
-                      (legally speaking).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      6. Survey Responses
-                    </Text>
-                    <Text style={styles.modalText}>
-                      Your survey responses are shared with the survey creator
-                      (the researcher) in anonymized form. Researchers can see
-                      your answers but not your personal identifying information
-                      unless you explicitly provide it in a response. Think of
-                      it like a secret admirer - they know what you said, but
-                      not who you are (unless you tell them).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      7. AI Analysis & Processing
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We use OpenAI's GPT-4 for AI analysis. When we send data
-                      to OpenAI, it's processed according to their privacy
-                      policies. We ensure that personal identifiers are removed
-                      before processing. The AI doesn't know your name, email,
-                      or that embarrassing photo from 2012 (we don't either,
-                      thankfully).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      8. Cookies & Tracking
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We use authentication tokens (JWT) to keep you logged in.
-                      These aren't cookies in the traditional sense, but they
-                      serve a similar purpose. We don't use third-party tracking
-                      cookies or sell your browsing data. Your activity stays
-                      between you and us (and our servers, but they're sworn to
-                      secrecy).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>9. Your Rights</Text>
-                    <Text style={styles.modalText}>
-                      You have the right to: access your data, update your
-                      information, delete your account, and request a copy of
-                      your data. You can also opt out of certain communications.
-                      Just contact us - we're reasonable people (most of the
-                      time). We'll process your request within 30 days, or
-                      sooner if we can (we're not monsters, we just have a lot
-                      of requests sometimes).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      10. Children's Privacy
-                    </Text>
-                    <Text style={styles.modalText}>
-                      SIGHT is not intended for users under 13 years of age. If
-                      you're under 13, please get your parent's permission (and
-                      maybe ask them to help you read this - it's pretty long,
-                      we know). We don't knowingly collect data from children,
-                      and if we find out we have, we'll delete it faster than
-                      you can say "privacy violation."
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      11. International Data Transfers
-                    </Text>
-                    <Text style={styles.modalText}>
-                      Your data may be processed and stored in different
-                      countries. We ensure appropriate safeguards are in place
-                      to protect your data regardless of where it's processed.
-                      Your data travels more than most people do (and probably
-                      has better security too).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      12. Data Retention
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We retain your data as long as your account is active or
-                      as needed to provide services. If you delete your account,
-                      we'll delete your personal data within 30 days, though
-                      some anonymized data may remain for research purposes.
-                      Think of it like cleaning your room - most stuff goes, but
-                      some things (like aggregated statistics) stick around
-                      because they're useful.
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>
-                      13. Changes to Privacy Policy
-                    </Text>
-                    <Text style={styles.modalText}>
-                      We may update this Privacy Policy from time to time. We'll
-                      notify you of significant changes via email or in-app
-                      notification. Continued use of SIGHT after changes means
-                      you accept the updated policy. We recommend checking back
-                      occasionally - not because we're trying to hide anything,
-                      but because privacy laws evolve (and so do we).
-                    </Text>
-
-                    <Text style={styles.modalSectionTitle}>14. Contact Us</Text>
-                    <Text style={styles.modalText}>
-                      If you have privacy concerns or questions, please contact
-                      our privacy team. We're here to help and we take your
-                      concerns seriously. We might even respond faster than your
-                      internet service provider (that's a low bar, but we'll
-                      take it).
-                    </Text>
-
-                    <Text style={styles.modalFooterText}>
-                      Last Updated: {new Date().toLocaleDateString()}
-                    </Text>
-                  </ScrollView>
-                </Pressable>
+        {/* Privacy Modal */}
+        <Modal visible={showPrivacyModal} transparent animationType="slide" onRequestClose={() => setShowPrivacyModal(false)}>
+          <SafeAreaView style={styles.modalContainer}>
+            <Pressable style={styles.modalOverlay} onPress={() => setShowPrivacyModal(false)}>
+              <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalDragIndicator} />
+                  <Text style={styles.modalTitle}>Privacy Policy</Text>
+                  <TouchableOpacity onPress={() => setShowPrivacyModal(false)} style={styles.modalCloseButton}>
+                    <Ionicons name="close" size={24} color={Colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
+                  <Text style={styles.modalSectionTitle}>1. Introduction</Text>
+                  <Text style={styles.modalText}>At SIGHT, we take your privacy seriously.</Text>
+                  <Text style={styles.modalSectionTitle}>2. Information We Collect</Text>
+                  <Text style={styles.modalText}>We collect information you provide directly: name, email, profile images, and survey responses.</Text>
+                  <Text style={styles.modalSectionTitle}>3. How We Use Your Information</Text>
+                  <Text style={styles.modalText}>We use your data to provide and improve our services.</Text>
+                  <Text style={styles.modalSectionTitle}>4. Data Security</Text>
+                  <Text style={styles.modalText}>Your data is stored securely using industry-standard encryption.</Text>
+                  <Text style={styles.modalSectionTitle}>5. Your Rights</Text>
+                  <Text style={styles.modalText}>You have the right to access, update, and delete your data.</Text>
+                  <Text style={styles.modalFooterText}>Last Updated: {new Date().toLocaleDateString()}</Text>
+                </ScrollView>
               </Pressable>
-            </SafeAreaView>
-          </Modal>
-        </KeyboardAvoidingView>
+            </Pressable>
+          </SafeAreaView>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -816,217 +439,216 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
-    justifyContent: "center",
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
   brandingSection: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: Spacing.lg,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: Spacing.sm,
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
   },
-  titleContainer: {
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#222222",
-    marginRight: -3,
+  joinText: {
+    ...Typography.styles.h2,
+    color: Colors.text.primary,
   },
   titleImage: {
-    height: 36,
-    width: 108,
-    marginTop: 3,
-    marginLeft: -3,
+    height: 34,
+    width: 100,
+    marginTop: 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#505050",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
     textAlign: "center",
   },
-  profilePicContainer: {
+  avatarSection: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: Spacing.xl,
   },
-  avatarWrapper: {
+  avatarButton: {
     position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
   },
-  profilePicButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    overflow: "hidden",
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: Colors.background.primary,
   },
-  profilePic: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 60, // Ensure circular shape
-  },
-  profilePicPlaceholder: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cameraIconButton: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-  },
-  cameraIconContainer: {
-    backgroundColor: "#4A63D8",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
-    borderColor: "#FFFFFF",
+    borderColor: Colors.background.primary,
+  },
+  cameraButton: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary.blue,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: Colors.background.primary,
   },
   optionalText: {
-    fontSize: 14,
-    color: "#969696",
-    marginTop: 8,
+    ...Typography.styles.caption,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
   },
   form: {
     width: "100%",
   },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCDCDC",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#111827",
-  },
-  passwordContainer: {
+  errorContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCDCDC",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#111827",
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  helperText: {
-    fontSize: 12,
-    color: "#969696",
-    marginTop: 6,
-  },
-  errorValidationText: {
-    fontSize: 12,
-    color: "#DC2626",
-    marginTop: 6,
-  },
-  signUpButton: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  signUpButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  signUpButtonDisabled: {
-    opacity: 0.6,
-  },
-  bottomLinkContainer: {
-    marginTop: 24,
-    alignItems: "center",
-  },
-  bottomLinkText: {
-    fontSize: 14,
-    color: "#969696",
-  },
-  loginLink: {
-    color: "#4A63D8",
-    fontWeight: "500",
-    textDecorationLine: "underline",
-  },
-  errorContainer: {
-    backgroundColor: "#FEE2E2",
-    borderWidth: 1,
-    borderColor: "#EF4444",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
+    backgroundColor: Colors.semantic.errorLight,
+    borderRadius: Borders.radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.xs,
   },
   errorText: {
-    color: "#DC2626",
-    fontSize: 14,
-    textAlign: "center",
+    ...Typography.styles.bodySmall,
+    color: Colors.semantic.error,
+    flex: 1,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    ...Typography.styles.label,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.background.primary,
+    borderWidth: 1.5,
+    borderColor: Colors.border.default,
+    borderRadius: Borders.radius.md,
+    paddingHorizontal: Spacing.md,
+  },
+  inputContainerFocused: {
+    borderColor: Colors.primary.blue,
+    ...Shadows.xs,
+  },
+  inputIcon: {
+    marginRight: Spacing.sm,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    ...Typography.styles.body,
+    color: Colors.text.primary,
+  },
+  eyeButton: {
+    padding: Spacing.xs,
+  },
+  validationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  errorValidationText: {
+    ...Typography.styles.captionSmall,
+    color: Colors.semantic.error,
+  },
+  successValidationText: {
+    ...Typography.styles.captionSmall,
+    color: Colors.semantic.success,
   },
   agreementContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 20,
-    gap: 12,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
   },
-  checkboxContainer: {
-    marginTop: 0,
-    justifyContent: "center",
+  checkboxButton: {
+    marginTop: 2,
   },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border.default,
+    backgroundColor: Colors.background.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#4A63D8",
-    borderColor: "#4A63D8",
+    backgroundColor: Colors.primary.blue,
+    borderColor: Colors.primary.blue,
   },
   agreementText: {
     flex: 1,
-    fontSize: 14,
-    color: "#374151",
+    ...Typography.styles.bodySmall,
+    color: Colors.text.secondary,
     lineHeight: 20,
   },
   linkText: {
-    color: "#4A63D8",
+    color: Colors.primary.blue,
     fontWeight: "600",
-    textDecorationLine: "underline",
   },
+  signUpButtonWrapper: {
+    borderRadius: Borders.radius.md,
+    overflow: "hidden",
+    ...Shadows.primary,
+  },
+  signUpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md + 2,
+    gap: Spacing.xs,
+  },
+  signUpButtonText: {
+    ...Typography.styles.button,
+    color: Colors.text.inverse,
+  },
+  bottomLinkContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: Spacing.xl,
+  },
+  bottomLinkText: {
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
+  },
+  loginLink: {
+    ...Typography.styles.body,
+    color: Colors.primary.blue,
+    fontWeight: "600",
+  },
+  // Modal Styles
   modalContainer: {
     flex: 1,
   },
@@ -1036,33 +658,36 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "90%",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: Colors.background.primary,
+    borderTopLeftRadius: Borders.radius.xxl,
+    borderTopRightRadius: Borders.radius.xxl,
+    maxHeight: "85%",
+    ...Shadows.xl,
+  },
+  modalDragIndicator: {
+    position: "absolute",
+    top: Spacing.xs,
+    left: "50%",
+    marginLeft: -20,
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border.default,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: Colors.border.light,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
     flex: 1,
-    textAlign: "left",
   },
   modalCloseButton: {
     padding: 4,
@@ -1071,26 +696,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalScrollContent: {
-    padding: 20,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.xxl,
   },
   modalSectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginTop: 16,
-    marginBottom: 8,
+    ...Typography.styles.h5,
+    color: Colors.text.primary,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xs,
   },
   modalText: {
-    fontSize: 14,
-    color: "#374151",
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
     lineHeight: 22,
-    marginBottom: 12,
+    marginBottom: Spacing.sm,
   },
   modalFooterText: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    fontStyle: "italic",
-    marginTop: 16,
+    ...Typography.styles.captionSmall,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xl,
     textAlign: "center",
+    fontStyle: "italic",
   },
 });

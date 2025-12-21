@@ -30,6 +30,7 @@ import { createAnalysis, getAnalysisById } from "@/api/ai";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import AnalysisContext from "@/context/AnalysisContext";
 import { SightAISkeleton } from "@/components/Skeleton";
+import { Colors, Typography, Spacing, Shadows } from "@/constants/design";
 
 interface SurveyWithTitle {
   surveyId: string;
@@ -57,25 +58,18 @@ export default function SightAI() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [analyzingAnswered, setAnalyzingAnswered] = useState(false);
-  
-  // New fade overlay system for dark mode transition
-  const overlayOpacity = useSharedValue(0); // Dark overlay that fades in
-  
-  // Content opacity animations (opacity only, no transforms)
+
+  // Dark mode transition animations
+  const overlayOpacity = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
-  
-  // Staggered section animations (opacity only)
   const headerOpacity = useSharedValue(0);
   const aiCardOpacity = useSharedValue(0);
   const statsOpacity = useSharedValue(0);
   const insightsOpacity = useSharedValue(0);
 
-  // Ultra-smooth easing curves for fluid transitions
-  const entranceEasing = Easing.bezier(0.25, 0.1, 0.25, 1); // Smooth ease-in-out
-  const exitEasing = Easing.bezier(0.4, 0.0, 0.2, 1); // Smooth ease-out
+  const entranceEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
+  const exitEasing = Easing.bezier(0.4, 0.0, 0.2, 1);
 
-  // Initialize all animations to hidden state immediately on mount
-  // This prevents the sudden pop when content is already loaded
   useEffect(() => {
     overlayOpacity.value = 0;
     contentOpacity.value = 0;
@@ -85,84 +79,25 @@ export default function SightAI() {
     insightsOpacity.value = 0;
   }, []);
 
-  // Detect when page is focused for fade overlay transition
   useFocusEffect(
     useCallback(() => {
-      // Dark overlay fades in first (1000ms duration for smooth transition)
-      overlayOpacity.value = withTiming(1, {
-        duration: 1000,
-        easing: entranceEasing,
-      });
+      overlayOpacity.value = withTiming(1, { duration: 1000, easing: entranceEasing });
+      contentOpacity.value = withDelay(150, withTiming(1, { duration: 800, easing: entranceEasing }));
+      headerOpacity.value = withDelay(150, withTiming(1, { duration: 800, easing: entranceEasing }));
+      aiCardOpacity.value = withDelay(270, withTiming(1, { duration: 800, easing: entranceEasing }));
+      statsOpacity.value = withDelay(390, withTiming(1, { duration: 800, easing: entranceEasing }));
+      insightsOpacity.value = withDelay(510, withTiming(1, { duration: 800, easing: entranceEasing }));
 
-      // Content fades in after overlay starts (150ms delay, 800ms duration)
-      contentOpacity.value = withDelay(150, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
-
-      // Header starts with content
-      headerOpacity.value = withDelay(150, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
-
-      // Staggered section animations with longer delays for smoother cascade
-      // AI Card: 120ms delay after header
-      aiCardOpacity.value = withDelay(270, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
-
-      // Stats: 240ms delay after header
-      statsOpacity.value = withDelay(390, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
-
-      // Insights: 360ms delay after header
-      insightsOpacity.value = withDelay(510, withTiming(1, {
-        duration: 800,
-        easing: entranceEasing,
-      }));
-
-      // Load data when page is focused
       loadData();
 
       return () => {
-        // Coordinated exit animations when navigating away (slower for smoothness)
         const exitDuration = 600;
-        
-        // Fade out overlay and content together
-        overlayOpacity.value = withTiming(0, {
-          duration: exitDuration,
-          easing: exitEasing,
-        });
-        
-        contentOpacity.value = withTiming(0, {
-          duration: exitDuration,
-          easing: exitEasing,
-        });
-        
-        // Fade out all sections simultaneously
-        headerOpacity.value = withTiming(0, {
-          duration: exitDuration,
-          easing: exitEasing,
-        });
-        
-        aiCardOpacity.value = withTiming(0, {
-          duration: exitDuration,
-          easing: exitEasing,
-        });
-        
-        statsOpacity.value = withTiming(0, {
-          duration: exitDuration,
-          easing: exitEasing,
-        });
-        
-        insightsOpacity.value = withTiming(0, {
-          duration: exitDuration,
-          easing: exitEasing,
-        });
+        overlayOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        contentOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        headerOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        aiCardOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        statsOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        insightsOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
       };
     }, [])
   );
@@ -189,7 +124,6 @@ export default function SightAI() {
       const response = await getAllAnalyses();
       setAnalyses(response.analyses || []);
     } catch (error: any) {
-      // Don't show error for 401 - token will be cleared and user redirected to login
       if (error?.response?.status === 401) {
         console.log("Authentication expired - redirecting to login");
         return;
@@ -203,19 +137,14 @@ export default function SightAI() {
       const user = await getUser();
       if (user?._id) {
         const responses = await getResponsesByUserId(user._id);
-        // Get unique survey IDs
-        const uniqueSurveyIds = Array.from(
-          new Set(responses.map((r) => r.surveyId))
-        );
+        const uniqueSurveyIds = Array.from(new Set(responses.map((r) => r.surveyId)));
 
-        // Fetch survey titles
         const surveysWithTitles = await Promise.all(
           uniqueSurveyIds.map(async (surveyId) => {
             try {
               const survey = await getSurveyById(surveyId);
               return { surveyId, title: survey.title };
             } catch (error) {
-              console.error(`Error fetching survey ${surveyId}:`, error);
               return { surveyId, title: "Survey" };
             }
           })
@@ -239,15 +168,11 @@ export default function SightAI() {
       const cards: InsightCard[] = [];
 
       for (const analysis of readyAnalyses.slice(0, 4)) {
-        if (!analysis.data?.surveys || analysis.data.surveys.length === 0) {
-          continue;
-        }
+        if (!analysis.data?.surveys || analysis.data.surveys.length === 0) continue;
 
-        // Get first survey for display
         const firstSurvey = analysis.data.surveys[0];
         const firstInsight = firstSurvey.insights[0];
 
-        // Fetch actual survey title
         let surveyTitle = "Survey Analysis";
         try {
           const survey = await getSurveyById(firstSurvey.surveyId);
@@ -256,7 +181,6 @@ export default function SightAI() {
           console.error(`Error fetching survey title:`, error);
         }
 
-        // Collect all tags from insights
         const allTags: string[] = [];
         analysis.data.surveys.forEach((survey) => {
           survey.insights.forEach((insight) => {
@@ -292,23 +216,19 @@ export default function SightAI() {
     router.push("/(protected)/(researcher)/mass-analyses" as any);
   };
 
-  // Background polling function
   const pollAnalysisInBackground = (analysisId: string) => {
     const poll = async () => {
       try {
         const data = await getAnalysisById(analysisId);
-        
+
         if (data.status === "ready") {
-          // Clear polling
           if (pollingTimeoutRef.current) {
             clearTimeout(pollingTimeoutRef.current);
             pollingTimeoutRef.current = null;
           }
-          
-          // Trigger completion animation
+
           triggerCompletion();
-          
-          // Navigate to insights after completion animation
+
           setTimeout(() => {
             setIsAnalyzing(false);
             router.replace({
@@ -317,42 +237,30 @@ export default function SightAI() {
             } as any);
           }, 800);
         } else if (data.status === "failed") {
-          // Clear polling
           if (pollingTimeoutRef.current) {
             clearTimeout(pollingTimeoutRef.current);
             pollingTimeoutRef.current = null;
           }
-          
+
           setIsAnalyzing(false);
-          Alert.alert(
-            "Analysis Failed",
-            "The analysis failed to complete. Please try again."
-          );
+          Alert.alert("Analysis Failed", "The analysis failed to complete. Please try again.");
         } else if (data.status === "processing") {
-          // Continue polling
           pollingTimeoutRef.current = setTimeout(() => poll(), 2000);
         }
       } catch (err: any) {
-        console.error("Error polling analysis:", err);
-        
-        // Clear polling on error
         if (pollingTimeoutRef.current) {
           clearTimeout(pollingTimeoutRef.current);
           pollingTimeoutRef.current = null;
         }
-        
+
         setIsAnalyzing(false);
-        Alert.alert(
-          "Error",
-          "Failed to check analysis status. Please try again."
-        );
+        Alert.alert("Error", "Failed to check analysis status. Please try again.");
       }
     };
-    
+
     poll();
   };
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollingTimeoutRef.current) {
@@ -364,23 +272,15 @@ export default function SightAI() {
 
   const handleAnalyzeAnsweredSurveys = async () => {
     if (answeredSurveys.length === 0) {
-      Alert.alert(
-        "No Surveys",
-        "You haven't answered any surveys yet. Answer some surveys to get personal insights!"
-      );
+      Alert.alert("No Surveys", "You haven't answered any surveys yet. Answer some surveys to get personal insights!");
       return;
     }
 
     Alert.alert(
       "Analyze Your Responses",
-      `Analyze ${answeredSurveys.length} survey${
-        answeredSurveys.length !== 1 ? "s" : ""
-      } you've answered to get personal insights?`,
+      `Analyze ${answeredSurveys.length} survey${answeredSurveys.length !== 1 ? "s" : ""} you've answered to get personal insights?`,
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Analyze",
           onPress: async () => {
@@ -388,21 +288,12 @@ export default function SightAI() {
             try {
               const surveyIds = answeredSurveys.map((s) => s.surveyId);
               const analysis = await createAnalysis(surveyIds);
-              
-              // Set analyzing state to trigger jelly effect
-              setIsAnalyzing(true);
 
-              // Start background polling instead of navigating to loading page
+              setIsAnalyzing(true);
               pollAnalysisInBackground(analysis.analysisId);
             } catch (err: any) {
-              console.error("Error creating analysis:", err);
               setIsAnalyzing(false);
-              Alert.alert(
-                "Error",
-                err.response?.data?.message ||
-                  err.message ||
-                  "Failed to start analysis. Please try again."
-              );
+              Alert.alert("Error", err.response?.data?.message || err.message || "Failed to start analysis. Please try again.");
             } finally {
               setAnalyzingAnswered(false);
             }
@@ -422,16 +313,12 @@ export default function SightAI() {
   const handleShare = async (analysis: AnalysisResponse) => {
     try {
       const message = `Check out my survey analysis: ${analysis.analysisId}`;
-      await Share.share({
-        message,
-        title: "Survey Analysis",
-      });
+      await Share.share({ message, title: "Survey Analysis" });
     } catch (error) {
       console.error("Error sharing:", error);
     }
   };
 
-  // Calculate statistics
   const readyAnalyses = analyses.filter((a) => a.status === "ready");
   const processingAnalyses = analyses.filter((a) => a.status === "processing");
   const totalInsights = readyAnalyses.reduce((sum, analysis) => {
@@ -441,32 +328,12 @@ export default function SightAI() {
     return sum;
   }, 0);
 
-
-  // Animated styles - fade overlay system
-  const overlayAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
-
-  const contentAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
-  }));
-
-  // Section animated styles (opacity only)
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: headerOpacity.value,
-  }));
-
-  const aiCardAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: aiCardOpacity.value,
-  }));
-
-  const statsAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: statsOpacity.value,
-  }));
-
-  const insightsAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: insightsOpacity.value,
-  }));
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
+  const contentAnimatedStyle = useAnimatedStyle(() => ({ opacity: contentOpacity.value }));
+  const headerAnimatedStyle = useAnimatedStyle(() => ({ opacity: headerOpacity.value }));
+  const aiCardAnimatedStyle = useAnimatedStyle(() => ({ opacity: aiCardOpacity.value }));
+  const statsAnimatedStyle = useAnimatedStyle(() => ({ opacity: statsOpacity.value }));
+  const insightsAnimatedStyle = useAnimatedStyle(() => ({ opacity: insightsOpacity.value }));
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -477,10 +344,10 @@ export default function SightAI() {
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return "just now";
-    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-    if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
-    return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) !== 1 ? "s" : ""} ago`;
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
   };
 
   if (loading) {
@@ -488,92 +355,72 @@ export default function SightAI() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-      {/* Light background (visible when overlay is transparent) */}
+    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
       <View style={styles.lightBackground} />
-      
-      {/* Dark overlay that fades in */}
       <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
-      
-      {/* Content container */}
+
       <View style={styles.contentContainer}>
-        {/* Fixed Header Section */}
-        <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
-          <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
-            <Text style={styles.title}>AI Analysis</Text>
-            <View style={styles.logoContainer}>
-              <Image source={require("@/assets/sightai.png")} style={styles.titleImage} resizeMode="contain" />
-            </View>
-          </View>
+        {/* Header */}
+        <Animated.View style={[styles.header, headerAnimatedStyle, { paddingTop: insets.top + Spacing.md }]}>
+          <Text style={styles.headerTitle}>AI Analysis</Text>
+          <Image source={require("@/assets/sightai.png")} style={styles.sightaiLogo} resizeMode="contain" />
         </Animated.View>
-        
+
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: bottomNavHeight + 16 }}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + Spacing.lg }]}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#8B5CF6"
-              colors={["#8B5CF6"]}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary.purple} colors={[Colors.primary.purple]} />
           }
         >
           <Animated.View style={contentAnimatedStyle}>
-
-            {/* AI-Powered Intelligence Card */}
-            <Animated.View style={[styles.aiCardContainer, aiCardAnimatedStyle]}>
+            {/* Hero AI Card */}
+            <Animated.View style={[styles.heroCardContainer, aiCardAnimatedStyle]}>
               <LinearGradient
-                colors={["#1E1E3F", "#2D1B4E", "#3D1F5E"]}
+                colors={[Colors.dark.backgroundSecondary, "#1A1A3A", "#2A1A4A"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.aiCard}
+                style={styles.heroCard}
               >
-                <View style={styles.aiIconContainer}>
-                  <View style={styles.aiIconCircle}>
-                    <Ionicons name="sparkles" size={32} color="#FFFFFF" />
-                  </View>
-                </View>
-                <Text style={styles.aiCardTitle}>AI-Powered Intelligence</Text>
-                <Text style={styles.aiCardDescription}>
-                  Discover hidden patterns to uncover millions of survey responses.
-                </Text>
-                <TouchableOpacity
-                  style={styles.massAnalyzeButton}
-                  onPress={handleMassAnalyze}
-                >
-                  <LinearGradient
-                    colors={["#8B5CF6", "#5FA9F5"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.massAnalyzeButtonGradient}
-                  >
-                    <Text style={styles.massAnalyzeButtonText}>
-                      Analyze Mass Data
-                    </Text>
+                {/* Subtle grid pattern overlay */}
+                <View style={styles.gridPattern} />
+
+                <View style={styles.heroIconContainer}>
+                  <LinearGradient colors={[Colors.primary.purple, Colors.accent.cyan]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroIconGradient}>
+                    <Ionicons name="sparkles" size={28} color={Colors.background.primary} />
                   </LinearGradient>
+                </View>
+
+                <Text style={styles.heroTitle}>AI-Powered Intelligence</Text>
+                <Text style={styles.heroDescription}>
+                  Discover hidden patterns and insights from millions of survey responses with advanced AI analysis.
+                </Text>
+
+                <TouchableOpacity style={styles.heroButton} onPress={handleMassAnalyze} activeOpacity={0.9}>
+                  <Text style={styles.heroButtonText}>Analyze Mass Data</Text>
+                  <Ionicons name="arrow-forward" size={18} color={Colors.dark.backgroundSecondary} />
                 </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
 
-            {/* Summary Statistics */}
-            <Animated.View style={[styles.statsContainer, statsAnimatedStyle]}>
+            {/* Stats Row */}
+            <Animated.View style={[styles.statsRow, statsAnimatedStyle]}>
               <View style={styles.statCard}>
                 <Text style={styles.statNumber}>{readyAnalyses.length}</Text>
-                <Text style={styles.statLabel}>Surveys</Text>
+                <Text style={styles.statLabel}>Analyses</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statNumber}>{processingAnalyses.length}</Text>
-                <Text style={styles.statLabel}>Analyzing</Text>
+                <Text style={[styles.statNumber, { color: Colors.accent.teal }]}>{processingAnalyses.length}</Text>
+                <Text style={styles.statLabel}>Processing</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statNumber}>{totalInsights}</Text>
+                <Text style={[styles.statNumber, { color: Colors.primary.pink }]}>{totalInsights}</Text>
                 <Text style={styles.statLabel}>Insights</Text>
               </View>
             </Animated.View>
 
-            {/* Analyzing Now Section */}
+            {/* Processing Section */}
             {processingAnalyses.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
@@ -583,31 +430,21 @@ export default function SightAI() {
                   </TouchableOpacity>
                 </View>
                 {processingAnalyses.slice(0, 3).map((analysis) => (
-                  <View key={analysis.analysisId} style={styles.analyzingCard}>
-                    <View style={styles.analyzingCardContent}>
-                      <Text style={styles.analyzingCardTitle}>
-                        Analysis {analysis.analysisId.slice(-8)}
-                      </Text>
+                  <View key={analysis.analysisId} style={styles.processingCard}>
+                    <View style={styles.processingCardContent}>
+                      <Text style={styles.processingCardTitle}>Analysis {analysis.analysisId.slice(-8)}</Text>
                       <View style={styles.progressContainer}>
                         <View style={styles.progressBar}>
-                          <View
-                            style={[
-                              styles.progressFill,
-                              { width: `${analysis.progress || 0}%` },
-                            ]}
+                          <LinearGradient
+                            colors={[Colors.accent.teal, Colors.primary.purple]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={[styles.progressFill, { width: `${analysis.progress || 0}%` }]}
                           />
                         </View>
-                        <Text style={styles.progressText}>
-                          {analysis.progress || 0}% completed
-                        </Text>
+                        <Text style={styles.progressText}>{analysis.progress || 0}%</Text>
                       </View>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => handleShare(analysis)}
-                      style={styles.shareButton}
-                    >
-                      <Ionicons name="share-outline" size={20} color="#8B5CF6" />
-                    </TouchableOpacity>
                   </View>
                 ))}
               </View>
@@ -616,28 +453,25 @@ export default function SightAI() {
             {/* Personal Insights Section */}
             <Animated.View style={[styles.section, insightsAnimatedStyle]}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Personal Insights</Text>
-                <Text style={styles.sectionSubtitle}>from your surveys</Text>
+                <View>
+                  <Text style={styles.sectionTitle}>Personal Insights</Text>
+                  <Text style={styles.sectionSubtitle}>From your surveys</Text>
+                </View>
               </View>
 
-              {/* Button to analyze answered surveys */}
               {answeredSurveys.length > 0 && (
                 <TouchableOpacity
-                  style={[
-                    styles.analyzeAnsweredButton,
-                    analyzingAnswered && styles.analyzeAnsweredButtonDisabled,
-                  ]}
+                  style={[styles.analyzeButton, analyzingAnswered && styles.analyzeButtonDisabled]}
                   onPress={handleAnalyzeAnsweredSurveys}
                   disabled={analyzingAnswered}
+                  activeOpacity={0.9}
                 >
                   {analyzingAnswered ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={Colors.background.primary} />
                   ) : (
                     <>
-                      <Ionicons name="sparkles" size={20} color="#FFFFFF" />
-                      <Text style={styles.analyzeAnsweredButtonText}>
-                        Analyze My Answered Surveys ({answeredSurveys.length})
-                      </Text>
+                      <Ionicons name="sparkles" size={18} color={Colors.background.primary} />
+                      <Text style={styles.analyzeButtonText}>Analyze My Answered Surveys ({answeredSurveys.length})</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -645,55 +479,48 @@ export default function SightAI() {
 
               {insightCards.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <Ionicons name="analytics-outline" size={48} color="#6B7280" />
+                  <Ionicons name="analytics-outline" size={48} color={Colors.text.tertiary} />
                   <Text style={styles.emptyText}>No insights yet</Text>
-                  <Text style={styles.emptySubtext}>
-                    Analyze surveys to see insights here
-                  </Text>
+                  <Text style={styles.emptySubtext}>Analyze your answered surveys to see insights here</Text>
                 </View>
               ) : (
                 insightCards.map((card) => (
-                  <View key={card.analysisId} style={styles.insightCard}>
-                    <View style={styles.insightCardHeader}>
-                      <View style={styles.insightCardHeaderLeft}>
-                        <View style={styles.insightIcon}>
-                          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                  <TouchableOpacity
+                    key={card.analysisId}
+                    style={styles.insightCard}
+                    onPress={() => handleViewAnalysis(card.analysisId)}
+                    activeOpacity={0.8}
+                  >
+                    {/* Left accent border */}
+                    <LinearGradient colors={[Colors.accent.cyan, Colors.primary.purple]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.insightCardAccent} />
+
+                    <View style={styles.insightCardContent}>
+                      <View style={styles.insightCardHeader}>
+                        <View style={styles.insightStatus}>
+                          <Ionicons name="checkmark-circle" size={16} color={Colors.semantic.success} />
+                          <Text style={styles.insightTime}>{formatTimeAgo(card.createdAt)}</Text>
                         </View>
-                        <Text style={styles.insightTime}>
-                          {formatTimeAgo(card.createdAt)}
-                        </Text>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => handleShare(analyses.find((a) => a.analysisId === card.analysisId)!)}
-                        style={styles.shareButton}
-                      >
-                        <Ionicons name="share-outline" size={20} color="#8B5CF6" />
-                      </TouchableOpacity>
+
+                      <Text style={styles.insightTitle} numberOfLines={1}>{card.surveyTitle}</Text>
+                      <Text style={styles.insightDescription} numberOfLines={2}>{card.insight}</Text>
+
+                      {card.tags.length > 0 && (
+                        <View style={styles.tagsContainer}>
+                          {card.tags.slice(0, 3).map((tag, index) => (
+                            <View key={index} style={styles.tag}>
+                              <Text style={styles.tagText}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      <View style={styles.viewReportRow}>
+                        <Text style={styles.viewReportText}>View Full Report</Text>
+                        <Ionicons name="arrow-forward" size={14} color={Colors.accent.sky} />
+                      </View>
                     </View>
-                    <Text style={styles.insightTitle}>
-                      {card.surveyTitle}
-                    </Text>
-                    <Text style={styles.insightDescription} numberOfLines={3}>
-                      {card.insight}
-                    </Text>
-                    {card.tags.length > 0 && (
-                      <View style={styles.tagsContainer}>
-                        {card.tags.slice(0, 3).map((tag, index) => (
-                          <View key={index} style={styles.tag}>
-                            <Text style={styles.tagText}>{tag}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={styles.viewReportButton}
-                      onPress={() => handleViewAnalysis(card.analysisId)}
-                    >
-                      <Text style={styles.viewReportButtonText}>
-                        View Full Report →
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </Animated.View>
@@ -710,306 +537,296 @@ const styles = StyleSheet.create({
   },
   lightBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background.primary,
     zIndex: 0,
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0F0F1E",
+    backgroundColor: Colors.dark.background,
     zIndex: 1,
   },
   contentContainer: {
     flex: 1,
     zIndex: 2,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
+  header: {
+    backgroundColor: "transparent",
+    paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingBottom: Spacing.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#0F0F1E",
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.dark.border,
+  },
+  headerTitle: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h2,
+    color: Colors.textDark.primary,
+    letterSpacing: Typography.letterSpacing.tight,
+  },
+  sightaiLogo: {
+    height: 39,
+    width: 132,
   },
   scrollView: {
     flex: 1,
   },
-  fixedHeader: {
-    backgroundColor: "transparent",
-    zIndex: 10,
-    paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E1E2E",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+  scrollContent: {
+    paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing.page.paddingHorizontal,
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  heroCardContainer: {
+    marginBottom: Spacing.xl,
   },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  titleImage: {
-    height: 32,
-    width: 106,
-    marginTop: -4,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  aiCardContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  aiCard: {
-    borderRadius: 20,
-    padding: 24,
-    minHeight: 200,
-  },
-  aiIconContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  aiIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(139, 92, 246, 0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  aiCardTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  aiCardDescription: {
-    fontSize: 16,
-    color: "#CCCCCC",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  massAnalyzeButton: {
-    borderRadius: 12,
+  heroCard: {
+    borderRadius: Spacing.card.borderRadiusLarge,
+    padding: Spacing.card.paddingLarge,
+    position: "relative",
     overflow: "hidden",
   },
-  massAnalyzeButtonGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+  gridPattern: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.03,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.textDark.primary,
+  },
+  heroIconContainer: {
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  heroIconGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  heroTitle: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h2,
+    color: Colors.textDark.primary,
+    textAlign: "center",
+    marginBottom: Spacing.sm,
+  },
+  heroDescription: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.body,
+    color: Colors.textDark.secondary,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: Spacing.xl,
+  },
+  heroButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: Colors.accent.cyan,
+    paddingVertical: Spacing.button.paddingVertical,
+    borderRadius: Spacing.button.borderRadius,
+    gap: Spacing.xs,
   },
-  massAnalyzeButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    textAlign: "center",
+  heroButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.dark.backgroundSecondary,
   },
-  statsContainer: {
+  statsRow: {
     flexDirection: "row",
-    paddingHorizontal: 24,
-    gap: 12,
-    marginBottom: 32,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
   },
   statCard: {
     flex: 1,
-    backgroundColor: "#1E1E2E",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.dark.surface,
+    borderRadius: Spacing.card.borderRadius,
+    padding: Spacing.md,
     alignItems: "center",
-    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#8B5CF6",
-    marginBottom: 4,
-    textAlign: "center",
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h3,
+    color: Colors.primary.purple,
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: 14,
-    color: "#CCCCCC",
-    textAlign: "center",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.textDark.tertiary,
   },
   section: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: Spacing.xl,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    marginBottom: Spacing.md,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.h4,
+    color: Colors.textDark.primary,
   },
   sectionSubtitle: {
-    fontSize: 14,
-    color: "#9CA3AF",
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.caption,
+    color: Colors.textDark.tertiary,
+    marginTop: 2,
   },
   addLink: {
-    fontSize: 14,
-    color: "#5FA9F5",
-    fontWeight: "600",
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.accent.sky,
   },
-  analyzingCard: {
-    backgroundColor: "#1E1E2E",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  processingCard: {
+    backgroundColor: Colors.dark.surface,
+    borderRadius: Spacing.card.borderRadius,
+    padding: Spacing.card.paddingSmall,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
-  analyzingCardContent: {
+  processingCardContent: {
     flex: 1,
   },
-  analyzingCardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 12,
+  processingCardTitle: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.textDark.primary,
+    marginBottom: Spacing.sm,
   },
   progressContainer: {
-    gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
   progressBar: {
+    flex: 1,
     height: 6,
-    backgroundColor: "#2D2D3E",
+    backgroundColor: Colors.dark.surfaceLight,
     borderRadius: 3,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#5FA9F5",
     borderRadius: 3,
   },
   progressText: {
-    fontSize: 12,
-    color: "#9CA3AF",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.textDark.tertiary,
+    width: 35,
+    textAlign: "right",
   },
-  shareButton: {
-    padding: 8,
-  },
-  analyzeAnsweredButton: {
+  analyzeButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#8B5CF6",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 16,
+    backgroundColor: Colors.primary.purple,
+    paddingVertical: Spacing.button.paddingVertical,
+    borderRadius: Spacing.button.borderRadius,
+    gap: Spacing.xs,
+    marginBottom: Spacing.md,
+    ...Shadows.glow.purple,
   },
-  analyzeAnsweredButtonDisabled: {
+  analyzeButtonDisabled: {
     opacity: 0.6,
   },
-  analyzeAnsweredButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
+  analyzeButtonText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.body,
+    color: Colors.background.primary,
   },
   emptyContainer: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
+    paddingVertical: Spacing.huge,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#9CA3AF",
-    marginTop: 16,
-    marginBottom: 8,
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodyLarge,
+    color: Colors.textDark.tertiary,
+    marginTop: Spacing.md,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: "#6B7280",
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.textDark.disabled,
+    marginTop: Spacing.xs,
   },
   insightCard: {
-    backgroundColor: "#1E1E2E",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    flexDirection: "row",
+    backgroundColor: Colors.dark.surface,
+    borderRadius: Spacing.card.borderRadius,
+    marginBottom: Spacing.sm,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  insightCardAccent: {
+    width: 4,
+  },
+  insightCardContent: {
+    flex: 1,
+    padding: Spacing.card.paddingSmall,
   },
   insightCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: Spacing.xs,
   },
-  insightCardHeaderLeft: {
+  insightStatus: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  insightIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
+    gap: 6,
   },
   insightTime: {
-    fontSize: 12,
-    color: "#9CA3AF",
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.captionSmall,
+    color: Colors.textDark.tertiary,
   },
   insightTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 8,
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodyLarge,
+    color: Colors.textDark.primary,
+    marginBottom: 4,
   },
   insightDescription: {
-    fontSize: 14,
-    color: "#CCCCCC",
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.textDark.secondary,
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: Spacing.sm,
   },
   tagsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   tag: {
-    backgroundColor: "rgba(139, 92, 246, 0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: `${Colors.primary.purple}20`,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   tagText: {
-    fontSize: 12,
-    color: "#8B5CF6",
-    fontWeight: "500",
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.label,
+    color: Colors.primary.purple,
   },
-  viewReportButton: {
-    marginTop: 8,
+  viewReportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  viewReportButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#5FA9F5",
+  viewReportText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.accent.sky,
   },
 });
