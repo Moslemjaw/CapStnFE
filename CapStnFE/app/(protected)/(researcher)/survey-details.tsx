@@ -307,11 +307,10 @@ export default function SurveyDetails() {
           {/* Fixed Header Section */}
           <View style={styles.modalFixedHeader}>
             <View style={styles.modalHeaderContent}>
-              <View style={styles.modalLogoContainer}>
-                <Image source={require("@/assets/title.png")} style={styles.modalTitleImage} resizeMode="contain" />
-              </View>
-              <View style={styles.modalHeaderTitleRow}>
-                <Text style={styles.modalHeaderTitle}>{survey?.title || "Survey"}</Text>
+              <View style={styles.modalHeaderTopRow}>
+                <View style={styles.modalLogoContainer}>
+                  <Image source={require("@/assets/title.png")} style={styles.modalTitleImage} resizeMode="contain" />
+                </View>
                 <TouchableOpacity
                   onPress={() => setShowPreviewModal(false)}
                   style={styles.modalCloseButton}
@@ -319,6 +318,7 @@ export default function SurveyDetails() {
                   <Ionicons name="close" size={24} color="#6B7280" />
                 </TouchableOpacity>
               </View>
+              <Text style={styles.modalHeaderTitle}>{survey?.title || "Survey"}</Text>
               <Text style={styles.modalHeaderSubtitle}>Survey preview</Text>
             </View>
           </View>
@@ -972,19 +972,21 @@ const styles = StyleSheet.create({
     marginLeft: -8,
     marginTop: -4,
   },
-  modalHeaderTitleRow: {
+  modalHeaderTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 16,
   },
   modalHeaderTitle: {
     fontSize: 32,
     fontWeight: "700",
     color: "#222222",
+    marginBottom: 8,
   },
   modalCloseButton: {
-    padding: 4,
+    padding: 8,
+    marginRight: 0,
   },
   modalHeaderSubtitle: {
     fontSize: 16,
