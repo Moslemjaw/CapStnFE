@@ -367,7 +367,7 @@ export default function SurveyView() {
           style={[styles.keyboardView, styles.scrollView]}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: bottomNavHeight + (hasAnswered ? 140 : 100) },
+            { paddingBottom: bottomNavHeight + (hasAnswered ? 140 : 120) },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -559,59 +559,9 @@ export default function SurveyView() {
               )}
             </View>
 
-          {/* Submit Button with Progress */}
-          {!hasAnswered && (
-            <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight + 16 }]}>
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSubmit}
-                disabled={submitting}
-                activeOpacity={0.9}
-              >
-                <View style={styles.submitButtonBackground}>
-                  {/* Animated Progress Fill */}
-                  <Animated.View
-                    style={[
-                      styles.submitProgressFillContainer,
-                      {
-                        width: progressAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0%', '100%'],
-                        }),
-                      },
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[Colors.accent.sky, Colors.primary.blue]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.submitProgressFill}
-                    />
-                  </Animated.View>
-                  {/* Button Content */}
-                  <View style={styles.submitButtonContent}>
-                    <Text style={[
-                      styles.submitButtonText,
-                      getProgress() < 0.5 && styles.submitButtonTextDark
-                    ]}>
-                      {submitting ? "Submitting..." : "Submit Survey"}
-                    </Text>
-                    {!submitting && (
-                      <Ionicons 
-                        name="arrow-forward" 
-                        size={20} 
-                        color={getProgress() >= 0.5 ? Colors.background.primary : Colors.text.secondary} 
-                      />
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* Completed Info */}
           {hasAnswered && userResponse && (
-            <View style={[styles.completedSection, { bottom: bottomNavHeight + 16 }]}>
+            <View style={styles.completedSectionInline}>
               <View style={styles.completedCard}>
                 <View style={styles.completedHeader}>
                   <View style={styles.completedIconContainer}>
@@ -648,6 +598,56 @@ export default function SurveyView() {
             </View>
           )}
         </KeyboardAwareScrollView>
+
+        {/* Floating Submit Button */}
+        {!hasAnswered && (
+          <View style={[styles.floatingSubmitContainer, { bottom: bottomNavHeight + 16 }]}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmit}
+              disabled={submitting}
+              activeOpacity={0.9}
+            >
+              <View style={styles.submitButtonBackground}>
+                {/* Animated Progress Fill */}
+                <Animated.View
+                  style={[
+                    styles.submitProgressFillContainer,
+                    {
+                      width: progressAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%'],
+                      }),
+                    },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={[Colors.accent.sky, Colors.primary.blue]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.submitProgressFill}
+                  />
+                </Animated.View>
+                {/* Button Content */}
+                <View style={styles.submitButtonContent}>
+                  <Text style={[
+                    styles.submitButtonText,
+                    getProgress() < 0.5 && styles.submitButtonTextDark
+                  ]}>
+                    {submitting ? "Submitting..." : "Submit Survey"}
+                  </Text>
+                  {!submitting && (
+                    <Ionicons 
+                      name="arrow-forward" 
+                      size={20} 
+                      color={getProgress() >= 0.5 ? Colors.background.primary : Colors.text.secondary} 
+                    />
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
     </FadeInView>
   );
@@ -873,12 +873,13 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.medium,
     color: Colors.primary.blue,
   },
-  fixedButtonContainer: {
+  floatingSubmitContainer: {
     position: "absolute",
     left: 0,
     right: 0,
+    alignItems: "center",
     paddingHorizontal: Spacing.page.paddingHorizontal,
-    zIndex: 10,
+    zIndex: 100,
   },
   submitButton: {
     borderRadius: Spacing.button.borderRadiusPill,
@@ -907,7 +908,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: Spacing.button.paddingVerticalLarge,
+    paddingHorizontal: Spacing.xl,
     gap: Spacing.xs,
+    minWidth: 200,
   },
   submitButtonText: {
     fontFamily: Typography.fontFamily.semiBold,
@@ -924,12 +927,9 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  completedSection: {
-    position: "absolute",
-    left: 0,
-    right: 0,
+  completedSectionInline: {
+    marginTop: Spacing.xl,
     paddingHorizontal: Spacing.page.paddingHorizontal,
-    zIndex: 10,
   },
   completedCard: {
     backgroundColor: Colors.surface.blueTint,

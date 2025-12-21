@@ -270,13 +270,20 @@ export default function SurveyPreview() {
               <Text style={styles.moduleLabel}>Questions</Text>
             </View>
 
-            <TouchableOpacity style={styles.summaryModule} onPress={openTimeEditModal}>
+            <TouchableOpacity style={[styles.summaryModule, styles.editableModule]} onPress={openTimeEditModal} activeOpacity={0.7}>
+              <View style={styles.timeEditHeader}>
+                <Ionicons name="create-outline" size={14} color="#2BB6E9" />
+                <Text style={styles.editableLabel}>EDITABLE</Text>
+              </View>
               <View style={styles.timeIconContainer}>
                 <Ionicons name="time-outline" size={24} color="#2BB6E9" />
-                <Ionicons name="pencil" size={10} color="#2BB6E9" style={styles.timeEditIcon} />
               </View>
               <Text style={styles.moduleValue}>~{survey.estimatedMinutes}</Text>
               <Text style={styles.moduleLabel}>Minutes</Text>
+              <View style={styles.editButtonIndicator}>
+                <Ionicons name="pencil" size={12} color="#FFFFFF" />
+                <Text style={styles.editButtonText}>Tap to Edit</Text>
+              </View>
             </TouchableOpacity>
 
             <View style={styles.summaryModule}>
@@ -597,12 +604,48 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xxs,
   },
   timeIconContainer: {
-    position: "relative",
+    marginTop: Spacing.xs,
   },
-  timeEditIcon: {
-    position: "absolute",
-    bottom: -2,
-    right: -6,
+  timeEditHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(43, 182, 233, 0.15)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Borders.radius.full,
+    marginBottom: Spacing.xxs,
+  },
+  editableLabel: {
+    fontSize: 9,
+    fontWeight: Typography.fontWeight.bold,
+    color: "#2BB6E9",
+    letterSpacing: 0.5,
+  },
+  editableModule: {
+    backgroundColor: "rgba(43, 182, 233, 0.06)",
+    borderWidth: 2,
+    borderColor: "#2BB6E9",
+    borderStyle: "dashed",
+    borderRadius: Borders.radius.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    marginHorizontal: -Spacing.xs,
+  },
+  editButtonIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#2BB6E9",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Borders.radius.full,
+    marginTop: Spacing.xs,
+  },
+  editButtonText: {
+    fontSize: Typography.fontSize.caption - 1,
+    color: "#FFFFFF",
+    fontWeight: Typography.fontWeight.bold,
   },
   fixedHeader: {
     backgroundColor: Colors.background.primary,
