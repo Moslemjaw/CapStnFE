@@ -23,7 +23,7 @@ export default function GlobalBottomNav() {
   const getActiveTab = () => {
     if (!pathname) return null;
     
-    // Check for specific tab routes first
+    // Check for specific tab routes first (order matters - check specific routes before general)
     if (pathname.includes("/sightai")) {
       return "sightai";
     }
@@ -41,12 +41,17 @@ export default function GlobalBottomNav() {
     if (pathname.includes("/survey-") || pathname.includes("/create-survey")) {
       return "surveys";
     }
-    // Default to home for index or root tabs
-    if (pathname.includes("/index") || pathname.endsWith("/(tabs)") || pathname.endsWith("/(tabs)/")) {
+    // Check for home/index - this should match when none of the above matched
+    // and we're in the tabs section
+    if (pathname === "/" || 
+        pathname.includes("/index") || 
+        pathname.endsWith("/(tabs)") || 
+        pathname.endsWith("/(tabs)/")) {
       return "home";
     }
-    // Default to home if we're in the researcher section but no specific match
-    if (pathname.includes("/(researcher)")) {
+    // If we're in the researcher/(tabs) section but didn't match any specific tab,
+    // it's likely the home/index route
+    if (pathname.includes("/(researcher)/(tabs)")) {
       return "home";
     }
     return null;
@@ -94,11 +99,29 @@ export default function GlobalBottomNav() {
 
   const handleNavigation = (route: string) => {
     try {
-      // Check if we're already on this route
-      if (pathname === route || pathname?.includes(route.split("/").pop() || "")) {
-        return; // Already on this route, don't navigate
+      // Get the last segment of the route (e.g., "surveys", "profile", etc.)
+      const routeSegment = route.split("/").filter(Boolean).pop() || "";
+      
+      // For home/index route (ends with "/" or "(tabs)"), check differently
+      const isHomeRoute = route.endsWith("/(tabs)/") || route.endsWith("/(tabs)");
+      
+      if (isHomeRoute) {
+        // Check if we're on the home/index page
+        const isOnHome = pathname === "/" || 
+                         pathname?.endsWith("/(tabs)") || 
+                         pathname?.endsWith("/(tabs)/") ||
+                         pathname?.endsWith("/index") ||
+                         (pathname?.includes("/(tabs)") && !pathname?.includes("/surveys") && 
+                          !pathname?.includes("/research") && !pathname?.includes("/profile") && 
+                          !pathname?.includes("/sightai"));
+        if (isOnHome) {
+          return; // Already on home
+        }
+      } else if (routeSegment && pathname?.includes(`/${routeSegment}`)) {
+        return; // Already on this route
       }
-      // Use replace for tab navigation to avoid unmatched route errors
+      
+      // Use replace for tab navigation to avoid stacking
       router.replace(route as any);
     } catch (error) {
       console.error("Navigation error:", error);
