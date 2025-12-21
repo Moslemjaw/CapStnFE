@@ -12,7 +12,7 @@ import {
   Pressable,
 } from "react-native";
 import React, { useEffect, useState, useMemo } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -69,6 +69,7 @@ type SortOption = "newest" | "oldest" | "most-responses" | "least-responses";
 
 export default function AllSurveys() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const bottomNavHeight = useBottomNavHeight();
   const [user, setUser] = useState<User | null>(null);
   const [surveys, setSurveys] = useState<SurveyWithMetadata[]>([]);
@@ -271,6 +272,14 @@ export default function AllSurveys() {
     return filtered;
   }, [surveys, statusFilter, responseFilter, sortOption]);
 
+  const hasActiveFilters = statusFilter !== "all" || responseFilter !== "all" || sortOption !== "newest";
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setResponseFilter("all");
+    setSortOption("newest");
+  };
+
   const handleViewSurvey = (survey: SurveyWithMetadata) => {
     router.push({
       pathname: "/(protected)/(researcher)/survey-details",
@@ -370,14 +379,11 @@ export default function AllSurveys() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
-          </View>
-          <View style={styles.headerTop}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerTextContainer}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
@@ -385,6 +391,9 @@ export default function AllSurveys() {
               <Ionicons name="arrow-back" size={24} color="#222222" />
             </TouchableOpacity>
             <Text style={styles.title}>All Surveys</Text>
+          </View>
+          <View style={styles.logoContainer}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
         </View>
 
@@ -399,37 +408,109 @@ export default function AllSurveys() {
           )}
           <View style={styles.filtersRow}>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[
+                styles.filterButton,
+                statusFilter !== "all" && styles.filterButtonActive,
+              ]}
               onPress={() => {
                 setShowResponseDropdown(false);
                 setShowSortDropdown(false);
                 setShowStatusDropdown(!showStatusDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>{getStatusLabel(statusFilter)}</Text>
-              <Ionicons name="chevron-down" size={16} color="#505050" />
+              <View style={styles.filterButtonContent}>
+                <Ionicons
+                  name={
+                    statusFilter === "published"
+                      ? "checkmark-circle-outline"
+                      : statusFilter === "archived"
+                      ? "archive-outline"
+                      : "filter-outline"
+                  }
+                  size={16}
+                  color={statusFilter !== "all" ? "#4A63D8" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    statusFilter !== "all" && styles.filterButtonTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {getStatusLabel(statusFilter)}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={statusFilter !== "all" ? "#4A63D8" : "#9CA3AF"}
+              />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[
+                styles.filterButton,
+                responseFilter !== "all" && styles.filterButtonActive,
+              ]}
               onPress={() => {
                 setShowStatusDropdown(false);
                 setShowSortDropdown(false);
                 setShowResponseDropdown(!showResponseDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>{getResponseLabel(responseFilter)}</Text>
-              <Ionicons name="chevron-down" size={16} color="#505050" />
+              <View style={styles.filterButtonContent}>
+                <Ionicons
+                  name="people-outline"
+                  size={16}
+                  color={responseFilter !== "all" ? "#4A63D8" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    responseFilter !== "all" && styles.filterButtonTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {getResponseLabel(responseFilter)}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={responseFilter !== "all" ? "#4A63D8" : "#9CA3AF"}
+              />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[
+                styles.filterButton,
+                sortOption !== "newest" && styles.filterButtonActive,
+              ]}
               onPress={() => {
                 setShowStatusDropdown(false);
                 setShowResponseDropdown(false);
                 setShowSortDropdown(!showSortDropdown);
               }}
             >
-              <Text style={styles.filterButtonText}>{getSortLabel(sortOption)}</Text>
-              <Ionicons name="chevron-down" size={16} color="#505050" />
+              <View style={styles.filterButtonContent}>
+                <Ionicons
+                  name="swap-vertical-outline"
+                  size={16}
+                  color={sortOption !== "newest" ? "#4A63D8" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    sortOption !== "newest" && styles.filterButtonTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {getSortLabel(sortOption)}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={sortOption !== "newest" ? "#4A63D8" : "#9CA3AF"}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -562,20 +643,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     zIndex: 10,
     paddingBottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopWidth: 0,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
   },
   centerContainer: {
     flex: 1,
@@ -596,23 +668,26 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerTextContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   logoContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    paddingTop: 4,
   },
   titleImage: {
-    height: 28,
-    width: 92,
-    marginLeft: -8,
-    marginTop: -4,
-  },
-  headerTop: {
-    flexDirection: "row",
-    alignItems: "center",
+    height: 32,
+    width: 106,
+    marginLeft: -6,
   },
   backButton: {
     marginRight: 12,
@@ -622,11 +697,12 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     color: "#222222",
+    lineHeight: 40,
   },
   filtersSection: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     marginBottom: 0,
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
   filtersHeader: {
     flexDirection: "row",
@@ -641,7 +717,7 @@ const styles = StyleSheet.create({
   },
   filtersRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
   },
   filterButton: {
     flex: 1,
@@ -651,14 +727,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+    minHeight: 40,
+  },
+  filterButtonActive: {
+    borderColor: "#4A63D8",
+    backgroundColor: "#F0F4FF",
+  },
+  filterButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
   },
   filterButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
+    color: "#6B7280",
+    textAlign: "center",
+  },
+  filterButtonTextActive: {
     color: "#222222",
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,

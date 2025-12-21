@@ -1096,7 +1096,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   sightaiButtonContainer: {
-    top: -5,
+    top: -10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1111,8 +1111,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   sightaiLogo: {
-    width: 101,
-    height: 101,
+    width: 85,
+    height: 85,
   },
 });
 

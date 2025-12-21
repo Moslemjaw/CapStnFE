@@ -872,6 +872,8 @@ const styles = StyleSheet.create({
   },
   surveysSection: {
     paddingHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 16,
   },
   sectionHeader: {
     flexDirection: "row",
