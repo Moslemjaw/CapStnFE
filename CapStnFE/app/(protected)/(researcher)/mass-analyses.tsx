@@ -9,7 +9,7 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useMemo, useContext } from "react";
+import React, { useEffect, useState, useMemo, useContext, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -19,10 +19,10 @@ import {
   Survey,
 } from "@/api/surveys";
 import { getResponsesBySurveyId } from "@/api/responses";
-import { createAnalysis } from "@/api/ai";
+import { createAnalysis, getAnalysisById } from "@/api/ai";
 import { getUser } from "@/api/storage";
 import User from "@/types/User";
-import { SurveyListSkeleton } from "@/components/Skeleton";
+import { SmoothLoader } from "@/components/SmoothLoader";
 import AnalysisContext from "@/context/AnalysisContext";
 
 interface SurveyWithResponses extends Survey {
@@ -35,7 +35,8 @@ type TimeRangeFilter = "all" | "1-5" | "6-10" | "11-15" | "16-30" | "31+";
 
 export default function MassAnalyses() {
   const router = useRouter();
-  const { setIsAnalyzing } = useContext(AnalysisContext);
+  const { setIsAnalyzing, triggerCompletion } = useContext(AnalysisContext);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [surveys, setSurveys] = useState<SurveyWithResponses[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -289,10 +290,6 @@ export default function MassAnalyses() {
     );
   };
 
-  if (loading) {
-    return <SurveyListSkeleton />;
-  }
-
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
@@ -308,9 +305,10 @@ export default function MassAnalyses() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Fixed Header Section */}
-      <View style={styles.fixedHeader}>
+    <SmoothLoader isLoading={loading} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
+        {/* Fixed Header Section */}
+        <View style={styles.fixedHeader}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
@@ -670,6 +668,7 @@ export default function MassAnalyses() {
         )}
       </View>
     </SafeAreaView>
+    </SmoothLoader>
   );
 }
 

@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { getToken } from "@/api/storage";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -35,19 +36,21 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, isLoading }}>
-        <AnalysisProvider>
-          <SafeAreaProvider style={{ flex: 1 }}>
-            <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(protected)" />
-            </Stack>
-          </SafeAreaProvider>
-        </AnalysisProvider>
-      </AuthContext.Provider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, isLoading }}>
+          <AnalysisProvider>
+            <SafeAreaProvider style={{ flex: 1 }}>
+              <StatusBar style="dark" />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(protected)" />
+              </Stack>
+            </SafeAreaProvider>
+          </AnalysisProvider>
+        </AuthContext.Provider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

@@ -16,7 +16,7 @@ import AnalysisContext from "@/context/AnalysisContext";
 
 export default function AnalysisLoading() {
   const router = useRouter();
-  const { setIsAnalyzing } = useContext(AnalysisContext);
+  const { setIsAnalyzing, triggerCompletion } = useContext(AnalysisContext);
   const { analysisId, type } = useLocalSearchParams<{
     analysisId: string;
     type: "single" | "multi";
@@ -76,14 +76,16 @@ export default function AnalysisLoading() {
 
       // Navigate to insights when ready
       if (analysis.status === "ready") {
-        // Clear analyzing state when analysis completes
-        setIsAnalyzing(false);
+        // Trigger completion animation
+        triggerCompletion();
+        // Clear analyzing state after completion animation
         setTimeout(() => {
+          setIsAnalyzing(false);
           router.replace({
             pathname: "/(protected)/(researcher)/analysis-insights",
             params: { analysisId: analysis.analysisId },
           } as any);
-        }, 1000);
+        }, 800);
       } else if (analysis.status === "failed") {
         // Clear analyzing state when analysis fails
         setIsAnalyzing(false);

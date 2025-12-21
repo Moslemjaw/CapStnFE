@@ -185,7 +185,7 @@ export default function SurveyRespondentPreview() {
       >
         {/* Survey Overview */}
         <View style={styles.overviewSection}>
-          {survey.description && survey.description.trim() && survey.description.trim() !== "No description provided" && (
+          {survey.description && survey.description.trim() && (
             <Text style={styles.surveyDescription}>{survey.description}</Text>
           )}
 

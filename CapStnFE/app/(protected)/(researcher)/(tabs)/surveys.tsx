@@ -851,7 +851,9 @@ export default function ResearcherSurveys() {
 
             {/* All Surveys Section */}
             <View style={styles.allSurveysSection}>
-              <Text style={styles.sectionTitle}>All Surveys</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.allSurveysTitle}>All Surveys</Text>
+              </View>
               {filteredAvailable.length === 0 ? (
                 <View style={styles.emptySection}>
                   <Ionicons
@@ -953,7 +955,7 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
       >
         {survey.title}
       </Text>
-      {survey.description && survey.description.trim() && survey.description.trim() !== "No description provided" && !isSmall && (
+      {survey.description && survey.description.trim() && !isSmall && (
         <Text style={styles.cardDescription} numberOfLines={3}>
           {survey.description}
         </Text>
@@ -1287,7 +1289,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   allSurveysSection: {
-    marginTop: 8,
+    marginTop: 0,
     marginBottom: 32,
     paddingHorizontal: 24,
   },
@@ -1298,6 +1300,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
+    fontWeight: "700",
+    color: "#222222",
+    marginRight: 12,
+  },
+  allSurveysTitle: {
+    fontSize: 22,
     fontWeight: "700",
     color: "#222222",
     marginRight: 12,

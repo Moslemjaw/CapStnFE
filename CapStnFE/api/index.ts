@@ -1,7 +1,7 @@
 import axios from "axios";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { getToken } from "./storage";
+import { getToken, deleteToken } from "./storage";
 
 /**
  * Determine base URL for the backend API server
@@ -79,7 +79,19 @@ const instance = axios.create({
 // Response interceptor for error handling
 instance.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    // Handle 401 Unauthorized errors - token expired or invalid
+    if (error.response?.status === 401) {
+      console.log("[API] 401 Unauthorized - clearing token and redirecting to login");
+      try {
+        // Clear token and user data
+        await deleteToken();
+        // The protected layout will automatically redirect to login
+        // when isAuthenticated becomes false
+      } catch (clearError) {
+        console.error("[API] Error clearing token on 401:", clearError);
+      }
+    }
     return Promise.reject(error);
   }
 );

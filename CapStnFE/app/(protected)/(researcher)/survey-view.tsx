@@ -11,7 +11,7 @@ import {
   Platform,
   Image,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -46,6 +46,8 @@ export default function SurveyView() {
   const [checkingAnswered, setCheckingAnswered] = useState(true);
   const [userResponse, setUserResponse] = useState<Response | null>(null);
   const [optionSearchQueries, setOptionSearchQueries] = useState<Record<string, string>>({});
+  const scrollViewRef = useRef<ScrollView>(null);
+  const questionPositions = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (surveyId) {
@@ -113,11 +115,45 @@ export default function SurveyView() {
     }
   };
 
+  const scrollToNextQuestion = (currentQuestionId: string) => {
+    if (hasAnswered) return; // Don't scroll if already answered
+    
+    // Find the current question index
+    const currentIndex = questions.findIndex((q) => q._id === currentQuestionId);
+    if (currentIndex === -1) return;
+    
+    // Find the next unanswered question
+    const nextUnansweredIndex = questions.findIndex(
+      (q, index) => index > currentIndex && !answers[q._id]
+    );
+    
+    if (nextUnansweredIndex !== -1) {
+      const nextQuestionId = questions[nextUnansweredIndex]._id;
+      const position = questionPositions.current[nextQuestionId];
+      
+      if (position !== undefined && scrollViewRef.current) {
+        // Scroll to the next question with a slight offset for better visibility
+        // The position from onLayout is relative to the ScrollView content
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({
+            y: Math.max(0, position - 100), // Offset to show question better in view
+            animated: true,
+          });
+        }, 300);
+      }
+    }
+  };
+
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,
     }));
+    
+    // Scroll to next question if answer is provided (non-empty)
+    if (value && value.trim()) {
+      scrollToNextQuestion(questionId);
+    }
   };
 
   const handleOptionSearchChange = (questionId: string, query: string) => {
@@ -147,13 +183,13 @@ export default function SurveyView() {
     questionType: Question["type"]
   ) => {
     if (questionType === "single_choice" || questionType === "dropdown") {
-      // Single selection
+      // Single selection - scroll to next question
       handleAnswerChange(questionId, option);
     } else if (
       questionType === "multiple_choice" ||
       questionType === "checkbox"
     ) {
-      // Multiple selection - toggle option
+      // Multiple selection - toggle option (don't auto-scroll for multiple choice)
       const currentAnswer = answers[questionId] || "";
       const selectedOptions = currentAnswer ? currentAnswer.split(",") : [];
       const optionIndex = selectedOptions.indexOf(option);
@@ -166,7 +202,10 @@ export default function SurveyView() {
         selectedOptions.push(option);
       }
 
-      handleAnswerChange(questionId, selectedOptions.join(","));
+      setAnswers((prev) => ({
+        ...prev,
+        [questionId]: selectedOptions.join(","),
+      }));
     }
   };
 
@@ -364,6 +403,7 @@ export default function SurveyView() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
@@ -408,7 +448,14 @@ export default function SurveyView() {
               </View>
             ) : (
               questions.map((question, index) => (
-                <View key={question._id} style={styles.questionCard}>
+                <View
+                  key={question._id}
+                  style={styles.questionCard}
+                  onLayout={(event) => {
+                    const { y } = event.nativeEvent.layout;
+                    questionPositions.current[question._id] = y;
+                  }}
+                >
                   <View style={styles.questionHeader}>
                     <Text style={styles.questionNumber}>
                       Question {index + 1}

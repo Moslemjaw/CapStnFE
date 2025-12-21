@@ -8,10 +8,17 @@ import {
   Share,
   Image,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+} from "react-native-reanimated";
 import {
   getAnalysisById,
   AnalysisResponse,
@@ -21,7 +28,7 @@ import {
   Correlation,
 } from "@/api/ai";
 import { getSurveyById } from "@/api/surveys";
-import { AnalysisSkeleton } from "@/components/Skeleton";
+import { SmoothLoader } from "@/components/SmoothLoader";
 
 interface SurveyWithName extends SurveySummary {
   surveyTitle: string;
@@ -36,6 +43,90 @@ export default function AnalysisInsights() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Animation system for dark theme transition
+  const overlayOpacity = useSharedValue(0);
+  const contentOpacity = useSharedValue(0);
+  const headerOpacity = useSharedValue(0);
+  const statsOpacity = useSharedValue(0);
+  const overviewOpacity = useSharedValue(0);
+  const surveysOpacity = useSharedValue(0);
+
+  const entranceEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
+  const exitEasing = Easing.bezier(0.4, 0.0, 0.2, 1);
+
+  // Initialize animations
+  useEffect(() => {
+    overlayOpacity.value = 0;
+    contentOpacity.value = 0;
+    headerOpacity.value = 0;
+    statsOpacity.value = 0;
+    overviewOpacity.value = 0;
+    surveysOpacity.value = 0;
+  }, []);
+
+  // Handle page focus for animations
+  useFocusEffect(
+    useCallback(() => {
+      overlayOpacity.value = withTiming(1, {
+        duration: 1000,
+        easing: entranceEasing,
+      });
+
+      contentOpacity.value = withDelay(150, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      headerOpacity.value = withDelay(150, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      statsOpacity.value = withDelay(270, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      overviewOpacity.value = withDelay(390, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      surveysOpacity.value = withDelay(510, withTiming(1, {
+        duration: 800,
+        easing: entranceEasing,
+      }));
+
+      return () => {
+        const exitDuration = 600;
+        overlayOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        contentOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        headerOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        statsOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        overviewOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+        surveysOpacity.value = withTiming(0, {
+          duration: exitDuration,
+          easing: exitEasing,
+        });
+      };
+    }, [])
+  );
 
   useEffect(() => {
     if (analysisId) {
@@ -85,7 +176,7 @@ export default function AnalysisInsights() {
     if (!analysis || !analysis.data) return;
 
     try {
-      let shareText = `Analysis Insights\n\nOverview:\n${analysis.data.overview}\n\n`;
+      let shareText = `Analysis Insights\n\nOverview:\n${analysis?.data?.overview || "No overview available"}\n\n`;
 
       if (surveysWithNames.length > 0) {
         shareText += `Surveys Analyzed:\n`;
@@ -105,17 +196,46 @@ export default function AnalysisInsights() {
     }
   };
 
-  if (error || !analysis || !analysis.data) {
+  // Animated styles
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+  }));
+
+  const statsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: statsOpacity.value,
+  }));
+
+  const overviewAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overviewOpacity.value,
+  }));
+
+  const surveysAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: surveysOpacity.value,
+  }));
+
+  if (error || (!loading && (!analysis || !analysis.data))) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-          <Text style={styles.errorText}>
-            {error || "Analysis data not available"}
-          </Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.button}>
-            <Text style={styles.buttonText}>Go Back</Text>
-          </TouchableOpacity>
+        <View style={styles.lightBackground} />
+        <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
+        <View style={styles.contentContainer}>
+          <View style={styles.centerContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.errorText}>
+              {error || "Analysis data not available"}
+            </Text>
+            <TouchableOpacity onPress={() => router.back()} style={styles.button}>
+              <Text style={styles.buttonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -127,118 +247,128 @@ export default function AnalysisInsights() {
   );
 
   return (
-    <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#111827" />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Analysis Insights</Text>
-            <Text style={styles.subtitle}>
-              {new Date(analysis.createdAt || "").toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-            <Ionicons name="share-outline" size={24} color="#8B5CF6" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Success Badge */}
-        <View style={styles.successBadge}>
-          <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-          <Text style={styles.successText}>Analysis Complete</Text>
-        </View>
-
-        {/* Stats Cards */}
-        <View style={styles.statsGrid}>
-          <StatCard
-            icon="document-text"
-            label="Surveys"
-            value={surveysWithNames.length}
-            color="#3B82F6"
-          />
-          <StatCard
-            icon="people"
-            label="Responses"
-            value={totalResponses}
-            color="#10B981"
-          />
-        </View>
-
-        {/* Data Quality */}
-        {analysis.data.dataQualityNotes && (
-          <View style={styles.qualityCard}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="shield-checkmark" size={24} color="#10B981" />
-              <Text style={styles.cardTitle}>Data Quality</Text>
-            </View>
-            <View style={styles.confidenceRow}>
-              <Text style={styles.confidenceLabel}>Confidence Score:</Text>
-              <View style={styles.confidenceBadge}>
-                <Text style={styles.confidenceValue}>
-                  {Math.round(
-                    analysis.data.dataQualityNotes.confidenceScore * 100
-                  )}
-                  %
-                </Text>
+    <SmoothLoader isLoading={loading} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
+        {/* Light background layer */}
+        <View style={styles.lightBackground} />
+        
+        {/* Dark overlay that fades in */}
+        <Animated.View style={[styles.darkOverlay, overlayAnimatedStyle]} />
+        
+        {/* Content container */}
+        <View style={styles.contentContainer}>
+          {/* Fixed Header Section */}
+          <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Image source={require("@/assets/sightai.png")} style={styles.titleImage} resizeMode="contain" />
               </View>
+              <Text style={styles.title}>Analysis Insights</Text>
+              <Text style={styles.subtitle}>
+                {analysis?.createdAt ? new Date(analysis.createdAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }) : "Analysis Insights"}
+              </Text>
             </View>
-            <Text style={styles.qualityText}>
-              {analysis.data.dataQualityNotes.confidenceExplanation}
-            </Text>
-            {analysis.data.dataQualityNotes.notes &&
-              analysis.data.dataQualityNotes.notes.length > 0 && (
-                <View style={styles.notesSection}>
-                  {analysis.data.dataQualityNotes.notes.map((note, index) => (
-                    <View key={index} style={styles.noteItem}>
-                      <Ionicons
-                        name="information-circle"
-                        size={16}
-                        color="#6B7280"
-                      />
-                      <Text style={styles.noteText}>{note}</Text>
+          </Animated.View>
+          
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.View style={contentAnimatedStyle}>
+
+              {/* Success Badge */}
+              <View style={styles.successBadge}>
+                <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                <Text style={styles.successText}>Analysis Complete</Text>
+              </View>
+
+              {/* Stats Cards */}
+              <Animated.View style={[styles.statsGrid, statsAnimatedStyle]}>
+                <StatCard
+                  icon="document-text"
+                  label="Surveys"
+                  value={surveysWithNames.length}
+                  color="#8B5CF6"
+                />
+                <StatCard
+                  icon="people"
+                  label="Responses"
+                  value={totalResponses}
+                  color="#5FA9F5"
+                />
+              </Animated.View>
+
+              {/* Data Quality */}
+              <Animated.View style={overviewAnimatedStyle}>
+                {analysis?.data?.dataQualityNotes && (
+                  <View style={styles.qualityCard}>
+                    <View style={styles.cardHeader}>
+                      <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+                      <Text style={styles.cardTitle}>Data Quality</Text>
                     </View>
-                  ))}
+                    <View style={styles.confidenceRow}>
+                      <Text style={styles.confidenceLabel}>Confidence Score:</Text>
+                      <View style={styles.confidenceBadge}>
+                        <Text style={styles.confidenceValue}>
+                          {Math.round(
+                            (analysis?.data?.dataQualityNotes?.confidenceScore || 0) * 100
+                          )}
+                          %
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.qualityText}>
+                      {analysis?.data?.dataQualityNotes?.confidenceExplanation || ""}
+                    </Text>
+                    {analysis?.data?.dataQualityNotes?.notes &&
+                      analysis?.data?.dataQualityNotes?.notes.length > 0 && (
+                        <View style={styles.notesSection}>
+                          {analysis?.data?.dataQualityNotes?.notes.map((note, index) => (
+                            <View key={index} style={styles.noteItem}>
+                              <Ionicons
+                                name="information-circle"
+                                size={16}
+                                color="#9CA3AF"
+                              />
+                              <Text style={styles.noteText}>{note}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                  </View>
+                )}
+
+                {/* Overview Card */}
+                <View style={styles.overviewCard}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="document-text-outline" size={24} color="#8B5CF6" />
+                    <Text style={styles.cardTitle}>Overview</Text>
+                  </View>
+                  <Text style={styles.overviewText}>{analysis?.data?.overview || "No overview available"}</Text>
                 </View>
-              )}
-          </View>
-        )}
+              </Animated.View>
 
-        {/* Overview Card */}
-        <View style={styles.overviewCard}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="document-text-outline" size={24} color="#8B5CF6" />
-            <Text style={styles.cardTitle}>Overview</Text>
-          </View>
-          <Text style={styles.overviewText}>{analysis.data.overview}</Text>
+              {/* Survey Insights */}
+              <Animated.View style={surveysAnimatedStyle}>
+                {surveysWithNames && surveysWithNames.length > 0 && (
+                  <View style={styles.surveysSection}>
+                    <Text style={styles.sectionTitle}>Survey Details</Text>
+                    {surveysWithNames.map((survey, index) => (
+                      <SurveyInsightCard key={index} survey={survey} />
+                    ))}
+                  </View>
+                )}
+              </Animated.View>
+            </Animated.View>
+          </ScrollView>
         </View>
-
-        {/* Survey Insights */}
-        {surveysWithNames && surveysWithNames.length > 0 && (
-          <View style={styles.surveysSection}>
-            <Text style={styles.sectionTitle}>Survey Details</Text>
-            {surveysWithNames.map((survey, index) => (
-              <SurveyInsightCard key={index} survey={survey} />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
-    </FadeInView>
+      </SafeAreaView>
+    </SmoothLoader>
   );
 }
 
@@ -380,12 +510,7 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color }) => {
   return (
     <View style={styles.statCard}>
-      <View
-        style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}
-      >
-        <Ionicons name={icon as any} size={24} color={color} />
-      </View>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statNumber}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
@@ -394,7 +519,20 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+  },
+  lightBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#FFFFFF",
+    zIndex: 0,
+  },
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#0F0F1E",
+    zIndex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    zIndex: 2,
   },
   centerContainer: {
     flex: 1,
@@ -405,7 +543,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 14,
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   errorText: {
     marginTop: 16,
@@ -431,7 +569,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   fixedHeader: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
     zIndex: 10,
     paddingBottom: 0,
     borderTopLeftRadius: 20,
@@ -439,19 +577,25 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#1E1E2E",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
   header: {
     padding: 24,
     paddingBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 8,
   },
   logoContainer: {
     flexDirection: "row",
@@ -461,24 +605,17 @@ const styles = StyleSheet.create({
   titleImage: {
     height: 28,
     width: 92,
-    marginLeft: -8,
     marginTop: -4,
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#222222",
-    marginBottom: 8,
-  },
-  headerSubtitle: {
+  subtitle: {
     fontSize: 16,
-    color: "#505050",
+    color: "#CCCCCC",
   },
   successBadge: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -488,7 +625,7 @@ const styles = StyleSheet.create({
   successText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#065F46",
+    color: "#10B981",
   },
   statsGrid: {
     flexDirection: "row",
@@ -497,15 +634,11 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E1E2E",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: "center",
   },
   statIconContainer: {
     width: 48,
@@ -515,27 +648,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
   },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#8B5CF6",
+    marginBottom: 4,
+    textAlign: "center",
+  },
   statValue: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#111827",
+    color: "#8B5CF6",
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
-    color: "#6B7280",
+    fontSize: 14,
+    color: "#CCCCCC",
     textAlign: "center",
   },
   qualityCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E1E2E",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   confidenceRow: {
     flexDirection: "row",
@@ -546,10 +681,10 @@ const styles = StyleSheet.create({
   confidenceLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#374151",
+    color: "#CCCCCC",
   },
   confidenceBadge: {
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 12,
@@ -557,11 +692,11 @@ const styles = StyleSheet.create({
   confidenceValue: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#065F46",
+    color: "#10B981",
   },
   qualityText: {
     fontSize: 14,
-    color: "#374151",
+    color: "#CCCCCC",
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -577,19 +712,14 @@ const styles = StyleSheet.create({
   noteText: {
     flex: 1,
     fontSize: 13,
-    color: "#6B7280",
+    color: "#9CA3AF",
     lineHeight: 18,
   },
   overviewCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E1E2E",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   cardHeader: {
     flexDirection: "row",
@@ -600,11 +730,11 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#111827",
+    color: "#FFFFFF",
   },
   overviewText: {
     fontSize: 16,
-    color: "#374151",
+    color: "#CCCCCC",
     lineHeight: 24,
   },
   surveysSection: {
@@ -613,19 +743,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#111827",
+    color: "#FFFFFF",
     marginBottom: 16,
   },
   surveyCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E1E2E",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   surveyHeader: {
     flexDirection: "row",
@@ -639,12 +764,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
+    color: "#FFFFFF",
   },
   responseBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F3FF",
+    backgroundColor: "rgba(139, 92, 246, 0.2)",
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
@@ -667,34 +792,36 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#111827",
+    color: "#FFFFFF",
   },
   findingCard: {
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.3)",
   },
   findingTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#92400E",
+    color: "#F59E0B",
     marginBottom: 6,
   },
   findingDescription: {
     fontSize: 14,
-    color: "#92400E",
+    color: "#FCD34D",
     lineHeight: 20,
   },
   insightCard: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#2D2D3E",
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
   },
   themeChip: {
     alignSelf: "flex-start",
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "rgba(139, 92, 246, 0.2)",
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
@@ -703,17 +830,17 @@ const styles = StyleSheet.create({
   themeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#1E40AF",
+    color: "#8B5CF6",
   },
   insightTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#111827",
+    color: "#FFFFFF",
     marginBottom: 6,
   },
   insightDescription: {
     fontSize: 14,
-    color: "#374151",
+    color: "#CCCCCC",
     lineHeight: 20,
   },
   examplesSection: {
@@ -722,7 +849,7 @@ const styles = StyleSheet.create({
   examplesLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#6B7280",
+    color: "#9CA3AF",
     marginBottom: 6,
   },
   exampleItem: {
@@ -738,18 +865,20 @@ const styles = StyleSheet.create({
   exampleText: {
     flex: 1,
     fontSize: 13,
-    color: "#374151",
+    color: "#CCCCCC",
     lineHeight: 18,
   },
   correlationCard: {
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.3)",
   },
   correlationDescription: {
     fontSize: 14,
-    color: "#065F46",
+    color: "#10B981",
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -761,13 +890,15 @@ const styles = StyleSheet.create({
   evidenceText: {
     flex: 1,
     fontSize: 13,
-    color: "#047857",
+    color: "#34D399",
     lineHeight: 18,
   },
   caveatsBox: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
     borderRadius: 12,
     padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
   },
   caveatItem: {
     flexDirection: "row",
@@ -778,7 +909,7 @@ const styles = StyleSheet.create({
   caveatText: {
     flex: 1,
     fontSize: 13,
-    color: "#991B1B",
+    color: "#F87171",
     lineHeight: 18,
   },
   emptyState: {
@@ -788,7 +919,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#6B7280",
+    color: "#9CA3AF",
     textAlign: "center",
   },
 });

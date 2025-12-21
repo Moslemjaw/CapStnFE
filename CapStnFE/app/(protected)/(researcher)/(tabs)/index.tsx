@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, ScrollView, Image } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
 
@@ -23,12 +23,6 @@ export default function ResearcherHome() {
           </View>
           <Text style={styles.title}>Discover Insights</Text>
           <Text style={styles.subtitle}>Real data, real people, real patterns</Text>
-          <LinearGradient
-            colors={["#5FA9F5", "#8A4DE8"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.divider}
-          />
         </View>
       </View>
 
@@ -38,7 +32,26 @@ export default function ResearcherHome() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 8 }]}
       >
         <View style={styles.content}>
-          {/* Content will be added here later */}
+          <View style={styles.placeholderContainer}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="analytics-outline" size={64} color="#8A4DE8" />
+            </View>
+            <Text style={styles.placeholderTitle}>Your Insights Dashboard</Text>
+            <Text style={styles.placeholderText}>
+              This page will populate with insights and data as you use the app.
+            </Text>
+            <View style={styles.iconRow}>
+              <View style={styles.smallIconContainer}>
+                <Ionicons name="bar-chart-outline" size={32} color="#5FA9F5" />
+              </View>
+              <View style={styles.smallIconContainer}>
+                <Ionicons name="pie-chart-outline" size={32} color="#8A4DE8" />
+              </View>
+              <View style={styles.smallIconContainer}>
+                <Ionicons name="trending-up-outline" size={32} color="#5FA9F5" />
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -100,12 +113,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#505050",
   },
-  divider: {
-    height: 2,
-    borderRadius: 1,
-  },
   content: {
     padding: 24,
     gap: 16,
+    flex: 1,
+    justifyContent: "center",
+  },
+  placeholderContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+    paddingHorizontal: 20,
+  },
+  iconContainer: {
+    marginBottom: 24,
+    padding: 20,
+    backgroundColor: "#F5F0FF",
+    borderRadius: 50,
+  },
+  placeholderTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#222222",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: "#505050",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+    paddingHorizontal: 8,
+  },
+  iconRow: {
+    flexDirection: "row",
+    gap: 24,
+    alignItems: "center",
+  },
+  smallIconContainer: {
+    padding: 12,
+    backgroundColor: "#F0F7FF",
+    borderRadius: 20,
   },
 });

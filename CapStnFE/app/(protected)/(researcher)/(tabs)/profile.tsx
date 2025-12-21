@@ -308,7 +308,12 @@ export default function ResearcherProfile() {
         analysesData.count,
         ")"
       );
-    } catch (err) {
+    } catch (err: any) {
+      // Don't show error for 401 - token will be cleared and user redirected to login
+      if (err?.response?.status === 401) {
+        console.log("Authentication expired - redirecting to login");
+        return;
+      }
       console.error("Error loading activity metrics:", err);
       setSurveysAnswered(0);
       setDurationMs(0);

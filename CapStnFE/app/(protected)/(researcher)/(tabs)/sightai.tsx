@@ -10,7 +10,7 @@ import {
   Share,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useCallback, useContext } from "react";
+import React, { useEffect, useState, useCallback, useContext, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,7 +26,7 @@ import { getAllAnalyses, AnalysisResponse } from "@/api/ai";
 import { getResponsesByUserId } from "@/api/responses";
 import { getUser } from "@/api/storage";
 import { getSurveyById } from "@/api/surveys";
-import { createAnalysis } from "@/api/ai";
+import { createAnalysis, getAnalysisById } from "@/api/ai";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import AnalysisContext from "@/context/AnalysisContext";
 
@@ -47,7 +47,8 @@ interface InsightCard {
 export default function SightAI() {
   const router = useRouter();
   const bottomNavHeight = useBottomNavHeight();
-  const { setIsAnalyzing } = useContext(AnalysisContext);
+  const { setIsAnalyzing, triggerCompletion } = useContext(AnalysisContext);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
   const [answeredSurveys, setAnsweredSurveys] = useState<SurveyWithTitle[]>([]);
   const [insightCards, setInsightCards] = useState<InsightCard[]>([]);
@@ -185,7 +186,12 @@ export default function SightAI() {
     try {
       const response = await getAllAnalyses();
       setAnalyses(response.analyses || []);
-    } catch (error) {
+    } catch (error: any) {
+      // Don't show error for 401 - token will be cleared and user redirected to login
+      if (error?.response?.status === 401) {
+        console.log("Authentication expired - redirecting to login");
+        return;
+      }
       console.error("Error loading analyses:", error);
     }
   };
@@ -284,6 +290,76 @@ export default function SightAI() {
     router.push("/(protected)/(researcher)/mass-analyses" as any);
   };
 
+  // Background polling function
+  const pollAnalysisInBackground = (analysisId: string) => {
+    const poll = async () => {
+      try {
+        const data = await getAnalysisById(analysisId);
+        
+        if (data.status === "ready") {
+          // Clear polling
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+          
+          // Trigger completion animation
+          triggerCompletion();
+          
+          // Navigate to insights after completion animation
+          setTimeout(() => {
+            setIsAnalyzing(false);
+            router.replace({
+              pathname: "/(protected)/(researcher)/analysis-insights",
+              params: { analysisId: data.analysisId },
+            } as any);
+          }, 800);
+        } else if (data.status === "failed") {
+          // Clear polling
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+          
+          setIsAnalyzing(false);
+          Alert.alert(
+            "Analysis Failed",
+            "The analysis failed to complete. Please try again."
+          );
+        } else if (data.status === "processing") {
+          // Continue polling
+          pollingTimeoutRef.current = setTimeout(() => poll(), 2000);
+        }
+      } catch (err: any) {
+        console.error("Error polling analysis:", err);
+        
+        // Clear polling on error
+        if (pollingTimeoutRef.current) {
+          clearTimeout(pollingTimeoutRef.current);
+          pollingTimeoutRef.current = null;
+        }
+        
+        setIsAnalyzing(false);
+        Alert.alert(
+          "Error",
+          "Failed to check analysis status. Please try again."
+        );
+      }
+    };
+    
+    poll();
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+        pollingTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const handleAnalyzeAnsweredSurveys = async () => {
     if (answeredSurveys.length === 0) {
       Alert.alert(
@@ -314,15 +390,11 @@ export default function SightAI() {
               // Set analyzing state to trigger jelly effect
               setIsAnalyzing(true);
 
-              router.push({
-                pathname: "/(protected)/(researcher)/analysis-loading",
-                params: {
-                  analysisId: analysis.analysisId,
-                  type: "multi",
-                },
-              } as any);
+              // Start background polling instead of navigating to loading page
+              pollAnalysisInBackground(analysis.analysisId);
             } catch (err: any) {
               console.error("Error creating analysis:", err);
+              setIsAnalyzing(false);
               Alert.alert(
                 "Error",
                 err.response?.data?.message ||

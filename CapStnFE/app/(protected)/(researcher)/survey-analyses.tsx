@@ -9,19 +9,20 @@ import {
   RefreshControl,
   Image,
 } from "react-native";
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getSurveyById, Survey } from "@/api/surveys";
 import { getResponsesBySurveyId } from "@/api/responses";
-import { createAnalysis, getAllAnalyses, AnalysisResponse } from "@/api/ai";
+import { createAnalysis, getAllAnalyses, getAnalysisById, AnalysisResponse } from "@/api/ai";
 import AnalysisContext from "@/context/AnalysisContext";
 
 export default function SurveyAnalyses() {
   const router = useRouter();
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>();
-  const { setIsAnalyzing } = useContext(AnalysisContext);
+  const { setIsAnalyzing, triggerCompletion } = useContext(AnalysisContext);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
   const [responseCount, setResponseCount] = useState(0);
@@ -62,6 +63,11 @@ export default function SurveyAnalyses() {
 
       setAnalyses(surveyAnalyses);
     } catch (err: any) {
+      // Don't show error for 401 - token will be cleared and user redirected to login
+      if (err?.response?.status === 401) {
+        console.log("Authentication expired - redirecting to login");
+        return;
+      }
       console.error("Error loading data:", err);
       setError(err.message || "Failed to load data");
     } finally {
@@ -79,6 +85,76 @@ export default function SurveyAnalyses() {
       setRefreshing(false);
     }
   };
+
+  // Background polling function
+  const pollAnalysisInBackground = (analysisId: string) => {
+    const poll = async () => {
+      try {
+        const data = await getAnalysisById(analysisId);
+        
+        if (data.status === "ready") {
+          // Clear polling
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+          
+          // Trigger completion animation
+          triggerCompletion();
+          
+          // Navigate to insights after completion animation
+          setTimeout(() => {
+            setIsAnalyzing(false);
+            router.replace({
+              pathname: "/(protected)/(researcher)/analysis-insights",
+              params: { analysisId: data.analysisId },
+            } as any);
+          }, 800);
+        } else if (data.status === "failed") {
+          // Clear polling
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+          
+          setIsAnalyzing(false);
+          Alert.alert(
+            "Analysis Failed",
+            "The analysis failed to complete. Please try again."
+          );
+        } else if (data.status === "processing") {
+          // Continue polling
+          pollingTimeoutRef.current = setTimeout(() => poll(), 2000);
+        }
+      } catch (err: any) {
+        console.error("Error polling analysis:", err);
+        
+        // Clear polling on error
+        if (pollingTimeoutRef.current) {
+          clearTimeout(pollingTimeoutRef.current);
+          pollingTimeoutRef.current = null;
+        }
+        
+        setIsAnalyzing(false);
+        Alert.alert(
+          "Error",
+          "Failed to check analysis status. Please try again."
+        );
+      }
+    };
+    
+    poll();
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+        pollingTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleCreateAnalysis = async () => {
     if (!surveyId || !survey) return;
@@ -112,16 +188,11 @@ export default function SurveyAnalyses() {
               // Set analyzing state to trigger jelly effect
               setIsAnalyzing(true);
 
-              // Navigate to loading screen with analysis ID
-              router.push({
-                pathname: "/(protected)/(researcher)/analysis-loading",
-                params: {
-                  analysisId: analysis.analysisId,
-                  type: "single",
-                },
-              } as any);
+              // Start background polling instead of navigating to loading page
+              pollAnalysisInBackground(analysis.analysisId);
             } catch (err: any) {
               console.error("Error creating analysis:", err);
+              setIsAnalyzing(false);
               Alert.alert(
                 "Error",
                 err.response?.data?.message ||

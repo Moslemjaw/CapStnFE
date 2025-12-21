@@ -244,7 +244,7 @@ export default function SurveyPreview() {
           <View style={styles.surveyHeaderIcon}>
             <Ionicons name="document-text-outline" size={32} color="#5FA9F5" />
           </View>
-          {survey.description && survey.description.trim() && survey.description.trim() !== "No description provided" && (
+          {survey.description && survey.description.trim() && (
             <Text style={styles.surveyDescription}>{survey.description}</Text>
           )}
         </View>
