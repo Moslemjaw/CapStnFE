@@ -510,7 +510,7 @@ export default function ResearcherProfile() {
           <Text style={styles.sectionTitle}>Your Activity</Text>
           <View style={styles.activityGrid}>
             <View style={styles.activityCard}>
-              <Ionicons name="bag" size={24} color="#7DD3FC" />
+              <Ionicons name="checkmark-circle" size={24} color="#7DD3FC" />
               <Text style={styles.activityValue}>
                 {loadingActivity ? "..." : surveysAnswered}
               </Text>

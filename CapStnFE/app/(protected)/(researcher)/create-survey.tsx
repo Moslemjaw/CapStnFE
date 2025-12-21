@@ -239,7 +239,7 @@ export default function CreateSurvey() {
         // Edit mode: Update existing survey
         await updateSurvey(surveyId, {
           title: title.trim(),
-          description: description.trim() || "No description provided",
+          description: description.trim() || "",
           rewardPoints: calculateRewardPoints(),
         });
         
@@ -272,7 +272,7 @@ export default function CreateSurvey() {
         // Create mode: Create new survey
         const surveyData: CreateSurveyData = {
           title: title.trim(),
-          description: description.trim() || "No description provided",
+          description: description.trim() || "",
           rewardPoints: calculateRewardPoints(),
           estimatedMinutes: 1,
           creatorId: user._id,
@@ -336,7 +336,7 @@ export default function CreateSurvey() {
         // Edit mode: Update existing survey
         await updateSurvey(surveyId, {
           title: title.trim(),
-          description: description.trim() || "No description provided",
+          description: description.trim() || "",
           rewardPoints: calculateRewardPoints(),
         });
         
@@ -367,7 +367,7 @@ export default function CreateSurvey() {
         // Create mode: Create new survey
         const surveyData: CreateSurveyData = {
           title: title.trim(),
-          description: description.trim() || "No description provided",
+          description: description.trim() || "",
           rewardPoints: calculateRewardPoints(),
           estimatedMinutes: 1,
           creatorId: user._id,

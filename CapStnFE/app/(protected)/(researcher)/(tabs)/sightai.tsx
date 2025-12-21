@@ -59,111 +59,114 @@ export default function SightAI() {
   // Animation values for dark mode transition
   const opacity = useSharedValue(0);
   const bgColor = useSharedValue(0); // 0 = light, 1 = dark
-  const scale = useSharedValue(0.95);
-  const translateY = useSharedValue(20);
+  const scale = useSharedValue(0.99);
+  const translateY = useSharedValue(8);
 
   // Staggered section animations
   const headerOpacity = useSharedValue(0);
-  const headerScale = useSharedValue(0.95);
-  const headerTranslateY = useSharedValue(15);
+  const headerScale = useSharedValue(0.99);
+  const headerTranslateY = useSharedValue(6);
   const aiCardOpacity = useSharedValue(0);
-  const aiCardScale = useSharedValue(0.95);
-  const aiCardTranslateY = useSharedValue(15);
+  const aiCardScale = useSharedValue(0.99);
+  const aiCardTranslateY = useSharedValue(6);
   const statsOpacity = useSharedValue(0);
-  const statsScale = useSharedValue(0.95);
-  const statsTranslateY = useSharedValue(15);
+  const statsScale = useSharedValue(0.99);
+  const statsTranslateY = useSharedValue(6);
   const insightsOpacity = useSharedValue(0);
-  const insightsScale = useSharedValue(0.95);
-  const insightsTranslateY = useSharedValue(15);
+  const insightsScale = useSharedValue(0.99);
+  const insightsTranslateY = useSharedValue(6);
 
-  // Spring configuration for natural, fluid motion
-  const springConfig = {
-    damping: 15,
-    stiffness: 100,
-    mass: 1,
-  };
-
-  // Custom bezier easing for ultra-smooth transitions
-  const smoothEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
+  // Very smooth, slow easing curves for fluid transitions
+  const smoothEasing = Easing.bezier(0.25, 0.46, 0.45, 0.94); // Ease-out-quad-like, very smooth
+  const ultraSmoothEasing = Easing.bezier(0.16, 1, 0.3, 1); // Even smoother, slower curve
+  
+  // Smooth exit easing
+  const exitEasing = Easing.bezier(0.4, 0.0, 0.2, 1);
 
   // Initialize all animations to hidden state immediately on mount
   // This prevents the sudden pop when content is already loaded
   useEffect(() => {
     opacity.value = 0;
     bgColor.value = 0;
-    scale.value = 0.95;
-    translateY.value = 20;
+    scale.value = 0.99;
+    translateY.value = 8;
     headerOpacity.value = 0;
-    headerScale.value = 0.95;
-    headerTranslateY.value = 15;
+    headerScale.value = 0.99;
+    headerTranslateY.value = 6;
     aiCardOpacity.value = 0;
-    aiCardScale.value = 0.95;
-    aiCardTranslateY.value = 15;
+    aiCardScale.value = 0.99;
+    aiCardTranslateY.value = 6;
     statsOpacity.value = 0;
-    statsScale.value = 0.95;
-    statsTranslateY.value = 15;
+    statsScale.value = 0.99;
+    statsTranslateY.value = 6;
     insightsOpacity.value = 0;
-    insightsScale.value = 0.95;
-    insightsTranslateY.value = 15;
+    insightsScale.value = 0.99;
+    insightsTranslateY.value = 6;
   }, []);
 
   // Detect when page is focused for enhanced cascade transition
   useFocusEffect(
     useCallback(() => {
-      // Start background color transition first with smooth easing
+      // Very slow, smooth background color transition
       bgColor.value = withTiming(1, {
-        duration: 1000,
-        easing: smoothEasing,
+        duration: 1200,
+        easing: ultraSmoothEasing,
       });
 
-      // Main content animation with spring
-      opacity.value = withSpring(1, springConfig);
-      scale.value = withSpring(1, springConfig);
-      translateY.value = withSpring(0, springConfig);
+      // Main content animation - very slow and fluid
+      const mainDuration = 1400;
+      opacity.value = withTiming(1, { duration: mainDuration, easing: ultraSmoothEasing });
+      scale.value = withTiming(1, { duration: mainDuration, easing: ultraSmoothEasing });
+      translateY.value = withTiming(0, { duration: mainDuration, easing: ultraSmoothEasing });
 
-      // Header starts immediately with spring
-      headerOpacity.value = withSpring(1, springConfig);
-      headerScale.value = withSpring(1, springConfig);
-      headerTranslateY.value = withSpring(0, springConfig);
+      // Header starts immediately - slow and fluid
+      const headerDuration = 1300;
+      headerOpacity.value = withTiming(1, { duration: headerDuration, easing: ultraSmoothEasing });
+      headerScale.value = withTiming(1, { duration: headerDuration, easing: ultraSmoothEasing });
+      headerTranslateY.value = withTiming(0, { duration: headerDuration, easing: ultraSmoothEasing });
 
-      // Cascade: AI Card starts after header (150ms delay for wave effect)
-      aiCardOpacity.value = withDelay(150, withSpring(1, springConfig));
-      aiCardScale.value = withDelay(150, withSpring(1, springConfig));
-      aiCardTranslateY.value = withDelay(150, withSpring(0, springConfig));
+      // Cascade: AI Card starts after header (200ms delay for smooth wave effect)
+      const aiCardDuration = 1300;
+      aiCardOpacity.value = withDelay(200, withTiming(1, { duration: aiCardDuration, easing: ultraSmoothEasing }));
+      aiCardScale.value = withDelay(200, withTiming(1, { duration: aiCardDuration, easing: ultraSmoothEasing }));
+      aiCardTranslateY.value = withDelay(200, withTiming(0, { duration: aiCardDuration, easing: ultraSmoothEasing }));
 
-      // Stats start after AI Card (300ms total delay)
-      statsOpacity.value = withDelay(300, withSpring(1, springConfig));
-      statsScale.value = withDelay(300, withSpring(1, springConfig));
-      statsTranslateY.value = withDelay(300, withSpring(0, springConfig));
+      // Stats start after AI Card (400ms total delay)
+      const statsDuration = 1300;
+      statsOpacity.value = withDelay(400, withTiming(1, { duration: statsDuration, easing: ultraSmoothEasing }));
+      statsScale.value = withDelay(400, withTiming(1, { duration: statsDuration, easing: ultraSmoothEasing }));
+      statsTranslateY.value = withDelay(400, withTiming(0, { duration: statsDuration, easing: ultraSmoothEasing }));
 
-      // Insights start after Stats (450ms total delay)
-      insightsOpacity.value = withDelay(450, withSpring(1, springConfig));
-      insightsScale.value = withDelay(450, withSpring(1, springConfig));
-      insightsTranslateY.value = withDelay(450, withSpring(0, springConfig));
+      // Insights start after Stats (600ms total delay)
+      const insightsDuration = 1300;
+      insightsOpacity.value = withDelay(600, withTiming(1, { duration: insightsDuration, easing: ultraSmoothEasing }));
+      insightsScale.value = withDelay(600, withTiming(1, { duration: insightsDuration, easing: ultraSmoothEasing }));
+      insightsTranslateY.value = withDelay(600, withTiming(0, { duration: insightsDuration, easing: ultraSmoothEasing }));
 
       // Load data when page is focused
       loadData();
 
       return () => {
-        // Reset all animations when leaving
-        opacity.value = withTiming(0, { duration: 300, easing: Easing.in(Easing.ease) });
-        bgColor.value = withTiming(0, { duration: 300, easing: Easing.in(Easing.ease) });
-        scale.value = withTiming(0.95, { duration: 300, easing: Easing.in(Easing.ease) });
-        translateY.value = withTiming(20, { duration: 300, easing: Easing.in(Easing.ease) });
+        // Very smooth, slow exit animations with coordinated fade-out
+        const exitDuration = 700;
+        opacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        bgColor.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        scale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
+        translateY.value = withTiming(8, { duration: exitDuration, easing: exitEasing });
         
-        // Reset section animations
-        headerOpacity.value = 0;
-        headerScale.value = 0.95;
-        headerTranslateY.value = 15;
-        aiCardOpacity.value = 0;
-        aiCardScale.value = 0.95;
-        aiCardTranslateY.value = 15;
-        statsOpacity.value = 0;
-        statsScale.value = 0.95;
-        statsTranslateY.value = 15;
-        insightsOpacity.value = 0;
-        insightsScale.value = 0.95;
-        insightsTranslateY.value = 15;
+        // Smooth exit for section animations
+        headerOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        headerScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
+        headerTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
+        aiCardOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        aiCardScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
+        aiCardTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
+        statsOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        statsScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
+        statsTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
+        insightsOpacity.value = withTiming(0, { duration: exitDuration, easing: exitEasing });
+        insightsScale.value = withTiming(0.99, { duration: exitDuration, easing: exitEasing });
+        insightsTranslateY.value = withTiming(6, { duration: exitDuration, easing: exitEasing });
       };
     }, [])
   );

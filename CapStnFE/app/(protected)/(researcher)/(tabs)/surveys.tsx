@@ -184,7 +184,7 @@ export default function ResearcherSurveys() {
 
     const publishedSurveys = await getPublishedSurveys();
     const available = publishedSurveys.filter(
-      (survey) => survey.creatorId !== user._id
+      (survey) => survey.creatorId !== user._id && !featuredIds.includes(survey._id)
     );
 
     const surveysWithMetadata = await Promise.all(
@@ -920,10 +920,10 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
       ]}
       onPress={() => onPress(survey)}
     >
-      {survey.isAnswered && isAllSurvey && (
+      {survey.isAnswered && (isAllSurvey || isLarge || isSmall) && (
         <View style={styles.answeredTag}>
           <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-          <Text style={styles.answeredTagText}>Answered</Text>
+          {isAllSurvey && <Text style={styles.answeredTagText}>Answered</Text>}
         </View>
       )}
       {!survey.isAnswered && (isLarge || isSmall) && (
@@ -950,8 +950,8 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
       >
         {survey.title}
       </Text>
-      {survey.description && (
-        <Text style={styles.cardDescription} numberOfLines={isSmall ? 2 : 3}>
+      {survey.description && survey.description.trim() && survey.description.trim() !== "No description provided" && !isSmall && (
+        <Text style={styles.cardDescription} numberOfLines={3}>
           {survey.description}
         </Text>
       )}
@@ -1310,11 +1310,10 @@ const styles = StyleSheet.create({
   featuredGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 12,
+    gap: 12,
   },
   smallFeaturedCard: {
-    width: "48.5%",
+    width: "48%",
     minWidth: 150,
   },
   allSurveyCard: {
@@ -1336,7 +1335,6 @@ const styles = StyleSheet.create({
   },
   smallCard: {
     padding: 12,
-    minHeight: 180,
   },
   cardTitle: {
     fontSize: 18,
@@ -1346,10 +1344,12 @@ const styles = StyleSheet.create({
   },
   largeCardTitle: {
     fontSize: 22,
+    paddingRight: 70,
   },
   smallCardTitle: {
     fontSize: 15,
-    marginBottom: 6,
+    marginBottom: 4,
+    paddingRight: 40,
   },
   cardDescription: {
     fontSize: 14,
@@ -1365,7 +1365,7 @@ const styles = StyleSheet.create({
   },
   smallCardDetails: {
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   detailItem: {
     flexDirection: "row",
@@ -1406,6 +1406,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     gap: 4,
+    minWidth: 24,
+    justifyContent: "center",
   },
   answeredTagText: {
     fontSize: 12,
