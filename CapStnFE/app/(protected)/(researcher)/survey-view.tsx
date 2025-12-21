@@ -12,7 +12,7 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -34,6 +34,7 @@ import { FadeInView } from "@/components/FadeInView";
 export default function SurveyView() {
   const router = useRouter();
   const bottomNavHeight = useBottomNavHeight();
+  const insets = useSafeAreaInsets();
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -386,15 +387,14 @@ export default function SurveyView() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
+          <Text style={styles.headerTitle}>Answer Survey</Text>
           <View style={styles.logoContainer}>
             <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
-          <Text style={styles.headerTitle}>Answer Survey</Text>
-          <Text style={styles.headerSubtitle}>{survey.title}</Text>
         </View>
       </View>
       <KeyboardAvoidingView
@@ -777,17 +777,19 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
   },
   titleImage: {
-    height: 28,
-    width: 92,
+    height: 36,
+    width: 120,
     marginLeft: -8,
     marginTop: -4,
   },
@@ -795,11 +797,6 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: "#505050",
   },
   surveyInfo: {
     padding: 24,

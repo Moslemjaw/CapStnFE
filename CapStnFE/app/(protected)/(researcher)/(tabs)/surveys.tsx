@@ -11,7 +11,7 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState, useMemo } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -36,6 +36,7 @@ interface UserStats {
 export default function ResearcherSurveys() {
   const router = useRouter();
   const bottomNavHeight = useBottomNavHeight();
+  const insets = useSafeAreaInsets();
   const [featuredSurveys, setFeaturedSurveys] = useState<SurveyWithMetadata[]>(
     []
   );
@@ -429,11 +430,12 @@ export default function ResearcherSurveys() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Text style={styles.title}>Explore Surveys</Text>
           <View style={styles.logoContainer}>
             <Image
               source={require("@/assets/title.png")}
@@ -441,10 +443,6 @@ export default function ResearcherSurveys() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Explore Surveys</Text>
-          <Text style={styles.subtitle}>
-            Answer surveys, earn points, shape insights.
-          </Text>
         </View>
 
         {/* Search Bar */}
@@ -457,7 +455,7 @@ export default function ResearcherSurveys() {
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for surveys by title or description"
+            placeholder="Search"
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
@@ -1041,28 +1039,25 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   header: {
-    padding: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
   titleImage: {
-    height: 24,
-    width: 80,
+    height: 32,
+    width: 106,
     marginLeft: -6,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#505050",
   },
   searchContainer: {
     flexDirection: "row",

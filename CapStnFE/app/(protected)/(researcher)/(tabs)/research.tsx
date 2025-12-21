@@ -10,7 +10,7 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState, useMemo } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -77,6 +77,7 @@ const formatResponseCount = (count: number): string => {
 
 export default function ResearcherResearch() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const bottomNavHeight = useBottomNavHeight();
   const [user, setUser] = useState<User | null>(null);
   const [surveys, setSurveys] = useState<SurveyWithMetadata[]>([]);
@@ -328,10 +329,11 @@ export default function ResearcherResearch() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Text style={styles.title}>Research</Text>
           <View style={styles.logoContainer}>
             <Image
               source={require("@/assets/title.png")}
@@ -339,9 +341,8 @@ export default function ResearcherResearch() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Research</Text>
-          <Text style={styles.subtitle}>Create and manage your surveys</Text>
-
+        </View>
+        <View style={styles.headerContent}>
           {/* Compact Overview Stats Row */}
           <View style={styles.headerOverviewRow}>
             <View style={styles.headerOverviewStats}>
@@ -692,29 +693,29 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   header: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerContent: {
+    paddingHorizontal: 16,
     paddingBottom: 14,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
   titleImage: {
-    height: 24,
-    width: 80,
+    height: 32,
+    width: 106,
     marginLeft: -6,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#505050",
-    marginBottom: 12,
   },
   headerOverviewRow: {
     flexDirection: "row",

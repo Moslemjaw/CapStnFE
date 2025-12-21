@@ -11,7 +11,7 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState, useCallback, useContext, useRef } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -47,6 +47,7 @@ interface InsightCard {
 export default function SightAI() {
   const router = useRouter();
   const bottomNavHeight = useBottomNavHeight();
+  const insets = useSafeAreaInsets();
   const { setIsAnalyzing, triggerCompletion } = useContext(AnalysisContext);
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
@@ -486,7 +487,7 @@ export default function SightAI() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Light background (visible when overlay is transparent) */}
       <View style={styles.lightBackground} />
       
@@ -497,11 +498,11 @@ export default function SightAI() {
       <View style={styles.contentContainer}>
         {/* Fixed Header Section */}
         <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
+            <Text style={styles.title}>AI Analysis</Text>
             <View style={styles.logoContainer}>
               <Image source={require("@/assets/sightai.png")} style={styles.titleImage} resizeMode="contain" />
             </View>
-            <Text style={styles.subtitle}>AI-powered insights and analysis</Text>
           </View>
         </Animated.View>
         
@@ -749,28 +750,25 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
   },
   titleImage: {
-    height: 28,
-    width: 92,
+    height: 32,
+    width: 106,
     marginTop: -4,
   },
   title: {
     fontSize: 32,
     fontWeight: "700",
     color: "#FFFFFF",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#CCCCCC",
   },
   aiCardContainer: {
     paddingHorizontal: 24,

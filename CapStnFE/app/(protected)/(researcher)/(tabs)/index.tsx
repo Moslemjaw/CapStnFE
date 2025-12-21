@@ -1,19 +1,21 @@
 import { StyleSheet, Text, View, ScrollView, Image } from "react-native";
 import React from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
 
 export default function ResearcherHome() {
   const bottomNavHeight = useBottomNavHeight();
+  const insets = useSafeAreaInsets();
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Text style={styles.title}>Discover Insights</Text>
           <View style={styles.logoContainer}>
             <Image
               source={require("@/assets/title.png")}
@@ -21,8 +23,6 @@ export default function ResearcherHome() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Discover Insights</Text>
-          <Text style={styles.subtitle}>Real data, real people, real patterns</Text>
         </View>
       </View>
 
@@ -90,28 +90,25 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   header: {
-    padding: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
   titleImage: {
-    height: 24,
-    width: 80,
+    height: 32,
+    width: 106,
     marginLeft: -6,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#505050",
   },
   content: {
     padding: 24,

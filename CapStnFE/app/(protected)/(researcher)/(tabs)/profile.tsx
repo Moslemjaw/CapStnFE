@@ -443,11 +443,12 @@ export default function ResearcherProfile() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Text style={styles.title}>Profile</Text>
           <View style={styles.logoContainer}>
             <Image
               source={require("@/assets/title.png")}
@@ -455,11 +456,8 @@ export default function ResearcherProfile() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>
-            View stats and manage your account.
-          </Text>
-
+        </View>
+        <View style={styles.headerContent}>
           {/* User Information */}
           <View style={styles.headerUserInfo}>
             <View style={styles.avatarContainer}>
@@ -475,9 +473,6 @@ export default function ResearcherProfile() {
                       setImageError(false);
                     }}
                   />
-                  <View style={styles.verificationBadge}>
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                  </View>
                 </View>
               ) : (
                 <View style={styles.avatarImageWrapper}>
@@ -486,9 +481,6 @@ export default function ResearcherProfile() {
                     style={styles.avatarImage}
                     resizeMode="contain"
                   />
-                  <View style={styles.verificationBadge}>
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                  </View>
                 </View>
               )}
             </View>
@@ -1087,29 +1079,29 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   header: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerContent: {
+    paddingHorizontal: 16,
     paddingBottom: 16,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
   titleImage: {
-    height: 24,
-    width: 80,
+    height: 32,
+    width: 106,
     marginLeft: -6,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
     color: "#222222",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#505050",
-    marginBottom: 16,
   },
   headerUserInfo: {
     flexDirection: "row",
