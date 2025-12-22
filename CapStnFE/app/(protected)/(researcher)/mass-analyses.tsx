@@ -8,6 +8,9 @@ import {
   Alert,
   TextInput,
   Image,
+  Modal,
+  Pressable,
+  Keyboard,
 } from "react-native";
 import React, { useEffect, useState, useMemo, useContext, useRef, useCallback } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +22,9 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withDelay,
+  withSpring,
+  interpolate,
+  Extrapolation,
   Easing,
 } from "react-native-reanimated";
 import {
@@ -58,7 +64,9 @@ export default function MassAnalyses() {
     useState<ResponseRangeFilter>("all");
   const [timeRangeFilter, setTimeRangeFilter] =
     useState<TimeRangeFilter>("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showResponseDropdown, setShowResponseDropdown] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +78,9 @@ export default function MassAnalyses() {
   const searchOpacity = useSharedValue(0);
   const filtersOpacity = useSharedValue(0);
   const listOpacity = useSharedValue(0);
+  
+  // Clear button animation
+  const clearButtonProgress = useSharedValue(0);
 
   // Ultra-smooth easing curves
   const entranceEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -349,6 +360,111 @@ export default function MassAnalyses() {
     0
   );
 
+  // Clear filters function
+  const clearFilters = () => {
+    setFilterStatus("all");
+    setResponseRangeFilter("all");
+    setTimeRangeFilter("all");
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters =
+    filterStatus !== "all" ||
+    responseRangeFilter !== "all" ||
+    timeRangeFilter !== "all";
+
+  // Animate clear button when filters change
+  useEffect(() => {
+    clearButtonProgress.value = withSpring(hasActiveFilters ? 1 : 0, {
+      damping: 15,
+      stiffness: 200,
+      mass: 0.8,
+    });
+  }, [hasActiveFilters]);
+
+  const clearButtonAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      clearButtonProgress.value,
+      [0, 0.5, 1],
+      [0.6, 1.1, 1],
+      Extrapolation.CLAMP
+    );
+    const opacity = interpolate(
+      clearButtonProgress.value,
+      [0, 0.3, 1],
+      [0, 0.5, 1],
+      Extrapolation.CLAMP
+    );
+    const translateX = interpolate(
+      clearButtonProgress.value,
+      [0, 1],
+      [20, 0],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity,
+      transform: [{ scale }, { translateX }],
+    };
+  });
+
+  // Label getters
+  const getStatusLabel = (value: "all" | "published" | "unpublished") => {
+    switch (value) {
+      case "all":
+        return "All Status";
+      case "published":
+        return "Published";
+      case "unpublished":
+        return "My Drafts";
+      default:
+        return "All Status";
+    }
+  };
+
+  const getResponseLabel = (value: ResponseRangeFilter) => {
+    switch (value) {
+      case "all":
+        return "All Responses";
+      case "0":
+        return "0 responses";
+      case "1-5":
+        return "1-5 responses";
+      case "6-10":
+        return "6-10 responses";
+      case "11-20":
+        return "11-20 responses";
+      case "21+":
+        return "21+ responses";
+      default:
+        return "All Responses";
+    }
+  };
+
+  const getTimeLabel = (value: TimeRangeFilter) => {
+    switch (value) {
+      case "all":
+        return "All Time";
+      case "1-5":
+        return "1-5 min";
+      case "6-10":
+        return "6-10 min";
+      case "11-15":
+        return "11-15 min";
+      case "16-30":
+        return "16-30 min";
+      case "31+":
+        return "31+ min";
+      default:
+        return "All Time";
+    }
+  };
+
+  // Filter options
+  const statusOptions: ("all" | "published" | "unpublished")[] = ["all", "published", "unpublished"];
+  const responseOptions: ResponseRangeFilter[] = ["all", "0", "1-5", "6-10", "11-20", "21+"];
+  const timeOptions: TimeRangeFilter[] = ["all", "1-5", "6-10", "11-15", "16-30", "31+"];
+
   const pollAnalysisInBackground = (analysisId: string) => {
     const poll = async () => {
       try {
@@ -537,10 +653,10 @@ export default function MassAnalyses() {
                   filterStatus !== "all" && styles.filterButtonActive,
                 ]}
                 onPress={() => {
-                  const statuses: ("all" | "published" | "unpublished")[] = ["all", "published", "unpublished"];
-                  const currentIndex = statuses.indexOf(filterStatus);
-                  const nextIndex = (currentIndex + 1) % statuses.length;
-                  setFilterStatus(statuses[nextIndex]);
+                  Keyboard.dismiss();
+                  setShowResponseDropdown(false);
+                  setShowTimeDropdown(false);
+                  setShowStatusDropdown(!showStatusDropdown);
                 }}
               >
                 <View style={styles.filterButtonContent}>
@@ -562,11 +678,7 @@ export default function MassAnalyses() {
                     ]}
                     numberOfLines={1}
                   >
-                    {filterStatus === "all"
-                      ? "All Status"
-                      : filterStatus === "published"
-                      ? "Published"
-                      : "My Drafts"}
+                    {getStatusLabel(filterStatus)}
                   </Text>
                 </View>
                 <Ionicons
@@ -582,7 +694,12 @@ export default function MassAnalyses() {
                   styles.filterButton,
                   responseRangeFilter !== "all" && styles.filterButtonActive,
                 ]}
-                onPress={() => setShowFilters(!showFilters)}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setShowStatusDropdown(false);
+                  setShowTimeDropdown(false);
+                  setShowResponseDropdown(!showResponseDropdown);
+                }}
               >
                 <View style={styles.filterButtonContent}>
                   <Ionicons
@@ -597,9 +714,7 @@ export default function MassAnalyses() {
                     ]}
                     numberOfLines={1}
                   >
-                    {responseRangeFilter === "all"
-                      ? "All Responses"
-                      : `${responseRangeFilter} responses`}
+                    {getResponseLabel(responseRangeFilter)}
                   </Text>
                 </View>
                 <Ionicons
@@ -615,7 +730,12 @@ export default function MassAnalyses() {
                   styles.filterButton,
                   timeRangeFilter !== "all" && styles.filterButtonActive,
                 ]}
-                onPress={() => setShowFilters(!showFilters)}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setShowStatusDropdown(false);
+                  setShowResponseDropdown(false);
+                  setShowTimeDropdown(!showTimeDropdown);
+                }}
               >
                 <View style={styles.filterButtonContent}>
                   <Ionicons
@@ -630,9 +750,7 @@ export default function MassAnalyses() {
                     ]}
                     numberOfLines={1}
                   >
-                    {timeRangeFilter === "all"
-                      ? "All Time"
-                      : `${timeRangeFilter} min`}
+                    {getTimeLabel(timeRangeFilter)}
                   </Text>
                 </View>
                 <Ionicons
@@ -654,103 +772,80 @@ export default function MassAnalyses() {
                   : "Select All"}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
-
-        {/* Advanced Filters Panel */}
-        {showFilters && (
-          <Animated.View style={[styles.advancedFiltersPanel, filtersAnimatedStyle]}>
-            {/* Response Range Filter */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Response Range</Text>
-              <View style={styles.filterOptionsRow}>
-                {(
-                  [
-                    "all",
-                    "0",
-                    "1-5",
-                    "6-10",
-                    "11-20",
-                    "21+",
-                  ] as ResponseRangeFilter[]
-                ).map((range) => (
-                  <TouchableOpacity
-                    key={range}
-                    style={[
-                      styles.filterOption,
-                      responseRangeFilter === range &&
-                        styles.filterOptionActive,
-                    ]}
-                    onPress={() => setResponseRangeFilter(range)}
-                  >
-                    <Text
-                      style={[
-                        styles.filterOptionText,
-                        responseRangeFilter === range &&
-                          styles.filterOptionTextActive,
-                      ]}
-                    >
-                      {range === "all" ? "All" : range}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Estimated Time Filter */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>
-                Estimated Time (min)
-              </Text>
-              <View style={styles.filterOptionsRow}>
-                {(
-                  [
-                    "all",
-                    "1-5",
-                    "6-10",
-                    "11-15",
-                    "16-30",
-                    "31+",
-                  ] as TimeRangeFilter[]
-                ).map((range) => (
-                  <TouchableOpacity
-                    key={range}
-                    style={[
-                      styles.filterOption,
-                      timeRangeFilter === range && styles.filterOptionActive,
-                    ]}
-                    onPress={() => setTimeRangeFilter(range)}
-                  >
-                    <Text
-                      style={[
-                        styles.filterOptionText,
-                        timeRangeFilter === range &&
-                          styles.filterOptionTextActive,
-                      ]}
-                    >
-                      {range === "all" ? "All" : range}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
 
             {/* Clear Filters Button */}
-            {(responseRangeFilter !== "all" || timeRangeFilter !== "all") && (
-              <TouchableOpacity
-                style={styles.clearFiltersButton}
-                onPress={() => {
-                  setResponseRangeFilter("all");
-                  setTimeRangeFilter("all");
-                }}
-              >
-                <Ionicons name="close-circle" size={16} color="#EF4444" />
-                <Text style={styles.clearFiltersText}>
-                  Clear Advanced Filters
-                </Text>
-              </TouchableOpacity>
+            {hasActiveFilters && (
+              <Animated.View style={[styles.clearButtonRow, clearButtonAnimatedStyle]}>
+                <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters} activeOpacity={0.7}>
+                  <Ionicons name="close-circle" size={14} color="#EF4444" />
+                  <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+                </TouchableOpacity>
+              </Animated.View>
             )}
           </Animated.View>
-        )}
+
+          {/* Filter Dropdowns */}
+          <FilterDropdown
+            visible={showStatusDropdown}
+            onClose={() => setShowStatusDropdown(false)}
+            title="Filter by Status"
+            icon="filter-outline"
+            iconColor="#8B5CF6"
+            options={statusOptions.map((option) => ({
+              value: option,
+              label: getStatusLabel(option),
+              icon:
+                option === "all"
+                  ? "apps-outline"
+                  : option === "published"
+                  ? "checkmark-circle"
+                  : "document-outline",
+            }))}
+            selectedValue={filterStatus}
+            onSelect={(value) => {
+              setFilterStatus(value as "all" | "published" | "unpublished");
+              setShowStatusDropdown(false);
+            }}
+            accentColor="#8B5CF6"
+          />
+
+          <FilterDropdown
+            visible={showResponseDropdown}
+            onClose={() => setShowResponseDropdown(false)}
+            title="Filter by Responses"
+            icon="people-outline"
+            iconColor="#5FA9F5"
+            options={responseOptions.map((option) => ({
+              value: option,
+              label: getResponseLabel(option),
+              icon: "people-outline",
+            }))}
+            selectedValue={responseRangeFilter}
+            onSelect={(value) => {
+              setResponseRangeFilter(value as ResponseRangeFilter);
+              setShowResponseDropdown(false);
+            }}
+            accentColor="#5FA9F5"
+          />
+
+          <FilterDropdown
+            visible={showTimeDropdown}
+            onClose={() => setShowTimeDropdown(false)}
+            title="Filter by Time"
+            icon="time-outline"
+            iconColor="#8A4DE8"
+            options={timeOptions.map((option) => ({
+              value: option,
+              label: getTimeLabel(option),
+              icon: "timer-outline",
+            }))}
+            selectedValue={timeRangeFilter}
+            onSelect={(value) => {
+              setTimeRangeFilter(value as TimeRangeFilter);
+              setShowTimeDropdown(false);
+            }}
+            accentColor="#8A4DE8"
+          />
 
           {/* Survey List */}
           <Animated.View style={[styles.scrollViewContainer, listAnimatedStyle]}>
@@ -758,6 +853,8 @@ export default function MassAnalyses() {
               style={styles.scrollView}
               contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 16 }]}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="none"
             >
           {filteredSurveys.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -897,6 +994,68 @@ export default function MassAnalyses() {
     </SafeAreaView>
   );
 }
+
+// Filter Dropdown Component
+interface FilterDropdownProps {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  icon: string;
+  iconColor: string;
+  options: { value: string; label: string; icon: string }[];
+  selectedValue: string;
+  onSelect: (value: string) => void;
+  accentColor: string;
+}
+
+const FilterDropdown: React.FC<FilterDropdownProps> = ({
+  visible,
+  onClose,
+  title,
+  icon,
+  iconColor,
+  options,
+  selectedValue,
+  onSelect,
+  accentColor,
+}) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <View style={styles.dropdownContainer}>
+        <View style={styles.dropdownHeader}>
+          <Ionicons name={icon as any} size={18} color={iconColor} />
+          <Text style={styles.dropdownTitle}>{title}</Text>
+        </View>
+        {options.map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            style={[styles.dropdownItem, selectedValue === option.value && styles.dropdownItemActive]}
+            onPress={() => onSelect(option.value)}
+          >
+            <View style={styles.dropdownItemContent}>
+              <Ionicons
+                name={option.icon as any}
+                size={18}
+                color={selectedValue === option.value ? accentColor : "#9CA3AF"}
+              />
+              <Text
+                style={[
+                  styles.dropdownItemText,
+                  selectedValue === option.value && { color: "#FFFFFF", fontWeight: "600" },
+                ]}
+              >
+                {option.label}
+              </Text>
+            </View>
+            {selectedValue === option.value && (
+              <Ionicons name="checkmark" size={20} color={accentColor} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    </Pressable>
+  </Modal>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -1058,66 +1217,82 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#5FA9F5",
   },
-  advancedFiltersPanel: {
-    backgroundColor: "#1E1E2E",
-    marginHorizontal: 24,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2D2D3E",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  filterSection: {
-    marginBottom: 16,
-  },
-  filterSectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 10,
-  },
-  filterOptionsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  filterOption: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: "#2D2D3E",
-    borderWidth: 1,
-    borderColor: "#3D3D4E",
-  },
-  filterOptionActive: {
-    backgroundColor: "#8B5CF6",
-    borderColor: "#8B5CF6",
-  },
-  filterOptionText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#9CA3AF",
-  },
-  filterOptionTextActive: {
-    color: "#FFFFFF",
+  clearButtonRow: {
+    marginTop: 12,
+    alignItems: "flex-start",
   },
   clearFiltersButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
     paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     gap: 6,
-    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
   },
   clearFiltersText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#EF4444",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dropdownContainer: {
+    backgroundColor: "#1E1E2E",
+    borderRadius: 12,
+    minWidth: 260,
+    maxWidth: 320,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#2D2D3E",
+  },
+  dropdownHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#2D2D3E",
+    borderBottomWidth: 1,
+    borderBottomColor: "#3D3D4E",
+  },
+  dropdownTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2D2D3E",
+  },
+  dropdownItemActive: {
+    backgroundColor: "rgba(139, 92, 246, 0.15)",
+  },
+  dropdownItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#9CA3AF",
   },
   scrollViewContainer: {
     flex: 1,

@@ -217,7 +217,7 @@ export default function SurveyPreview() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container} edges={["left", "right"]}>
+    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
       {/* Gradient Background */}
       <LinearGradient
         colors={[Colors.background.primary, Colors.surface.blueTint, Colors.surface.purpleTint]}
@@ -237,8 +237,10 @@ export default function SurveyPreview() {
       </View>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 200 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
       >
         {/* Survey Header */}
         <View style={styles.surveyHeader}>
@@ -337,24 +339,26 @@ export default function SurveyPreview() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + insets.bottom + Spacing.sm, bottom: -insets.bottom }]} pointerEvents="box-none">
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + Spacing.sm }]}>
         <TouchableOpacity
           style={styles.editButton}
           onPress={handleEdit}
           disabled={actionLoading}
+          activeOpacity={0.8}
         >
           <LinearGradient
             colors={["#A23DD8", "#D13DB8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.editButtonGradient}
+            pointerEvents="none"
           >
             <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
             <Text style={styles.editButtonText}>Edit Survey</Text>
           </LinearGradient>
         </TouchableOpacity>
 
-        <View style={styles.buttonRow} pointerEvents="auto">
+        <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.publishButton}
             onPress={handlePublish}
@@ -366,6 +370,7 @@ export default function SurveyPreview() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.publishButtonGradient}
+              pointerEvents="none"
             >
               {actionLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -382,6 +387,7 @@ export default function SurveyPreview() {
             style={styles.archiveButton}
             onPress={handleArchive}
             disabled={actionLoading}
+            activeOpacity={0.8}
           >
             {actionLoading ? (
               <ActivityIndicator size="small" color="#6B7280" />
@@ -491,7 +497,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    zIndex: 1,
   },
   scrollContent: {
     padding: Spacing.lg,
@@ -865,11 +870,11 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingTop: Spacing.md,
     backgroundColor: Colors.background.primary,
-    borderTopWidth: 0,
+    borderTopWidth: Borders.width.default,
+    borderTopColor: Colors.border.default,
     overflow: "visible",
     ...Shadows.lg,
-    marginBottom: 0,
-    zIndex: 9999,
+    zIndex: 1000,
     elevation: 10,
   },
   editButton: {
@@ -880,8 +885,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 11,
-    zIndex: 10000,
+    elevation: 4,
   },
   editButtonGradient: {
     flexDirection: "row",
@@ -899,17 +903,11 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     gap: Spacing.sm,
-    zIndex: 10000,
-    elevation: 11,
-    position: "relative",
   },
   publishButton: {
     flex: 1,
     borderRadius: Borders.radius.lg,
     overflow: "hidden",
-    zIndex: 10002,
-    elevation: 12,
-    position: "relative",
   },
   publishButtonGradient: {
     flexDirection: "row",
@@ -918,8 +916,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm + 2,
     paddingHorizontal: Spacing.md,
     gap: Spacing.xs,
-    zIndex: 10001,
-    elevation: 12,
   },
   publishButtonText: {
     fontSize: Typography.fontSize.body,
@@ -938,8 +934,6 @@ const styles = StyleSheet.create({
     borderWidth: Borders.width.thick,
     borderColor: Colors.border.default,
     gap: Spacing.xs,
-    zIndex: 10000,
-    elevation: 11,
   },
   archiveButtonText: {
     fontSize: Typography.fontSize.body,

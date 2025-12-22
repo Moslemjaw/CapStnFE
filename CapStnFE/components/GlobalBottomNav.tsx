@@ -450,13 +450,13 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     currentAnimationState.current = targetState;
 
     if (isAnalysisComplete) {
-      // Completion celebration - smooth burst then aggressive pulsing for 3 seconds with very bright glow
+      // Completion celebration - smooth burst then aggressive pulsing for 3 seconds with extremely bright glow
       shadowOpacity.value = withSequence(
         withTiming(1.0, { duration: 300, easing: EASING.easeOut }),
         withRepeat(
           withSequence(
             withTiming(1.0, { duration: 150, easing: EASING.easeOut }),
-            withTiming(0.7, { duration: 150, easing: EASING.easeIn })
+            withTiming(0.95, { duration: 150, easing: EASING.easeIn })
           ),
           Math.floor(3000 / 300), // Pulse for 3 seconds (3000ms / 300ms per cycle)
           false
@@ -464,13 +464,13 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
         withTiming(0.5, { duration: 600, easing: EASING.smooth })
       );
       shadowRadius.value = withSequence(
-        withTiming(160, { duration: 300, easing: EASING.easeOut }),
+        withTiming(300, { duration: 300, easing: EASING.easeOut }),
         withRepeat(
           withSequence(
-            withTiming(160, { duration: 150, easing: EASING.easeOut }),
-            withTiming(120, { duration: 150, easing: EASING.easeIn })
+            withTiming(350, { duration: 150, easing: EASING.easeOut }),
+            withTiming(280, { duration: 150, easing: EASING.easeIn })
           ),
-          Math.floor(3000 / 300), // Pulse for 3 seconds
+          Math.floor(3000 / 300), // Pulse for 3 seconds with very strong glow
           false
         ),
         withTiming(30, { duration: 600, easing: EASING.smooth })
@@ -508,10 +508,10 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       analyzingAnimationActive.current = true;
       const cfg = ANIMATION_CONFIG.analyzing;
       
-      // Continuous rotation - 360 degrees in 186ms = ~5.38 rotations per second (40% faster)
+      // Continuous rotation - 360 degrees in 68ms = ~14.7 rotations per second (25% faster)
       // Modulo in logoAnimatedStyle wraps the value for continuous appearance
       rotation.value = withRepeat(
-        withTiming(360, { duration: 186, easing: Easing.linear }),
+        withTiming(360, { duration: 68, easing: Easing.linear }),
         -1,
         false
       );
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
   glowContainer: {
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.primary.blue,
+    shadowColor: "#00FFFF", // Bright cyan/white for maximum visibility
     shadowOffset: {
       width: 0,
       height: 0,

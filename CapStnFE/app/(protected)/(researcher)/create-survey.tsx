@@ -135,6 +135,34 @@ export default function CreateSurvey() {
     return questions.length;
   };
 
+  // Calculate estimated minutes based on question types and choice counts
+  const calculateEstimatedMinutes = (): number => {
+    let totalSeconds = 0;
+
+    questions.forEach((question) => {
+      if (question.type === "text") {
+        // Written questions: 30 seconds each
+        totalSeconds += 30;
+      } else if (question.type === "multiple_choice") {
+        // Choice questions: count valid (non-empty) options
+        const validOptions = question.options?.filter((opt) => opt.trim().length > 0) || [];
+        const optionCount = validOptions.length;
+
+        if (optionCount <= 3) {
+          // 2-3 choices: 15 seconds
+          totalSeconds += 15;
+        } else {
+          // 4+ choices: 15 + (count - 3) × 5 seconds
+          totalSeconds += 15 + (optionCount - 3) * 5;
+        }
+      }
+    });
+
+    // Convert seconds to minutes, round up, minimum 1 minute
+    const minutes = Math.max(1, Math.ceil(totalSeconds / 60));
+    return minutes;
+  };
+
   const handleDeleteQuestion = (index: number) => {
     Alert.alert(
       "Delete Question",
