@@ -23,6 +23,10 @@
       "predictiveBackGestureEnabled": false,
       "usesCleartextTraffic": true
     },
-    "web": {}
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/logo.png"
+    }
   }
 }
