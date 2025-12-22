@@ -508,10 +508,10 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       analyzingAnimationActive.current = true;
       const cfg = ANIMATION_CONFIG.analyzing;
       
-      // Continuous rotation - 360 degrees in 68ms = ~14.7 rotations per second (25% faster)
+      // Continuous rotation - 360 degrees in 88ms = ~11.4 rotations per second
       // Modulo in logoAnimatedStyle wraps the value for continuous appearance
       rotation.value = withRepeat(
-        withTiming(360, { duration: 68, easing: Easing.linear }),
+        withTiming(360, { duration: 88, easing: Easing.linear }),
         -1,
         false
       );
@@ -645,7 +645,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
 
 
   const handlePress = () => {
-    if (pressAnimationActive.current || isAnalyzing || isAnalysisComplete) {
+    if (pressAnimationActive.current || isAnalysisComplete) {
       return;
     }
 

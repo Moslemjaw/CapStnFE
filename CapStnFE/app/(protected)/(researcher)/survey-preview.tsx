@@ -169,10 +169,11 @@ export default function SurveyPreview() {
 
     setActionLoading(true);
     try {
-      const updatedSurvey = await updateSurvey(surveyId, {
+      await updateSurvey(surveyId, {
         estimatedMinutes: minutes,
       });
-      setSurvey(updatedSurvey);
+      // Reload survey data to ensure we have the latest value
+      await loadSurveyData();
       setShowTimeEditModal(false);
       Alert.alert("Success", "Estimated time updated successfully!");
     } catch (err: any) {

@@ -304,6 +304,7 @@ export default function CreateSurvey() {
           title: title.trim(),
           description: description.trim(),
           rewardPoints: calculateRewardPoints(),
+          estimatedMinutes: calculateEstimatedMinutes(),
         });
 
         // Get existing questions and update/delete as needed
@@ -342,7 +343,7 @@ export default function CreateSurvey() {
           title: title.trim(),
           description: description.trim(),
           rewardPoints: calculateRewardPoints(),
-          estimatedMinutes: 1,
+          estimatedMinutes: calculateEstimatedMinutes(),
           creatorId: user._id,
           despectipationPath: "-",
         };
@@ -378,7 +379,7 @@ export default function CreateSurvey() {
           surveyId: finalSurveyId,
           questionCount: questions.length.toString(),
           points: calculateRewardPoints().toString(),
-          estimatedMinutes: "1",
+          estimatedMinutes: calculateEstimatedMinutes().toString(),
         },
       } as any);
     } catch (err: any) {
@@ -414,6 +415,7 @@ export default function CreateSurvey() {
           title: title.trim(),
           description: description.trim(),
           rewardPoints: calculateRewardPoints(),
+          estimatedMinutes: calculateEstimatedMinutes(),
         });
 
         // Get existing questions and update/delete as needed
@@ -450,7 +452,7 @@ export default function CreateSurvey() {
           title: title.trim(),
           description: description.trim(),
           rewardPoints: calculateRewardPoints(),
-          estimatedMinutes: 1,
+          estimatedMinutes: calculateEstimatedMinutes(),
           creatorId: user._id,
           despectipationPath: "-",
         };
