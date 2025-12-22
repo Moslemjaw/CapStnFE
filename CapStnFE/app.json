@@ -24,7 +24,7 @@
       "usesCleartextTraffic": true
     },
     "web": {
-      "bundler": "metro",
+      "bundler": "webpack",
       "output": "static",
       "favicon": "./assets/logo.png"
     }
