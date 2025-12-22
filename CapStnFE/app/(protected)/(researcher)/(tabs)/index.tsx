@@ -228,7 +228,7 @@ export default function ResearcherHome() {
                     style={styles.actionCardLogo}
                     resizeMode="contain"
                   />
-                  <Text style={styles.actionCardTitle}>SightAI</Text>
+                  <Text style={styles.actionCardTitle}>sightAI</Text>
                   <Text style={styles.actionCardSubtitle}>Analyze data</Text>
                 </LinearGradient>
               </TouchableOpacity>

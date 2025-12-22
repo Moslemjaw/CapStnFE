@@ -581,7 +581,7 @@ export default function ResearcherProfile() {
               <Text style={styles.footerBrandText}>sight</Text>
             </View>
             <Text style={styles.footerVersion}>Version 1.3.5</Text>
-            <Text style={styles.footerCopyright}>© 2024 Sight. All rights reserved.</Text>
+            <Text style={styles.footerCopyright}>© 2024 sight. All rights reserved.</Text>
           </View>
         </ScrollView>
 

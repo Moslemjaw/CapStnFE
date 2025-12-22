@@ -829,7 +829,7 @@ const SurveyCard: React.FC<SurveyCardProps> = ({ survey, onPress, variant }) => 
       {isCompact ? (
         <TouchableOpacity style={styles.cardButtonCompact} onPress={() => onPress(survey)}>
           <Text style={styles.cardButtonTextCompact}>
-            {survey.isAnswered ? "View" : "Start"}
+            {survey.isAnswered ? "View" : "Preview"}
           </Text>
           <Ionicons name="arrow-forward" size={12} color={Colors.primary.blue} />
         </TouchableOpacity>

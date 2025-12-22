@@ -624,11 +624,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: Spacing.md + 2,
+    paddingVertical: 13,
     gap: Spacing.xs,
   },
   signUpButtonText: {
     ...Typography.styles.button,
+    fontSize: 20,
     color: Colors.text.inverse,
   },
   bottomLinkContainer: {

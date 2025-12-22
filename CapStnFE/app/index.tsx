@@ -59,34 +59,47 @@ export default function Index() {
   const scrollViewRef = useRef<ScrollView>(null);
   const autoSlideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const jellyAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const { isAuthenticated, isLoading, setIsAuthenticated } = useContext(AuthContext);
   const router = useRouter();
 
-  // Logo rotation and jelly animation - 3.5 minutes (210 seconds) for full rotation
+  // Logo rotation and pulse animation
   useEffect(() => {
-    const duration = 210000; // 3.5 minutes = 210,000 milliseconds
+    const rotationDuration = 210000; // 3.5 minutes = 210,000 milliseconds
     
-    // Create parallel animations that loop seamlessly
-    Animated.parallel([
-      Animated.loop(
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: duration,
-          easing: Easing.linear,
+    // Rotation animation
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: rotationDuration,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Pulse every 12 seconds
+    const createPulse = () => {
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.02,
+          duration: 500,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
-        })
-      ),
-      Animated.loop(
-        Animated.timing(jellyAnim, {
+        }),
+        Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: duration,
-          easing: Easing.linear,
+          duration: 500,
+          easing: Easing.in(Easing.ease),
           useNativeDriver: true,
-        })
-      ),
-    ]).start();
+        }),
+        Animated.delay(11000), // Wait 11 seconds before next pulse (total 12 seconds)
+      ]).start(() => {
+        createPulse(); // Loop the pulse
+      });
+    };
+
+    createPulse();
   }, []);
 
   // Auto-slide carousel every 5 seconds
@@ -219,12 +232,13 @@ export default function Index() {
                         }),
                       },
                       {
-                        scale: jellyAnim.interpolate({
-                          inputRange: [0, 0.25, 0.5, 0.75, 1],
-                          outputRange: [1, 1.015, 1, 0.985, 1],
-                        }),
+                        scale: pulseAnim,
                       },
                     ],
+                    opacity: pulseAnim.interpolate({
+                      inputRange: [1, 1.02],
+                      outputRange: [1, 0.98],
+                    }),
                   },
                 ]}
                 resizeMode="contain"
@@ -511,14 +525,14 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 11,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
   },
   loginButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "600",
     textAlign: "center",
   },

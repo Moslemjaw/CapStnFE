@@ -18,7 +18,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const TUTORIAL_SLIDES = [
   {
-    title: "Welcome to Sight",
+    title: "Welcome to sight",
     description: "Your platform for creating surveys and gathering meaningful insights from data.",
     icon: "hand-left-outline" as const,
     gradient: [Colors.surface.blueTint, Colors.background.secondary] as const,
@@ -33,7 +33,7 @@ const TUTORIAL_SLIDES = [
   },
   {
     title: "AI-Powered Analysis",
-    description: "Get instant insights from your survey responses with SightAI analytics.",
+    description: "Get instant insights from your survey responses with sightAI analytics.",
     icon: "sparkles-outline" as const,
     gradient: [Colors.surface.pinkTint, Colors.background.secondary] as const,
     iconColor: Colors.primary.pink,
