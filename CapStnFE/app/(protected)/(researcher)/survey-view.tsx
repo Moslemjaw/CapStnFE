@@ -393,7 +393,9 @@ export default function SurveyView() {
         />
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-          <Text style={styles.headerTitle}>Answer Survey</Text>
+          <Text style={styles.headerTitle}>
+            {hasAnswered ? "Review Answers" : "Answer Survey"}
+          </Text>
           <Image
             source={require("@/assets/title.png")}
             style={styles.titleImage}
@@ -598,11 +600,12 @@ export default function SurveyView() {
                 ))
               )}
             </View>
+        </KeyboardAwareScrollView>
 
-          {/* Completed Info */}
+          {/* Completed Info - Fixed above navbar */}
           {hasAnswered && userResponse && (
-            <View style={styles.completedSectionInline}>
-              <View style={styles.completedCard}>
+            <View style={[styles.completedSectionFixed, { bottom: bottomNavHeight + 16 }]}>
+              <View style={styles.completedSection}>
                 <View style={styles.completedHeader}>
                   <View style={styles.completedIconContainer}>
                     <Ionicons name="checkmark" size={12} color={Colors.background.primary} />
@@ -637,7 +640,6 @@ export default function SurveyView() {
               </View>
             </View>
           )}
-        </KeyboardAwareScrollView>
 
         {/* Floating Submit Button */}
         {!hasAnswered && (
@@ -965,11 +967,14 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  completedSectionInline: {
-    marginTop: Spacing.xl,
+  completedSectionFixed: {
+    position: "absolute",
+    left: 0,
+    right: 0,
     paddingHorizontal: Spacing.page.paddingHorizontal,
+    zIndex: 100,
   },
-  completedCard: {
+  completedSection: {
     backgroundColor: Colors.surface.blueTint,
     borderRadius: Spacing.card.borderRadius,
     padding: Spacing.card.paddingSmall,

@@ -735,9 +735,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   titleImage: {
-    height: 32,
-    width: 106,
-    marginLeft: -6,
+    height: 28,
+    width: 94,
   },
   title: {
     ...Typography.styles.h2,

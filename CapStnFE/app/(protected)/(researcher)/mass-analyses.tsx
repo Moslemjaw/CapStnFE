@@ -349,6 +349,62 @@ export default function MassAnalyses() {
     0
   );
 
+  const pollAnalysisInBackground = (analysisId: string) => {
+    const poll = async () => {
+      try {
+        const data = await getAnalysisById(analysisId);
+
+        if (data.status === "ready") {
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+
+          triggerCompletion();
+
+          setTimeout(() => {
+            setIsAnalyzing(false);
+            router.replace({
+              pathname: "/(protected)/(researcher)/analysis-insights",
+              params: { analysisId: data.analysisId },
+            } as any);
+          }, 800);
+        } else if (data.status === "failed") {
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+
+          setIsAnalyzing(false);
+          Alert.alert("Analysis Failed", "The analysis failed to complete. Please try again.");
+        } else if (data.status === "processing") {
+          pollingTimeoutRef.current = setTimeout(() => poll(), 2000);
+        }
+      } catch (err: any) {
+        console.error("Error polling analysis:", err);
+
+        if (pollingTimeoutRef.current) {
+          clearTimeout(pollingTimeoutRef.current);
+          pollingTimeoutRef.current = null;
+        }
+
+        setIsAnalyzing(false);
+        Alert.alert("Error", "Failed to check analysis status. Please try again.");
+      }
+    };
+
+    poll();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+        pollingTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const handleStartAnalysis = async () => {
     if (selectedSurveys.length === 0) {
       Alert.alert(
@@ -386,17 +442,11 @@ export default function MassAnalyses() {
               const surveyIds = selectedSurveys.map((s) => s._id);
               const analysis = await createAnalysis(surveyIds);
               
-              // Set analyzing state to trigger jelly effect
+              // Set analyzing state to trigger logo animation
               setIsAnalyzing(true);
 
-              // Navigate to loading screen
-              router.push({
-                pathname: "/(protected)/(researcher)/analysis-loading",
-                params: {
-                  analysisId: analysis.analysisId,
-                  type: "multi",
-                },
-              } as any);
+              // Poll analysis in background
+              pollAnalysisInBackground(analysis.analysisId);
             } catch (err: any) {
               console.error("Error creating analysis:", err);
               Alert.alert(

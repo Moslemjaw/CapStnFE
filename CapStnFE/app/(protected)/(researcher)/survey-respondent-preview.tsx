@@ -127,7 +127,6 @@ export default function SurveyRespondentPreview() {
           <View style={styles.headerTop}>
             <View style={styles.headerLeft}>
               <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
-              <Text style={styles.headerSubtitle}>Preview before starting</Text>
             </View>
             <Image
               source={require("@/assets/title.png")}
@@ -341,11 +340,6 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     letterSpacing: Typography.letterSpacing.tight,
     marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontFamily: Typography.fontFamily.regular,
-    fontSize: Typography.fontSize.body,
-    color: Colors.text.secondary,
   },
   scrollView: {
     flex: 1,

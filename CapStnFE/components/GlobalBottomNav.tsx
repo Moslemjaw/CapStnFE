@@ -15,6 +15,8 @@ import Animated, {
   interpolateColor,
   cancelAnimation,
   runOnJS,
+  useAnimatedReaction,
+  useFrameCallback,
 } from "react-native-reanimated";
 import AnalysisContext from "@/context/AnalysisContext";
 import { Colors, Typography, Spacing, Borders, Shadows, ZIndex } from "@/constants/design";
@@ -273,6 +275,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
   const shadowRadius = useSharedValue(0);
   const jellyScaleX = useSharedValue(1);
   const jellyScaleY = useSharedValue(1);
+  const rotation = useSharedValue(0);
   const pressAnimationActive = useRef(false);
   const currentAnimationState = useRef<'idle' | 'active' | 'analyzing' | 'completing' | null>(null);
   const analyzingAnimationActive = useRef(false);
@@ -293,6 +296,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     cancelAnimation(jellyScaleY);
     cancelAnimation(shadowOpacity);
     cancelAnimation(shadowRadius);
+    cancelAnimation(rotation);
     
     const currentContext = context;
     const currentIsAnalyzing = currentContext?.isAnalyzing ?? false;
@@ -436,9 +440,11 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       cancelAnimation(jellyScaleY);
       cancelAnimation(shadowOpacity);
       cancelAnimation(shadowRadius);
+      cancelAnimation(rotation);
 
       jellyScaleX.value = 1;
       jellyScaleY.value = 1;
+      rotation.value = 0;
     } else {
       return;
     }
@@ -466,10 +472,19 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
         withTiming(1.0, { duration: 350, easing: EASING.smooth })
       );
       analyzingAnimationActive.current = false;
+      rotation.value = 0;
     } else if (isAnalyzing) {
-      // Analyzing state - dynamic pulsing with organic feel
+      // Analyzing state - dynamic pulsing with organic feel and fast rotation
       analyzingAnimationActive.current = true;
       const cfg = ANIMATION_CONFIG.analyzing;
+      
+      // Very fast continuous rotation - 360 degrees in 5ms = 200 rotations per second
+      // Modulo in logoAnimatedStyle wraps the value for continuous appearance
+      rotation.value = withRepeat(
+        withTiming(360, { duration: 5, easing: Easing.linear }),
+        -1,
+        false
+      );
       
       jellyScaleX.value = withRepeat(
         withSequence(
@@ -507,6 +522,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     } else if (isFocused) {
       // Active state - calm breathing with subtle glow
       analyzingAnimationActive.current = false;
+      rotation.value = 0;
       const cfg = ANIMATION_CONFIG.active;
       
       jellyScaleX.value = withRepeat(
@@ -545,6 +561,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     } else {
       // Idle state - very subtle, peaceful breathing
       analyzingAnimationActive.current = false;
+      rotation.value = 0;
       const cfg = ANIMATION_CONFIG.idle;
       
       jellyScaleX.value = withRepeat(
@@ -596,6 +613,7 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     }
   }, [isAnalyzing]);
 
+
   const handlePress = () => {
     if (pressAnimationActive.current || isAnalyzing || isAnalysisComplete) {
       return;
@@ -606,9 +624,11 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
     cancelAnimation(jellyScaleY);
     cancelAnimation(shadowOpacity);
     cancelAnimation(shadowRadius);
+    cancelAnimation(rotation);
 
     jellyScaleX.value = 1;
     jellyScaleY.value = 1;
+    rotation.value = 0;
 
     const { spring, bounce } = ANIMATION_CONFIG.press;
 
@@ -669,8 +689,11 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
   });
 
   const logoAnimatedStyle = useAnimatedStyle(() => {
+    // Use modulo to wrap rotation value, allowing continuous incrementing without reset
+    const rotationDeg = rotation.value % 360;
     return {
       transform: [
+        { rotate: `${rotationDeg}deg` },
         { scaleX: jellyScaleX.value },
         { scaleY: jellyScaleY.value },
       ],

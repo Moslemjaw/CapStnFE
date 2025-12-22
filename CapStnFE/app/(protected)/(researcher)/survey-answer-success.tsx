@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Animated,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -16,6 +17,62 @@ import { getSurveyById } from "@/api/surveys";
 import { Survey } from "@/api/surveys";
 import { FadeInView } from "@/components/FadeInView";
 import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
+
+// Animated Checkmark Component
+function AnimatedCheckmark({ progress }: { progress: Animated.Value }) {
+  // Create a drawing effect: start small, grow, then complete
+  const scale = progress.interpolate({
+    inputRange: [0, 0.5, 0.8, 1],
+    outputRange: [0, 0.4, 0.9, 1],
+  });
+
+  const opacity = progress.interpolate({
+    inputRange: [0, 0.4, 0.7, 1],
+    outputRange: [0, 0.3, 0.8, 1],
+  });
+
+  // Rotate from bottom-left to final position (drawing motion)
+  const rotate = progress.interpolate({
+    inputRange: [0, 0.6, 1],
+    outputRange: ['-90deg', '-20deg', '0deg'],
+  });
+
+  const circleScale = progress.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 0.8, 1],
+  });
+
+  const circleOpacity = progress.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0.5, 1],
+  });
+
+  return (
+    <View style={styles.checkmarkContainer}>
+      <Animated.View
+        style={[
+          styles.checkmarkWrapper,
+          {
+            opacity,
+            transform: [{ scale }, { rotate }],
+          },
+        ]}
+      >
+        {/* Circle background */}
+        <Animated.View
+          style={[
+            styles.checkmarkCircle,
+            {
+              opacity: circleOpacity,
+              transform: [{ scale: circleScale }],
+            },
+          ]}
+        />
+        <Ionicons name="checkmark" size={58} color="#FFFFFF" style={styles.checkmarkIcon} />
+      </Animated.View>
+    </View>
+  );
+}
 
 export default function SurveyAnswerSuccess() {
   const router = useRouter();
@@ -42,12 +99,29 @@ export default function SurveyAnswerSuccess() {
 
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
+  const checkmarkProgress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (surveyId) {
       loadSurveyData();
     }
   }, [surveyId]);
+
+  useEffect(() => {
+    // Animate checkmark drawing effect with easing
+    Animated.sequence([
+      Animated.timing(checkmarkProgress, {
+        toValue: 0.6,
+        duration: 400,
+        useNativeDriver: false,
+      }),
+      Animated.timing(checkmarkProgress, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, []);
 
   const loadSurveyData = async () => {
     if (!surveyId) return;
@@ -122,38 +196,14 @@ export default function SurveyAnswerSuccess() {
       <View style={styles.fixedHeader}>
         <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
           <View style={styles.headerRow}>
-            <View style={styles.headerTextContainer}>
-              <View style={styles.logoContainer}>
-                <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
-              </View>
-              <Text style={styles.headerTitle}>Success</Text>
-              <Text style={styles.headerSubtitle}>Survey completed successfully</Text>
-            </View>
-            <Image source={require("@/assets/logo.png")} style={styles.headerLogo} resizeMode="contain" />
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
         </View>
       </View>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          {/* Success Icon */}
-          <View style={styles.iconContainer}>
-            <LinearGradient
-              colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.iconGradient}
-            >
-              <Ionicons name="checkmark" size={40} color="#FFFFFF" />
-            </LinearGradient>
-          </View>
-
           {/* Title */}
           <Text style={styles.title}>Survey Submitted!</Text>
-
-          {/* Thank You Message */}
-          <Text style={styles.thankYouText}>
-            Thank you for sharing your insights. Your response helps us understand better.
-          </Text>
 
           {/* Points Earned Card */}
           <View style={styles.pointsCard}>
@@ -163,13 +213,7 @@ export default function SurveyAnswerSuccess() {
               end={{ x: 1, y: 0 }}
               style={styles.pointsCardGradient}
             >
-              <View style={styles.coinsIconContainer}>
-                <View style={styles.coinStack}>
-                  <View style={[styles.coin, styles.coin1]} />
-                  <View style={[styles.coin, styles.coin2]} />
-                  <View style={[styles.coin, styles.coin3]} />
-                </View>
-              </View>
+              <AnimatedCheckmark progress={checkmarkProgress} />
               <Text style={styles.pointsLabel}>POINTS EARNED</Text>
               <Text style={styles.pointsValue}>+{pointsEarned || 0}</Text>
               <Text style={styles.pointsSubtext}>Added to your account</Text>
@@ -287,11 +331,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
     zIndex: 10,
     paddingBottom: 0,
-    borderBottomLeftRadius: Borders.radius.xl,
-    borderBottomRightRadius: Borders.radius.xl,
     borderBottomWidth: Borders.width.default,
     borderBottomColor: Colors.border.light,
-    ...Shadows.md,
   },
   header: {
     padding: Spacing.md,
@@ -300,34 +341,11 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
+    justifyContent: "flex-end",
   },
   titleImage: {
-    height: Spacing.lg,
-    width: 80,
-    marginLeft: -Spacing.xxs,
-  },
-  headerLogo: {
-    width: Spacing.avatar.lg + Spacing.md,
-    height: Spacing.avatar.lg + Spacing.md,
-    marginLeft: Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.styles.h2,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xxs,
-  },
-  headerSubtitle: {
-    ...Typography.styles.body,
-    color: Colors.text.secondary,
+    height: Spacing.xl,
+    width: 94,
   },
   scrollView: {
     flex: 1,
@@ -382,41 +400,34 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     alignItems: "center",
   },
-  coinsIconContainer: {
+  checkmarkContainer: {
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.xs,
+    width: 80,
+    height: 80,
   },
-  coinStack: {
+  checkmarkWrapper: {
+    width: 80,
+    height: 80,
+    alignItems: "center",
+    justifyContent: "center",
     position: "relative",
-    width: 40,
-    height: 32,
   },
-  coin: {
+  checkmarkCircle: {
     position: "absolute",
-    width: 24,
-    height: 24,
-    borderRadius: Borders.radius.full,
-    backgroundColor: Colors.background.primary,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: "rgba(255, 255, 255, 0.4)",
   },
-  coin1: {
-    top: 0,
-    left: 0,
-    zIndex: 3,
-  },
-  coin2: {
-    top: 4,
-    left: 8,
-    zIndex: 2,
-    opacity: 0.9,
-  },
-  coin3: {
-    top: 8,
-    left: 16,
+  checkmarkIcon: {
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
     zIndex: 1,
-    opacity: 0.8,
   },
   pointsLabel: {
     fontSize: Typography.fontSize.label,

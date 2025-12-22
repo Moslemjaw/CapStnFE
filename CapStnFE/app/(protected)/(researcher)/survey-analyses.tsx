@@ -242,10 +242,12 @@ export default function SurveyAnalyses() {
         params: { analysisId: analysis.analysisId },
       } as any);
     } else if (analysis.status === "processing") {
-      router.push({
-        pathname: "/(protected)/(researcher)/analysis-loading",
-        params: { analysisId: analysis.analysisId, type: analysis.type },
-      } as any);
+      // Analysis is processing in background - user can see feedback from logo
+      Alert.alert(
+        "Analysis in Progress",
+        "The analysis is currently being processed. You'll be notified when it's ready.",
+        [{ text: "OK" }]
+      );
     } else {
       Alert.alert("Analysis Failed", "This analysis failed to complete.", [{ text: "OK" }]);
     }

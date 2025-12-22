@@ -484,9 +484,6 @@ export default function CreateSurvey() {
             <Text style={styles.headerTitle}>
               {isEditMode ? "Edit Survey" : "Create Survey"}
             </Text>
-            <Text style={styles.headerSubtitle}>
-              Build your survey with questions and options
-            </Text>
           </View>
           <View style={styles.logoContainer}>
             <Image
