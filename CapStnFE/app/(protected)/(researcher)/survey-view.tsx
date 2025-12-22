@@ -9,7 +9,6 @@ import {
   Platform,
   Image,
   Animated,
-  Keyboard,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useEffect, useState, useRef } from "react";
@@ -31,6 +30,7 @@ import { updateUserProgress } from "@/utils/userProgress";
 import { getUser } from "@/api/storage";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
+import { SurveyViewSkeleton } from "@/components/Skeleton";
 import { Colors, Typography, Spacing, Shadows } from "@/constants/design";
 
 export default function SurveyView() {
@@ -49,7 +49,6 @@ export default function SurveyView() {
   const [checkingAnswered, setCheckingAnswered] = useState(true);
   const [userResponse, setUserResponse] = useState<Response | null>(null);
   const [optionSearchQueries, setOptionSearchQueries] = useState<Record<string, string>>({});
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const questionPositions = useRef<Record<string, number>>({});
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -70,27 +69,6 @@ export default function SurveyView() {
       useNativeDriver: false,
     }).start();
   }, [answers, questions]);
-
-  // Handle keyboard show/hide
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
-    );
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
-
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-    };
-  }, []);
 
   const checkIfAlreadyAnswered = async () => {
     if (!surveyId) return;
@@ -163,11 +141,9 @@ export default function SurveyView() {
       const position = questionPositions.current[nextQuestionId];
 
       if (position !== undefined && scrollViewRef.current) {
-        // Add extra offset to account for keyboard and submit button
-        const offset = keyboardHeight > 0 ? keyboardHeight + 100 : 200;
         setTimeout(() => {
           scrollViewRef.current?.scrollTo({
-            y: Math.max(0, position - offset),
+            y: Math.max(0, position - 100),
             animated: true,
           });
         }, 300);
@@ -180,13 +156,8 @@ export default function SurveyView() {
       ...prev,
       [questionId]: value,
     }));
-    // Don't auto-scroll on text change - only scroll on enter
-  };
 
-  const handleTextSubmit = (questionId: string) => {
-    const question = questions.find((q) => q._id === questionId);
-    if (question && question.type === "text") {
-      // Move to next question when enter is pressed
+    if (value && value.trim()) {
       scrollToNextQuestion(questionId);
     }
   };
@@ -220,10 +191,6 @@ export default function SurveyView() {
   ) => {
     if (questionType === "single_choice" || questionType === "dropdown") {
       handleAnswerChange(questionId, option);
-      // Auto-scroll to next question for single choice/dropdown
-      if (option && option.trim()) {
-        scrollToNextQuestion(questionId);
-      }
     } else if (
       questionType === "multiple_choice" ||
       questionType === "checkbox"
@@ -242,11 +209,6 @@ export default function SurveyView() {
         ...prev,
         [questionId]: selectedOptions.join(","),
       }));
-      
-      // Auto-scroll to next question for multiple choice/checkbox when an option is selected
-      if (selectedOptions.length > 0) {
-        scrollToNextQuestion(questionId);
-      }
     }
   };
 
@@ -367,6 +329,10 @@ export default function SurveyView() {
     }
   };
 
+  if (loading || checkingAnswered) {
+    return <SurveyViewSkeleton />;
+  }
+
   if (error || !survey) {
     return (
       <SafeAreaView style={styles.container}>
@@ -393,9 +359,7 @@ export default function SurveyView() {
         />
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-          <Text style={styles.headerTitle}>
-            {hasAnswered ? "Review Answers" : "Answer Survey"}
-          </Text>
+          <Text style={styles.headerTitle}>Answer Survey</Text>
           <Image
             source={require("@/assets/title.png")}
             style={styles.titleImage}
@@ -408,15 +372,14 @@ export default function SurveyView() {
           style={[styles.keyboardView, styles.scrollView]}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: bottomNavHeight + (hasAnswered ? 140 : 120) },
+            { paddingBottom: bottomNavHeight + (hasAnswered ? (Platform.OS === "android" ? 180 : 160) : (Platform.OS === "android" ? 140 : 120)) },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           enableAutomaticScroll={true}
-          extraScrollHeight={Platform.OS === "ios" ? 100 : 150}
-          extraHeight={150}
-          keyboardOpeningTime={0}
+          extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
+          extraHeight={120}
         >
             {/* Survey Info */}
             <View style={styles.surveyInfo}>
@@ -455,7 +418,10 @@ export default function SurveyView() {
                 questions.map((question, index) => (
                   <View
                     key={question._id}
-                    style={styles.questionCard}
+                    style={[
+                      styles.questionCard,
+                      index === questions.length - 1 && !hasAnswered && styles.lastQuestionCard,
+                    ]}
                     onLayout={(event) => {
                       const { y } = event.nativeEvent.layout;
                       questionPositions.current[question._id] = y;
@@ -482,9 +448,9 @@ export default function SurveyView() {
                         placeholderTextColor={Colors.text.tertiary}
                         value={answers[question._id] || ""}
                         onChangeText={(text) => handleAnswerChange(question._id, text)}
-                        onSubmitEditing={() => handleTextSubmit(question._id)}
-                        returnKeyType="next"
-                        blurOnSubmit={false}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
                         editable={!hasAnswered}
                       />
                     ) : question.options && question.options.length > 0 ? (
@@ -600,50 +566,17 @@ export default function SurveyView() {
                 ))
               )}
             </View>
+
         </KeyboardAwareScrollView>
 
-          {/* Completed Info - Fixed above navbar */}
-          {hasAnswered && userResponse && (
-            <View style={[styles.completedSectionFixed, { bottom: bottomNavHeight + 16 }]}>
-              <View style={styles.completedSection}>
-                <View style={styles.completedHeader}>
-                  <View style={styles.completedIconContainer}>
-                    <Ionicons name="checkmark" size={12} color={Colors.background.primary} />
-                  </View>
-                  <Text style={styles.completedTitle}>
-                    Completed on{" "}
-                    {new Date(userResponse.submittedAt || "").toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </Text>
-                </View>
-                <View style={styles.completedGrid}>
-                  <View style={styles.completedItem}>
-                    <Text style={styles.completedNumber}>
-                      {Math.round((userResponse.durationMs || 0) / 60000)}
-                    </Text>
-                    <Text style={styles.completedLabel}>Min</Text>
-                  </View>
-                  <View style={styles.completedItem}>
-                    <Text style={styles.completedNumber}>+{survey.rewardPoints}</Text>
-                    <Text style={styles.completedLabel}>Points</Text>
-                  </View>
-                  <View style={styles.completedItem}>
-                    <Text style={styles.completedNumber}>
-                      {questions.filter((q) => answers[q._id]).length}
-                    </Text>
-                    <Text style={styles.completedLabel}>Answered</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-
-        {/* Floating Submit Button */}
+        {/* Fixed Submit Button - Positioned above bottom nav */}
         {!hasAnswered && (
-          <View style={[styles.floatingSubmitContainer, { bottom: keyboardHeight > 0 ? keyboardHeight + 16 : bottomNavHeight + 16 }]}>
+          <View
+            style={[
+              styles.fixedSubmitButtonContainer,
+              { bottom: bottomNavHeight + 16 },
+            ]}
+          >
             <TouchableOpacity
               style={styles.submitButton}
               onPress={handleSubmit}
@@ -688,6 +621,45 @@ export default function SurveyView() {
                 </View>
               </View>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Fixed Completed Info - Stays above nav bar */}
+        {hasAnswered && userResponse && (
+          <View style={[styles.completedSectionFixed, { bottom: bottomNavHeight + (Platform.OS === "android" ? 24 : 16) }]}>
+            <View style={styles.completedCard}>
+              <View style={styles.completedHeader}>
+                <View style={styles.completedIconContainer}>
+                  <Ionicons name="checkmark" size={12} color={Colors.background.primary} />
+                </View>
+                <Text style={styles.completedTitle}>
+                  Completed on{" "}
+                  {new Date(userResponse.submittedAt || "").toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </Text>
+              </View>
+              <View style={styles.completedGrid}>
+                <View style={styles.completedItem}>
+                  <Text style={styles.completedNumber}>
+                    {Math.round((userResponse.durationMs || 0) / 60000)}
+                  </Text>
+                  <Text style={styles.completedLabel}>Min</Text>
+                </View>
+                <View style={styles.completedItem}>
+                  <Text style={styles.completedNumber}>+{survey.rewardPoints}</Text>
+                  <Text style={styles.completedLabel}>Points</Text>
+                </View>
+                <View style={styles.completedItem}>
+                  <Text style={styles.completedNumber}>
+                    {questions.filter((q) => answers[q._id]).length}
+                  </Text>
+                  <Text style={styles.completedLabel}>Answered</Text>
+                </View>
+              </View>
+            </View>
           </View>
         )}
       </SafeAreaView>
@@ -850,7 +822,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.regular,
     fontSize: Typography.fontSize.body,
     color: Colors.text.primary,
-    height: 48,
+    minHeight: 100,
   },
   textInputReadOnly: {
     backgroundColor: Colors.background.tertiary,
@@ -915,21 +887,20 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.medium,
     color: Colors.primary.blue,
   },
-  floatingSubmitContainer: {
+  fixedSubmitButtonContainer: {
     position: "absolute",
     left: 0,
     right: 0,
     paddingHorizontal: Spacing.page.paddingHorizontal,
-    zIndex: 100,
+    zIndex: 10,
   },
   submitButton: {
     borderRadius: Spacing.button.borderRadiusPill,
     overflow: "hidden",
-    width: "100%",
     ...Shadows.primary,
   },
   submitButtonBackground: {
-    backgroundColor: "#D1D5DB",
+    backgroundColor: Colors.background.tertiary,
     borderRadius: Spacing.button.borderRadiusPill,
     overflow: "hidden",
     position: "relative",
@@ -957,15 +928,18 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.bodyLarge,
     color: Colors.background.primary,
     letterSpacing: 0.3,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   submitButtonTextDark: {
-    color: Colors.text.primary,
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    color: Colors.text.secondary,
+    textShadowColor: 'rgba(255, 255, 255, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  lastQuestionCard: {
+    marginBottom: 100, // Space for the fixed submit button
   },
   completedSectionFixed: {
     position: "absolute",
@@ -974,7 +948,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.page.paddingHorizontal,
     zIndex: 100,
   },
-  completedSection: {
+  completedCard: {
     backgroundColor: Colors.surface.blueTint,
     borderRadius: Spacing.card.borderRadius,
     padding: Spacing.card.paddingSmall,

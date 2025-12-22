@@ -11,10 +11,12 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { getSurveyById, deleteSurvey } from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { getResponsesBySurveyId, Response } from "@/api/responses";
@@ -38,8 +40,11 @@ export default function SurveyDetails() {
   const [error, setError] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showResponsePreviewModal, setShowResponsePreviewModal] = useState(false);
-  const [selectedResponse, setSelectedResponse] = useState<Response | null>(null);
+  const [showResponsePreviewModal, setShowResponsePreviewModal] =
+    useState(false);
+  const [selectedResponse, setSelectedResponse] = useState<Response | null>(
+    null
+  );
 
   useEffect(() => {
     if (surveyId) {
@@ -101,12 +106,18 @@ export default function SurveyDetails() {
 
   const getQuestionTypeLabel = (type: Question["type"]) => {
     switch (type) {
-      case "text": return "Text Answer";
-      case "multiple_choice": return "Multiple Choice";
-      case "single_choice": return "Single Choice";
-      case "dropdown": return "Dropdown";
-      case "checkbox": return "Checkbox";
-      default: return type;
+      case "text":
+        return "Text Answer";
+      case "multiple_choice":
+        return "Multiple Choice";
+      case "single_choice":
+        return "Single Choice";
+      case "dropdown":
+        return "Dropdown";
+      case "checkbox":
+        return "Checkbox";
+      default:
+        return type;
     }
   };
 
@@ -137,9 +148,16 @@ export default function SurveyDetails() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={Colors.semantic.error} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={48}
+            color={Colors.semantic.error}
+          />
           <Text style={styles.errorText}>{error || "Survey not found"}</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.retryButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.retryButton}
+          >
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -149,14 +167,10 @@ export default function SurveyDetails() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
-        {/* Gradient Background */}
-        <LinearGradient
-          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
+      <SafeAreaView
+        style={styles.container}
+        edges={["bottom", "left", "right"]}
+      >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <View style={styles.headerContent}>
@@ -172,7 +186,10 @@ export default function SurveyDetails() {
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 100 }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: bottomNavHeight + 100 },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Survey Info Card */}
@@ -184,29 +201,64 @@ export default function SurveyDetails() {
 
             <View style={styles.metaGrid}>
               <View style={styles.metaItem}>
-                <Ionicons name="time-outline" size={18} color={Colors.text.secondary} />
-                <Text style={styles.metaText}>{survey.estimatedMinutes} min</Text>
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color={Colors.text.secondary}
+                />
+                <Text style={styles.metaText}>
+                  {survey.estimatedMinutes} min
+                </Text>
               </View>
               <View style={styles.metaItem}>
-                <Ionicons name="list-outline" size={18} color={Colors.text.secondary} />
-                <Text style={styles.metaText}>{questions.length} questions</Text>
+                <Ionicons
+                  name="list-outline"
+                  size={18}
+                  color={Colors.text.secondary}
+                />
+                <Text style={styles.metaText}>
+                  {questions.length} questions
+                </Text>
               </View>
               <View style={styles.metaItem}>
-                <Ionicons name="star-outline" size={18} color={Colors.semantic.warning} />
-                <Text style={[styles.metaText, { color: Colors.semantic.warning, fontFamily: Typography.fontFamily.semiBold }]}>
+                <Ionicons
+                  name="star-outline"
+                  size={18}
+                  color={Colors.semantic.warning}
+                />
+                <Text
+                  style={[
+                    styles.metaText,
+                    {
+                      color: Colors.semantic.warning,
+                      fontFamily: Typography.fontFamily.semiBold,
+                    },
+                  ]}
+                >
                   {survey.rewardPoints} pts
                 </Text>
               </View>
               <View style={styles.metaItem}>
                 <Ionicons
-                  name={survey.draft === "published" ? "checkmark-circle" : "archive"}
+                  name={
+                    survey.draft === "published"
+                      ? "checkmark-circle"
+                      : "archive"
+                  }
                   size={18}
-                  color={survey.draft === "published" ? Colors.semantic.success : Colors.text.secondary}
+                  color={
+                    survey.draft === "published"
+                      ? Colors.semantic.success
+                      : Colors.text.secondary
+                  }
                 />
                 <Text
                   style={[
                     styles.metaText,
-                    survey.draft === "published" && { color: Colors.semantic.success, fontFamily: Typography.fontFamily.semiBold },
+                    survey.draft === "published" && {
+                      color: Colors.semantic.success,
+                      fontFamily: Typography.fontFamily.semiBold,
+                    },
                   ]}
                 >
                   {survey.draft === "published" ? "Published" : "Unpublished"}
@@ -226,7 +278,11 @@ export default function SurveyDetails() {
 
             {responses.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="document-outline" size={40} color={Colors.text.tertiary} />
+                <Ionicons
+                  name="document-outline"
+                  size={40}
+                  color={Colors.text.tertiary}
+                />
                 <Text style={styles.emptyStateText}>No responses yet</Text>
               </View>
             ) : (
@@ -241,17 +297,35 @@ export default function SurveyDetails() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.responseHeader}>
-                    <Text style={styles.responseNumber}>Response #{index + 1}</Text>
-                    <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
+                    <Text style={styles.responseNumber}>
+                      Response #{index + 1}
+                    </Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color={Colors.text.tertiary}
+                    />
                   </View>
                   <View style={styles.responseInfo}>
                     <View style={styles.responseInfoRow}>
-                      <Ionicons name="calendar-outline" size={14} color={Colors.text.tertiary} />
-                      <Text style={styles.responseInfoText}>{formatDate(response.submittedAt)}</Text>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={14}
+                        color={Colors.text.tertiary}
+                      />
+                      <Text style={styles.responseInfoText}>
+                        {formatDate(response.submittedAt)}
+                      </Text>
                     </View>
                     <View style={styles.responseInfoRow}>
-                      <Ionicons name="time-outline" size={14} color={Colors.text.tertiary} />
-                      <Text style={styles.responseInfoText}>{formatDuration(response.durationMs)}</Text>
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={Colors.text.tertiary}
+                      />
+                      <Text style={styles.responseInfoText}>
+                        {formatDuration(response.durationMs)}
+                      </Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -261,12 +335,21 @@ export default function SurveyDetails() {
         </ScrollView>
 
         {/* Footer Actions */}
-        <View style={[styles.footer, { paddingBottom: bottomNavHeight + Spacing.md }]}>
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: bottomNavHeight + Spacing.md },
+          ]}
+        >
           <TouchableOpacity
             style={styles.previewButton}
             onPress={() => setShowPreviewModal(true)}
           >
-            <Ionicons name="eye-outline" size={18} color={Colors.primary.blue} />
+            <Ionicons
+              name="eye-outline"
+              size={18}
+              color={Colors.primary.blue}
+            />
             <Text style={styles.previewButtonText}>Preview</Text>
           </TouchableOpacity>
 
@@ -275,7 +358,11 @@ export default function SurveyDetails() {
             onPress={() => setShowDeleteModal(true)}
             disabled={actionLoading}
           >
-            <Ionicons name="trash-outline" size={18} color={Colors.semantic.error} />
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={Colors.semantic.error}
+            />
             <Text style={styles.deleteButtonText}>Delete</Text>
           </TouchableOpacity>
         </View>
@@ -290,31 +377,53 @@ export default function SurveyDetails() {
           <SafeAreaView style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>{survey?.title || "Survey"}</Text>
+                <Text style={styles.modalTitle}>
+                  {survey?.title || "Survey"}
+                </Text>
                 <Text style={styles.modalSubtitle}>Preview</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowPreviewModal(false)} style={styles.modalCloseButton}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              <TouchableOpacity
+                onPress={() => setShowPreviewModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={Colors.text.secondary}
+                />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollContent}>
+            <ScrollView
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.modalScrollContent}
+            >
               {survey?.description && (
-                <Text style={styles.modalDescription}>{survey.description}</Text>
+                <Text style={styles.modalDescription}>
+                  {survey.description}
+                </Text>
               )}
 
               <Text style={styles.modalSectionTitle}>Questions</Text>
 
               {questions.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Ionicons name="help-circle-outline" size={32} color={Colors.text.tertiary} />
-                  <Text style={styles.emptyStateText}>No questions available</Text>
+                  <Ionicons
+                    name="help-circle-outline"
+                    size={32}
+                    color={Colors.text.tertiary}
+                  />
+                  <Text style={styles.emptyStateText}>
+                    No questions available
+                  </Text>
                 </View>
               ) : (
                 questions.map((question, index) => (
                   <View key={question._id} style={styles.questionCard}>
                     <View style={styles.questionHeader}>
-                      <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                      <Text style={styles.questionNumber}>
+                        Question {index + 1}
+                      </Text>
                       {question.isRequired && (
                         <View style={styles.requiredBadge}>
                           <Text style={styles.requiredBadgeText}>Required</Text>
@@ -327,11 +436,16 @@ export default function SurveyDetails() {
                       <View style={styles.optionsContainer}>
                         {question.options.map((option, optIndex) => {
                           const isMultiple =
-                            question.type === "multiple_choice" || question.type === "checkbox";
+                            question.type === "multiple_choice" ||
+                            question.type === "checkbox";
                           return (
                             <View key={optIndex} style={styles.optionItem}>
                               <Ionicons
-                                name={isMultiple ? "checkbox-outline" : "radio-button-off"}
+                                name={
+                                  isMultiple
+                                    ? "checkbox-outline"
+                                    : "radio-button-off"
+                                }
                                 size={18}
                                 color={Colors.text.tertiary}
                               />
@@ -364,12 +478,24 @@ export default function SurveyDetails() {
                 {selectedResponse && (
                   <>
                     <View style={styles.responseMetaItem}>
-                      <Ionicons name="calendar-outline" size={14} color={Colors.text.tertiary} />
-                      <Text style={styles.responseMetaText}>{formatDate(selectedResponse.submittedAt)}</Text>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={16}
+                        color={Colors.text.tertiary}
+                      />
+                      <Text style={styles.responseMetaText}>
+                        {formatDate(selectedResponse.submittedAt)}
+                      </Text>
                     </View>
                     <View style={styles.responseMetaItem}>
-                      <Ionicons name="time-outline" size={14} color={Colors.text.tertiary} />
-                      <Text style={styles.responseMetaText}>{formatDuration(selectedResponse.durationMs)}</Text>
+                      <Ionicons
+                        name="time-outline"
+                        size={16}
+                        color={Colors.text.tertiary}
+                      />
+                      <Text style={styles.responseMetaText}>
+                        {formatDuration(selectedResponse.durationMs)}
+                      </Text>
                     </View>
                   </>
                 )}
@@ -381,21 +507,35 @@ export default function SurveyDetails() {
                 }}
                 style={styles.modalCloseButton}
               >
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={Colors.text.secondary}
+                />
               </TouchableOpacity>
             </View>
 
             {selectedResponse && (
-              <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollContent}>
+              <ScrollView
+                style={styles.modalScrollView}
+                contentContainerStyle={styles.modalScrollContent}
+              >
                 {questions.map((question, index) => {
-                  const answer = getAnswerForQuestion(selectedResponse, question._id);
+                  const answer = getAnswerForQuestion(
+                    selectedResponse,
+                    question._id
+                  );
                   return (
                     <View key={question._id} style={styles.questionCard}>
                       <View style={styles.questionHeader}>
-                        <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                        <Text style={styles.questionNumber}>
+                          Question {index + 1}
+                        </Text>
                         {question.isRequired && (
                           <View style={styles.requiredBadge}>
-                            <Text style={styles.requiredBadgeText}>Required</Text>
+                            <Text style={styles.requiredBadgeText}>
+                              Required
+                            </Text>
                           </View>
                         )}
                       </View>
@@ -408,22 +548,42 @@ export default function SurveyDetails() {
                         ) : question.options && question.options.length > 0 ? (
                           <View style={styles.answerOptions}>
                             {question.options.map((option, optIndex) => {
-                              const isSelected = answer.split(",").includes(option);
+                              const isSelected = answer
+                                .split(",")
+                                .includes(option);
                               return (
                                 <View
                                   key={optIndex}
-                                  style={[styles.answerOption, isSelected && styles.answerOptionSelected]}
+                                  style={[
+                                    styles.answerOption,
+                                    isSelected && styles.answerOptionSelected,
+                                  ]}
                                 >
                                   <Ionicons
                                     name={
-                                      question.type === "single_choice" || question.type === "dropdown"
-                                        ? isSelected ? "radio-button-on" : "radio-button-off"
-                                        : isSelected ? "checkbox" : "checkbox-outline"
+                                      question.type === "single_choice" ||
+                                      question.type === "dropdown"
+                                        ? isSelected
+                                          ? "radio-button-on"
+                                          : "radio-button-off"
+                                        : isSelected
+                                        ? "checkbox"
+                                        : "checkbox-outline"
                                     }
                                     size={16}
-                                    color={isSelected ? Colors.primary.blue : Colors.text.tertiary}
+                                    color={
+                                      isSelected
+                                        ? Colors.primary.blue
+                                        : Colors.text.tertiary
+                                    }
                                   />
-                                  <Text style={[styles.answerOptionText, isSelected && styles.answerOptionTextSelected]}>
+                                  <Text
+                                    style={[
+                                      styles.answerOptionText,
+                                      isSelected &&
+                                        styles.answerOptionTextSelected,
+                                    ]}
+                                  >
                                     {option}
                                   </Text>
                                 </View>
@@ -449,18 +609,32 @@ export default function SurveyDetails() {
           animationType="fade"
           onRequestClose={() => setShowDeleteModal(false)}
         >
-          <Pressable style={styles.deleteModalOverlay} onPress={() => setShowDeleteModal(false)}>
-            <Pressable style={styles.deleteModalContent} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={styles.deleteModalOverlay}
+            onPress={() => setShowDeleteModal(false)}
+          >
+            <Pressable
+              style={styles.deleteModalContent}
+              onPress={(e) => e.stopPropagation()}
+            >
               <View style={styles.deleteModalHeader}>
-                <Ionicons name="warning" size={48} color={Colors.semantic.error} />
+                <Ionicons
+                  name="warning"
+                  size={48}
+                  color={Colors.semantic.error}
+                />
                 <Text style={styles.deleteModalTitle}>Delete Survey</Text>
                 <Text style={styles.deleteModalText}>
-                  Are you sure you want to delete "{survey.title}"? This action cannot be undone.
+                  Are you sure you want to delete "{survey.title}"? This action
+                  cannot be undone.
                 </Text>
               </View>
 
               <View style={styles.deleteModalFooter}>
-                <TouchableOpacity style={styles.deleteModalCancelButton} onPress={() => setShowDeleteModal(false)}>
+                <TouchableOpacity
+                  style={styles.deleteModalCancelButton}
+                  onPress={() => setShowDeleteModal(false)}
+                >
                   <Text style={styles.deleteModalCancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -469,7 +643,10 @@ export default function SurveyDetails() {
                   disabled={actionLoading}
                 >
                   {actionLoading ? (
-                    <ActivityIndicator size="small" color={Colors.background.primary} />
+                    <ActivityIndicator
+                      size="small"
+                      color={Colors.background.primary}
+                    />
                   ) : (
                     <Text style={styles.deleteModalConfirmText}>Delete</Text>
                   )}
@@ -803,16 +980,21 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     flexWrap: "wrap",
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
   },
   responseMetaItem: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
   },
   responseMetaText: {
     fontFamily: Typography.fontFamily.regular,
-    fontSize: Typography.fontSize.caption,
+    fontSize: Typography.fontSize.bodySmall,
     color: Colors.text.secondary,
+    textAlign: "center",
   },
   answerContainer: {
     backgroundColor: Colors.background.tertiary,

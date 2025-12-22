@@ -82,7 +82,9 @@ instance.interceptors.response.use(
   async (error) => {
     // Handle 401 Unauthorized errors - token expired or invalid
     if (error.response?.status === 401) {
-      console.log("[API] 401 Unauthorized - clearing token and redirecting to login");
+      console.log(
+        "[API] 401 Unauthorized - clearing token and redirecting to login"
+      );
       try {
         // Clear token and user data
         await deleteToken();

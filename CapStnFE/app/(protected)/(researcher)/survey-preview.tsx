@@ -22,7 +22,7 @@ import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
-import { Colors, Typography, Spacing, Borders, Shadows, ZIndex } from "@/constants/design";
+import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
 
 export default function SurveyPreview() {
   const router = useRouter();
@@ -169,11 +169,10 @@ export default function SurveyPreview() {
 
     setActionLoading(true);
     try {
-      await updateSurvey(surveyId, {
+      const updatedSurvey = await updateSurvey(surveyId, {
         estimatedMinutes: minutes,
       });
-      // Reload survey data to ensure we have the latest value
-      await loadSurveyData();
+      setSurvey(updatedSurvey);
       setShowTimeEditModal(false);
       Alert.alert("Success", "Estimated time updated successfully!");
     } catch (err: any) {
@@ -186,7 +185,6 @@ export default function SurveyPreview() {
       setActionLoading(false);
     }
   };
-
 
   if (loading) {
     return (
@@ -228,7 +226,7 @@ export default function SurveyPreview() {
       />
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
             <Text style={styles.headerSubtitle}>Survey preview</Text>
@@ -238,13 +236,25 @@ export default function SurveyPreview() {
       </View>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavHeight + 200 }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled={true}
       >
+        {/* Preview Mode Banner */}
+        <View style={styles.previewBanner}>
+          <Ionicons name="eye-outline" size={20} color="#8A4DE8" />
+          <View style={styles.previewBannerTextContainer}>
+            <Text style={styles.previewBannerTitle}>Preview Mode</Text>
+            <Text style={styles.previewBannerSubtitle}>
+              This is how your survey will appear to respondents.
+            </Text>
+          </View>
+        </View>
+
         {/* Survey Header */}
         <View style={styles.surveyHeader}>
+          <View style={styles.surveyHeaderIcon}>
+            <Ionicons name="document-text-outline" size={32} color="#5FA9F5" />
+          </View>
           {survey.description && survey.description.trim() && (
             <Text style={styles.surveyDescription}>{survey.description}</Text>
           )}
@@ -252,26 +262,30 @@ export default function SurveyPreview() {
 
         {/* Survey Summary Card */}
         <View style={styles.summaryCard}>
-          <View style={styles.infoHeader}>
-            <Ionicons name="information-circle" size={16} color={Colors.primary.blue} />
-            <Text style={styles.infoTitle}>Survey Information</Text>
-          </View>
-          <View style={styles.infoGrid}>
-            <TouchableOpacity style={styles.infoItemEditable} onPress={openTimeEditModal} activeOpacity={0.7}>
-              <View style={styles.editableBadge}>
-                <Ionicons name="create-outline" size={10} color={Colors.text.inverse} />
-                <Text style={styles.editableBadgeText}>EDIT</Text>
-              </View>
-              <Text style={styles.infoNumber}>~{survey.estimatedMinutes}</Text>
-              <Text style={styles.infoLabel}>Minutes</Text>
-            </TouchableOpacity>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoNumber}>{questions.length}</Text>
-              <Text style={styles.infoLabel}>Questions</Text>
+          <Text style={styles.summaryTitle}>SURVEY SUMMARY</Text>
+          <View style={styles.summaryModules}>
+            <View style={styles.summaryModule}>
+              <Ionicons name="list-outline" size={24} color="#4A63D8" />
+              <Text style={styles.moduleValue}>{questions.length}</Text>
+              <Text style={styles.moduleLabel}>Questions</Text>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoNumber}>+{survey.rewardPoints}</Text>
-              <Text style={styles.infoLabel}>Points</Text>
+
+            <TouchableOpacity style={[styles.summaryModule, styles.editableModule]} onPress={openTimeEditModal}>
+              <View style={styles.timeIconContainer}>
+                <Ionicons name="time-outline" size={24} color="#2BB6E9" />
+                <View style={styles.editBadge}>
+                  <Ionicons name="pencil" size={12} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={styles.moduleValue}>~{survey.estimatedMinutes}</Text>
+              <Text style={styles.moduleLabel}>Minutes</Text>
+              <Text style={styles.editHint}>Tap to edit</Text>
+            </TouchableOpacity>
+
+            <View style={styles.summaryModule}>
+              <Ionicons name="star-outline" size={24} color="#F59E0B" />
+              <Text style={styles.moduleValue}>+{survey.rewardPoints}</Text>
+              <Text style={styles.moduleLabel}>Points</Text>
             </View>
           </View>
         </View>
@@ -340,19 +354,17 @@ export default function SurveyPreview() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + Spacing.sm }]}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
         <TouchableOpacity
           style={styles.editButton}
           onPress={handleEdit}
           disabled={actionLoading}
-          activeOpacity={0.8}
         >
           <LinearGradient
             colors={["#A23DD8", "#D13DB8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.editButtonGradient}
-            pointerEvents="none"
           >
             <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
             <Text style={styles.editButtonText}>Edit Survey</Text>
@@ -364,14 +376,12 @@ export default function SurveyPreview() {
             style={styles.publishButton}
             onPress={handlePublish}
             disabled={actionLoading || survey?.draft === "published"}
-            activeOpacity={0.8}
           >
             <LinearGradient
               colors={["#5FA9F5", "#4A63D8"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.publishButtonGradient}
-              pointerEvents="none"
             >
               {actionLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -388,7 +398,6 @@ export default function SurveyPreview() {
             style={styles.archiveButton}
             onPress={handleArchive}
             disabled={actionLoading}
-            activeOpacity={0.8}
           >
             {actionLoading ? (
               <ActivityIndicator size="small" color="#6B7280" />
@@ -463,8 +472,7 @@ export default function SurveyPreview() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
-    overflow: "visible",
+    backgroundColor: Colors.background.primary,
   },
   centerContainer: {
     flex: 1,
@@ -501,11 +509,44 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: 300,
+    paddingBottom: 200,
+  },
+  previewBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface.purpleTint,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Borders.radius.md,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  previewBannerTextContainer: {
+    flex: 1,
+  },
+  previewBannerTitle: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary.purple,
+    marginBottom: 2,
+  },
+  previewBannerSubtitle: {
+    fontSize: Typography.fontSize.caption,
+    color: Colors.primary.purple,
+    lineHeight: 16,
   },
   surveyHeader: {
     marginBottom: Spacing.xxl,
     alignItems: "center",
+  },
+  surveyHeaderIcon: {
+    width: Spacing.avatar.lg,
+    height: Spacing.avatar.lg,
+    borderRadius: Borders.radius.full,
+    backgroundColor: Colors.surface.blueTint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.md,
   },
   surveyTitle: {
     ...Typography.styles.h2,
@@ -525,176 +566,75 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   summaryCard: {
-    backgroundColor: Colors.surface.blueTint,
-    borderRadius: Spacing.card.borderRadius,
-    padding: Spacing.card.paddingSmall,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Borders.radius.lg,
+    padding: Spacing.lg,
     marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-    ...Shadows.sm,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
   },
-  infoHeader: {
+  summaryTitle: {
+    fontSize: Typography.fontSize.caption,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.tertiary,
+    letterSpacing: 1,
+    marginBottom: Spacing.md,
+    textAlign: "center",
+  },
+  summaryModules: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    justifyContent: "space-around",
   },
-  infoTitle: {
-    fontFamily: Typography.fontFamily.semiBold,
-    fontSize: Typography.fontSize.bodySmall,
+  summaryModule: {
+    alignItems: "center",
+    flex: 1,
+  },
+  moduleValue: {
+    ...Typography.styles.h2,
     color: Colors.text.primary,
+    marginTop: Spacing.xs,
   },
-  infoGrid: {
-    flexDirection: "row",
-    gap: Spacing.xs,
+  moduleLabel: {
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xxs,
   },
-  infoItem: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.background.primary,
-    borderRadius: Spacing.button.borderRadiusSmall,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  infoItemEditable: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.background.primary,
-    borderRadius: Spacing.button.borderRadiusSmall,
-    borderWidth: 2,
-    borderColor: Colors.primary.blue,
-    borderStyle: "dashed",
+  timeIconContainer: {
     position: "relative",
   },
-  editableBadge: {
+  editBadge: {
     position: "absolute",
-    top: -8,
+    bottom: -6,
     right: -8,
-    flexDirection: "row",
+    backgroundColor: "#2BB6E9",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: "center",
-    gap: 3,
-    backgroundColor: Colors.primary.blue,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: Borders.radius.full,
-    ...Shadows.sm,
-  },
-  editableBadgeText: {
-    fontFamily: Typography.fontFamily.bold,
-    fontSize: 8,
-    color: Colors.text.inverse,
-    letterSpacing: 0.5,
-  },
-  infoNumber: {
-    fontFamily: Typography.fontFamily.bold,
-    fontSize: Typography.fontSize.h4,
-    color: Colors.text.primary,
-    marginBottom: 2,
-    marginTop: 4,
-  },
-  infoLabel: {
-    fontFamily: Typography.fontFamily.medium,
-    fontSize: Typography.fontSize.label,
-    color: Colors.text.secondary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
-    alignItems: "center",
-    padding: Spacing.lg,
+    borderWidth: 2,
+    borderColor: Colors.background.secondary,
   },
-  modalContent: {
-    backgroundColor: Colors.background.primary,
-    borderRadius: Borders.radius.xxl,
-    width: "100%",
-    maxWidth: 400,
-    shadowColor: Colors.primary.blue,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
-    overflow: "hidden",
+  editableModule: {
+    backgroundColor: "rgba(43, 182, 233, 0.08)",
+    borderWidth: 1.5,
+    borderColor: "rgba(43, 182, 233, 0.4)",
+    borderStyle: "dashed",
+    borderRadius: Borders.radius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    marginHorizontal: -Spacing.xs,
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: Spacing.lg,
-    borderBottomWidth: Borders.width.thick,
-    borderBottomColor: Colors.border.default,
-    backgroundColor: Colors.background.secondary,
-  },
-  modalTitle: {
-    ...Typography.styles.h3,
-    color: Colors.text.primary,
-    letterSpacing: -0.3,
-  },
-  modalBody: {
-    padding: Spacing.lg,
-  },
-  modalLabel: {
-    ...Typography.styles.label,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.secondary,
-    marginBottom: Spacing.sm,
-  },
-  modalInput: {
-    backgroundColor: Colors.background.secondary,
-    borderWidth: Borders.width.thick,
-    borderColor: Colors.border.default,
-    borderRadius: Borders.radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-    fontSize: Typography.fontSize.body,
-    color: Colors.text.primary,
+  editHint: {
+    fontSize: Typography.fontSize.caption - 1,
+    color: "#2BB6E9",
+    marginTop: Spacing.xxs,
     fontWeight: Typography.fontWeight.medium,
-  },
-  modalFooter: {
-    flexDirection: "row",
-    padding: Spacing.lg,
-    borderTopWidth: Borders.width.thick,
-    borderTopColor: Colors.border.default,
-    gap: Spacing.sm,
-    backgroundColor: Colors.background.secondary,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Borders.radius.lg,
-    alignItems: "center",
-    backgroundColor: Colors.background.tertiary,
-    borderWidth: Borders.width.thick,
-    borderColor: Colors.border.default,
-  },
-  modalCancelButtonText: {
-    fontSize: Typography.fontSize.body,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.secondary,
-  },
-  modalSaveButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Borders.radius.lg,
-    alignItems: "center",
-    backgroundColor: Colors.primary.blue,
-  },
-  modalSaveButtonText: {
-    fontSize: Typography.fontSize.body,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.inverse,
   },
   fixedHeader: {
     backgroundColor: Colors.background.primary,
     zIndex: 10,
     paddingBottom: 0,
-    borderTopWidth: 0,
     borderBottomLeftRadius: Borders.radius.xl,
     borderBottomRightRadius: Borders.radius.xl,
     borderBottomWidth: Borders.width.default,
@@ -864,19 +804,12 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     padding: Spacing.lg,
     paddingTop: Spacing.md,
     backgroundColor: Colors.background.primary,
-    borderTopWidth: Borders.width.default,
+    borderTopWidth: Borders.width.thick,
     borderTopColor: Colors.border.default,
-    overflow: "visible",
     ...Shadows.lg,
-    zIndex: 1000,
-    elevation: 10,
   },
   editButton: {
     borderRadius: Borders.radius.lg,
@@ -940,5 +873,94 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.body,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.tertiary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.xxl,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: Colors.primary.blue,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 12,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderBottomWidth: Borders.width.thick,
+    borderBottomColor: Colors.border.default,
+    backgroundColor: Colors.background.secondary,
+  },
+  modalTitle: {
+    ...Typography.styles.h3,
+    color: Colors.text.primary,
+    letterSpacing: -0.3,
+  },
+  modalBody: {
+    padding: Spacing.lg,
+  },
+  modalLabel: {
+    ...Typography.styles.label,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
+  },
+  modalInput: {
+    backgroundColor: Colors.background.secondary,
+    borderWidth: Borders.width.thick,
+    borderColor: Colors.border.default,
+    borderRadius: Borders.radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    padding: Spacing.lg,
+    borderTopWidth: Borders.width.thick,
+    borderTopColor: Colors.border.default,
+    gap: Spacing.sm,
+    backgroundColor: Colors.background.secondary,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Borders.radius.lg,
+    alignItems: "center",
+    backgroundColor: Colors.background.tertiary,
+    borderWidth: Borders.width.thick,
+    borderColor: Colors.border.default,
+  },
+  modalCancelButtonText: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.secondary,
+  },
+  modalSaveButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Borders.radius.lg,
+    alignItems: "center",
+    backgroundColor: Colors.primary.blue,
+  },
+  modalSaveButtonText: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
   },
 });

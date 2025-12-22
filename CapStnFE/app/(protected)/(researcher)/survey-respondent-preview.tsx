@@ -8,7 +8,10 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -102,9 +105,16 @@ export default function SurveyRespondentPreview() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={Colors.semantic.error} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={48}
+            color={Colors.semantic.error}
+          />
           <Text style={styles.errorText}>{error || "Survey not found"}</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.retryButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.retryButton}
+          >
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -114,10 +124,13 @@ export default function SurveyRespondentPreview() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+      <SafeAreaView
+        style={styles.container}
+        edges={["bottom", "left", "right"]}
+      >
         {/* Gradient Background */}
         <LinearGradient
-          colors={['#FFFFFF', '#F8FAFF', '#F5F3FF']}
+          colors={["#FFFFFF", "#F8FAFF", "#F5F3FF"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
@@ -126,7 +139,9 @@ export default function SurveyRespondentPreview() {
         <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
           <View style={styles.headerTop}>
             <View style={styles.headerLeft}>
-              <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
+              <Text style={styles.headerTitle}>
+                {survey?.title || "Survey"}
+              </Text>
             </View>
             <Image
               source={require("@/assets/title.png")}
@@ -165,7 +180,9 @@ export default function SurveyRespondentPreview() {
                   )}
                 </View>
                 <View style={styles.creatorDetails}>
-                  <Text style={styles.creatorName}>{creator.name || "Unknown User"}</Text>
+                  <Text style={styles.creatorName}>
+                    {creator.name || "Unknown User"}
+                  </Text>
                   <Text style={styles.creatorLabel}>Survey Creator</Text>
                 </View>
               </View>
@@ -190,18 +207,27 @@ export default function SurveyRespondentPreview() {
 
                 {question.type === "text" ? (
                   <View style={styles.textResponseField}>
-                    <Ionicons name="create-outline" size={16} color={Colors.text.tertiary} />
+                    <Ionicons
+                      name="create-outline"
+                      size={16}
+                      color={Colors.text.tertiary}
+                    />
                     <Text style={styles.textResponseText}>Text response</Text>
                   </View>
                 ) : question.options && question.options.length > 0 ? (
                   <View style={styles.optionsContainer}>
                     {question.options.slice(0, 4).map((option, optIndex) => {
                       const isMultiple =
-                        question.type === "multiple_choice" || question.type === "checkbox";
+                        question.type === "multiple_choice" ||
+                        question.type === "checkbox";
                       return (
                         <View key={optIndex} style={styles.optionItem}>
                           <Ionicons
-                            name={isMultiple ? "checkbox-outline" : "radio-button-off"}
+                            name={
+                              isMultiple
+                                ? "checkbox-outline"
+                                : "radio-button-off"
+                            }
                             size={16}
                             color={Colors.text.tertiary}
                           />
@@ -232,10 +258,16 @@ export default function SurveyRespondentPreview() {
         </ScrollView>
 
         {/* Fixed Info Section */}
-        <View style={[styles.fixedInfoSection, { bottom: bottomNavHeight + 80 }]}>
+        <View
+          style={[styles.fixedInfoSection, { bottom: bottomNavHeight + 80 }]}
+        >
           <View style={styles.infoCard}>
             <View style={styles.infoHeader}>
-              <Ionicons name="information-circle" size={16} color={Colors.primary.blue} />
+              <Ionicons
+                name="information-circle"
+                size={16}
+                color={Colors.primary.blue}
+              />
               <Text style={styles.infoTitle}>Survey Information</Text>
             </View>
             <View style={styles.infoGrid}>
@@ -252,7 +284,9 @@ export default function SurveyRespondentPreview() {
                 <Text style={styles.infoLabel}>Optional</Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoNumber}>~{survey.estimatedMinutes}</Text>
+                <Text style={styles.infoNumber}>
+                  ~{survey.estimatedMinutes}
+                </Text>
                 <Text style={styles.infoLabel}>Minutes</Text>
               </View>
             </View>
@@ -260,8 +294,17 @@ export default function SurveyRespondentPreview() {
         </View>
 
         {/* Fixed Start Button */}
-        <View style={[styles.fixedButtonContainer, { bottom: bottomNavHeight + 16 }]}>
-          <TouchableOpacity style={styles.startButton} onPress={handleStartSurvey} activeOpacity={0.9}>
+        <View
+          style={[
+            styles.fixedButtonContainer,
+            { bottom: bottomNavHeight + 16 },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={handleStartSurvey}
+            activeOpacity={0.9}
+          >
             <LinearGradient
               colors={[Colors.accent.sky, Colors.primary.blue]}
               start={{ x: 0, y: 0 }}
@@ -269,7 +312,11 @@ export default function SurveyRespondentPreview() {
               style={styles.startButtonGradient}
             >
               <Text style={styles.startButtonText}>Start Survey</Text>
-              <Ionicons name="arrow-forward" size={20} color={Colors.background.primary} />
+              <Ionicons
+                name="arrow-forward"
+                size={20}
+                color={Colors.background.primary}
+              />
             </LinearGradient>
           </TouchableOpacity>
         </View>

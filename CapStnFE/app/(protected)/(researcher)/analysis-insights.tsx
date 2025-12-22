@@ -9,7 +9,10 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState, useCallback } from "react";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import Animated, {
@@ -29,7 +32,13 @@ import {
 } from "@/api/ai";
 import { getSurveyById } from "@/api/surveys";
 import { AnalysisSkeleton } from "@/components/Skeleton";
-import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Borders,
+  Shadows,
+} from "@/constants/design";
 
 interface SurveyWithName extends SurveySummary {
   surveyTitle: string;
@@ -284,7 +293,9 @@ export default function AnalysisInsights() {
       <View style={styles.contentContainer}>
         {/* Fixed Header Section */}
         <Animated.View style={[styles.fixedHeader, headerAnimatedStyle]}>
-          <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+          <View
+            style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
+          >
             <Text style={styles.title}>Insights</Text>
             <View style={styles.logoContainer}>
               <Image
@@ -318,7 +329,7 @@ export default function AnalysisInsights() {
               />
               <StatCard
                 icon="people"
-                label="Responses"
+                label="Responses Used"
                 value={totalResponses}
                 color="#5FA9F5"
               />

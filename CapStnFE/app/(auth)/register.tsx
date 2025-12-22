@@ -153,7 +153,7 @@ export default function Register() {
           enableAutomaticScroll={true}
           extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
           extraHeight={120}
-          scrollEnabled={false}
+          scrollEnabled={true}
         >
             <View style={styles.content}>
               {/* Branding Section */}
@@ -424,6 +424,7 @@ export default function Register() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: Colors.background.secondary,
   },
   gradientContainer: {
     flex: 1,
@@ -692,10 +693,12 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalBody: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
   },
   modalScrollContent: {
     paddingHorizontal: Spacing.page.paddingHorizontal,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
   },
   modalSectionTitle: {

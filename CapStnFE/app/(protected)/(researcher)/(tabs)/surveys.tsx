@@ -176,12 +176,25 @@ export default function ResearcherSurveys() {
     const surveysWithMetadata = await Promise.all(
       available.map(async (survey) => {
         try {
-          const questions = await getQuestionsBySurveyId(survey._id);
+          const [questions, responses] = await Promise.all([
+            getQuestionsBySurveyId(survey._id),
+            getResponsesBySurveyId(survey._id),
+          ]);
           const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
-          return { ...survey, questionCount: questions.length, isAnswered };
+          return { 
+            ...survey, 
+            questionCount: questions.length, 
+            responseCount: responses.length,
+            isAnswered 
+          };
         } catch (err) {
           const isAnswered = userResponses.some((response) => response.surveyId === survey._id);
-          return { ...survey, questionCount: 0, isAnswered };
+          return { 
+            ...survey, 
+            questionCount: 0, 
+            responseCount: 0,
+            isAnswered 
+          };
         }
       })
     );

@@ -15,4 +15,5 @@ export { SurveyDetailsSkeleton } from "./SurveyDetailsSkeleton";
 export { CreateSurveySkeleton } from "./CreateSurveySkeleton";
 export { AnalysisSkeleton } from "./AnalysisSkeleton";
 export { SightAISkeleton } from "./SightAISkeleton";
+export { SurveyViewSkeleton } from "./SurveyViewSkeleton";
 

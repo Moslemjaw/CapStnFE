@@ -212,7 +212,7 @@ export default function Login() {
       enableAutomaticScroll={true}
       extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
       extraHeight={120}
-      scrollEnabled={false}
+          scrollEnabled={true}
     >
         <View style={styles.contentContainer}>
           {/* Branding Section */}
@@ -403,6 +403,7 @@ export default function Login() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: "#EEF5FF",
   },
   gradientContainer: {
     flex: 1,
