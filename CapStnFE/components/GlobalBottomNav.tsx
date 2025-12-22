@@ -94,9 +94,9 @@ export default function GlobalBottomNav() {
 
   const activeTab = getActiveTab();
   // Check if we're on any SightAI-related page
-  const isSightAIActive =
+  const isSightAIActive: boolean =
     activeTab === "sightai" ||
-    (pathname && (
+    (pathname !== null && pathname !== undefined && (
       pathname.includes("/analysis-loading") ||
       pathname.includes("/analysis-insights") ||
       pathname.includes("/mass-analyses") ||
@@ -424,18 +424,15 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       targetState = 'idle';
     }
 
-    if (targetState === 'analyzing' && 
-        currentAnimationState.current === 'analyzing' && 
-        analyzingAnimationActive.current &&
-        previousIsAnalyzing.current === isAnalyzing) {
-      return;
-    }
-
-    previousIsAnalyzing.current = isAnalyzing;
+    // Check if we need to start/restart the analyzing animation
+    // This ensures rotation starts even if isAnalyzing is already true on mount
+    const needsAnalyzingAnimation = targetState === 'analyzing' && 
+      (!analyzingAnimationActive.current || currentAnimationState.current !== 'analyzing');
 
     const stateChanged = currentAnimationState.current !== targetState;
     
-    if (stateChanged) {
+    // If state changed or we need to ensure analyzing animation is running, proceed
+    if (stateChanged || needsAnalyzingAnimation) {
       cancelAnimation(jellyScaleX);
       cancelAnimation(jellyScaleY);
       cancelAnimation(shadowOpacity);
@@ -449,26 +446,59 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       return;
     }
 
+    previousIsAnalyzing.current = isAnalyzing;
     currentAnimationState.current = targetState;
 
     if (isAnalysisComplete) {
-      // Completion celebration - smooth burst then settle
+      // Completion celebration - smooth burst then aggressive pulsing for 3 seconds with very bright glow
       shadowOpacity.value = withSequence(
         withTiming(1.0, { duration: 300, easing: EASING.easeOut }),
-        withDelay(400, withTiming(0.5, { duration: 600, easing: EASING.smooth }))
+        withRepeat(
+          withSequence(
+            withTiming(1.0, { duration: 150, easing: EASING.easeOut }),
+            withTiming(0.7, { duration: 150, easing: EASING.easeIn })
+          ),
+          Math.floor(3000 / 300), // Pulse for 3 seconds (3000ms / 300ms per cycle)
+          false
+        ),
+        withTiming(0.5, { duration: 600, easing: EASING.smooth })
       );
       shadowRadius.value = withSequence(
-        withTiming(45, { duration: 300, easing: EASING.easeOut }),
-        withDelay(400, withTiming(20, { duration: 600, easing: EASING.smooth }))
+        withTiming(160, { duration: 300, easing: EASING.easeOut }),
+        withRepeat(
+          withSequence(
+            withTiming(160, { duration: 150, easing: EASING.easeOut }),
+            withTiming(120, { duration: 150, easing: EASING.easeIn })
+          ),
+          Math.floor(3000 / 300), // Pulse for 3 seconds
+          false
+        ),
+        withTiming(30, { duration: 600, easing: EASING.smooth })
       );
       jellyScaleX.value = withSequence(
         withTiming(1.12, { duration: 250, easing: EASING.organic }),
         withTiming(0.95, { duration: 200, easing: EASING.easeInOut }),
+        withRepeat(
+          withSequence(
+            withTiming(1.15, { duration: 150, easing: EASING.easeOut }),
+            withTiming(0.92, { duration: 150, easing: EASING.easeIn })
+          ),
+          Math.floor(3000 / 300), // Aggressive pulse for 3 seconds
+          false
+        ),
         withTiming(1.0, { duration: 350, easing: EASING.smooth })
       );
       jellyScaleY.value = withSequence(
         withTiming(1.12, { duration: 250, easing: EASING.organic }),
         withTiming(0.95, { duration: 200, easing: EASING.easeInOut }),
+        withRepeat(
+          withSequence(
+            withTiming(1.15, { duration: 150, easing: EASING.easeOut }),
+            withTiming(0.92, { duration: 150, easing: EASING.easeIn })
+          ),
+          Math.floor(3000 / 300), // Aggressive pulse for 3 seconds
+          false
+        ),
         withTiming(1.0, { duration: 350, easing: EASING.smooth })
       );
       analyzingAnimationActive.current = false;
@@ -478,10 +508,10 @@ function AnimatedSightAILogo({ isFocused }: { isFocused: boolean }) {
       analyzingAnimationActive.current = true;
       const cfg = ANIMATION_CONFIG.analyzing;
       
-      // Very fast continuous rotation - 360 degrees in 5ms = 200 rotations per second
+      // Continuous rotation - 360 degrees in 186ms = ~5.38 rotations per second (40% faster)
       // Modulo in logoAnimatedStyle wraps the value for continuous appearance
       rotation.value = withRepeat(
-        withTiming(360, { duration: 5, easing: Easing.linear }),
+        withTiming(360, { duration: 186, easing: Easing.linear }),
         -1,
         false
       );

@@ -153,7 +153,7 @@ export default function ResearcherHome() {
               onPress={() => router.push("/(protected)/(researcher)/(tabs)/profile" as any)}
               activeOpacity={0.7}
             >
-              <Ionicons name="diamond-outline" size={24} color={Colors.primary.pink} />
+              <Ionicons name="medal-outline" size={24} color={Colors.primary.pink} />
               <Text style={[styles.statValue, { color: Colors.primary.pink }]}>{stats.totalPoints}</Text>
               <Text style={styles.statLabel}>Points</Text>
               <View style={styles.statArrow}>

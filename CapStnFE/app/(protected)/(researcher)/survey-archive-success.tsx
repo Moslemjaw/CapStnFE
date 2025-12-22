@@ -7,8 +7,9 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Animated,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -17,6 +18,62 @@ import { getSurveyById, publishSurvey } from "@/api/surveys";
 import { Survey } from "@/api/surveys";
 import { FadeInView } from "@/components/FadeInView";
 import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
+
+// Animated Checkmark Component
+function AnimatedCheckmark({ progress }: { progress: Animated.Value }) {
+  // Create a drawing effect: start small, grow, then complete
+  const scale = progress.interpolate({
+    inputRange: [0, 0.5, 0.8, 1],
+    outputRange: [0, 0.4, 0.9, 1],
+  });
+
+  const opacity = progress.interpolate({
+    inputRange: [0, 0.4, 0.7, 1],
+    outputRange: [0, 0.3, 0.8, 1],
+  });
+
+  // Rotate from bottom-left to final position (drawing motion)
+  const rotate = progress.interpolate({
+    inputRange: [0, 0.6, 1],
+    outputRange: ['-90deg', '-20deg', '0deg'],
+  });
+
+  const circleScale = progress.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 0.8, 1],
+  });
+
+  const circleOpacity = progress.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0.5, 1],
+  });
+
+  return (
+    <View style={styles.checkmarkContainer}>
+      <Animated.View
+        style={[
+          styles.checkmarkWrapper,
+          {
+            opacity,
+            transform: [{ scale }, { rotate }],
+          },
+        ]}
+      >
+        {/* Circle background */}
+        <Animated.View
+          style={[
+            styles.checkmarkCircle,
+            {
+              opacity: circleOpacity,
+              transform: [{ scale: circleScale }],
+            },
+          ]}
+        />
+        <Ionicons name="archive" size={58} color="#FFFFFF" style={styles.checkmarkIcon} />
+      </Animated.View>
+    </View>
+  );
+}
 
 export default function SurveyArchiveSuccess() {
   const router = useRouter();
@@ -31,12 +88,29 @@ export default function SurveyArchiveSuccess() {
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const checkmarkProgress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (surveyId) {
       loadSurvey();
     }
   }, [surveyId]);
+
+  useEffect(() => {
+    // Animate checkmark drawing effect with easing
+    Animated.sequence([
+      Animated.timing(checkmarkProgress, {
+        toValue: 0.6,
+        duration: 400,
+        useNativeDriver: false,
+      }),
+      Animated.timing(checkmarkProgress, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, []);
 
   const loadSurvey = async () => {
     if (!surveyId) return;
@@ -99,115 +173,115 @@ export default function SurveyArchiveSuccess() {
       />
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/title.png")}
-              style={styles.titleImage}
-              resizeMode="contain"
-            />
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
+          <View style={styles.headerRow}>
+            <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
           </View>
-          <Text style={styles.headerTitle}>Success</Text>
-          <Text style={styles.headerSubtitle}>
-            Your survey has been archived
-          </Text>
         </View>
       </View>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Success Icon */}
-        <View style={styles.iconContainer}>
-          <LinearGradient
-            colors={["#5FA9F5", "#4A63D8", "#8A4DE8"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconGradient}
-          >
-            <Ionicons name="archive" size={60} color="#FFFFFF" />
-          </LinearGradient>
-        </View>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {/* Title */}
+          <Text style={styles.title}>Survey Archived!</Text>
 
-        {/* Success Message */}
-        <Text style={styles.title}>Survey Archived!</Text>
-        <Text style={styles.subtitle}>
-          Your survey has been successfully saved to your archives. You can
-          publish it anytime.
-        </Text>
+          {/* Points Earned Card */}
+          <View style={styles.pointsCard}>
+            <LinearGradient
+              colors={["#FF6FAE", "#8A4DE8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.pointsCardGradient}
+            >
+              <AnimatedCheckmark progress={checkmarkProgress} />
+              <Text style={styles.pointsValue}>{survey?.title || "Survey"}</Text>
+              <Text style={styles.pointsSubtext}>Saved to your archives</Text>
+            </LinearGradient>
+          </View>
 
-        {/* Survey Summary Card */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>SURVEY SUMMARY</Text>
-          <Text style={styles.surveyTitleText}>
-            {survey?.title || "Survey"}
-          </Text>
-
-          <View style={styles.summaryModules}>
-            <View style={styles.summaryModule}>
-              <Ionicons name="list-outline" size={24} color="#4A63D8" />
-              <Text style={styles.moduleValue}>{questionCount || 0}</Text>
-              <Text style={styles.moduleLabel}>Questions</Text>
+          {/* Completion Stats Card */}
+          <View style={styles.statsCard}>
+            <View style={styles.statsHeader}>
+              <Ionicons name="bar-chart-outline" size={20} color="#4A63D8" />
+              <Text style={styles.statsTitle}>Survey Summary</Text>
             </View>
 
-            <View style={styles.summaryModule}>
-              <Ionicons name="time-outline" size={24} color="#2BB6E9" />
-              <Text style={styles.moduleValue}>~{estimatedMinutes || 0}</Text>
-              <Text style={styles.moduleLabel}>Minutes</Text>
+            <View style={styles.statsItem}>
+              <Ionicons name="list-outline" size={20} color="#4A63D8" />
+              <Text style={styles.statsLabel}>Questions</Text>
+              <View style={styles.statsValueContainer}>
+                <Text style={styles.statsValue}>
+                  {questionCount || 0}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.summaryModule}>
-              <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              <Text style={styles.moduleValue}>+{points || 0}</Text>
-              <Text style={styles.moduleLabel}>Points</Text>
+            <View style={styles.statsItem}>
+              <Ionicons name="time-outline" size={20} color="#8A4DE8" />
+              <Text style={styles.statsLabel}>Estimated Time</Text>
+              <View style={styles.statsValueContainer}>
+                <Text style={styles.statsValue}>
+                  ~{estimatedMinutes || 0} min
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.statsItem}>
+              <Ionicons name="star-outline" size={20} color="#8A4DE8" />
+              <Text style={styles.statsLabel}>Points</Text>
+              <View style={styles.statsValueContainer}>
+                <Text style={styles.statsValue}>
+                  +{points || 0}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Action Buttons */}
-        <TouchableOpacity
-          style={styles.publishButton}
-          onPress={handlePublishNow}
-          disabled={actionLoading}
-        >
-          <LinearGradient
-            colors={["#A23DD8", "#D13DB8"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.publishButtonGradient}
+          {/* Action Buttons */}
+          <TouchableOpacity
+            style={[styles.primaryButton, actionLoading && styles.buttonDisabled]}
+            onPress={handlePublishNow}
+            disabled={actionLoading}
+            activeOpacity={0.8}
           >
-            {actionLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Ionicons
-                  name="cloud-upload-outline"
-                  size={20}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.publishButtonText}>Publish Now</Text>
-              </>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={actionLoading ? ["#9CA3AF", "#6B7280", "#4B5563"] : ["#5FA9F5", "#4A63D8", "#8A4DE8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.primaryButtonGradient}
+            >
+              {actionLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Text style={styles.primaryButtonText}>Publish Now</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={handleEditSurvey}
-          disabled={actionLoading}
-        >
-          <Ionicons name="pencil-outline" size={18} color="#6B7280" />
-          <Text style={styles.editButtonText}>Edit Survey</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.secondaryButton, actionLoading && styles.buttonDisabled]}
+            onPress={handleEditSurvey}
+            disabled={actionLoading}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="pencil-outline" size={20} color={actionLoading ? "#9CA3AF" : "#222222"} />
+            <Text style={[styles.secondaryButtonText, actionLoading && styles.buttonTextDisabled]}>Edit Survey</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.backLink}
-          onPress={handleGoToResearch}
-          disabled={actionLoading}
-        >
-          <Text style={styles.backLinkText}>Back to Research</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.backLink}
+            onPress={handleGoToResearch}
+            disabled={actionLoading}
+            activeOpacity={0.6}
+          >
+            <Text style={[styles.backLinkText, actionLoading && styles.buttonTextDisabled]}>Back to Research</Text>
+          </TouchableOpacity>
+
+          {/* Spacer for bottom nav */}
+          <View style={styles.bottomSpacer} />
+        </View>
       </ScrollView>
     </SafeAreaView>
     </FadeInView>
@@ -223,181 +297,221 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
     zIndex: 10,
     paddingBottom: 0,
-    borderBottomLeftRadius: Borders.radius.xl,
-    borderBottomRightRadius: Borders.radius.xl,
     borderBottomWidth: Borders.width.default,
     borderBottomColor: Colors.border.light,
-    ...Shadows.md,
   },
   header: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.md,
+    padding: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
-  logoContainer: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: Spacing.md,
+    justifyContent: "flex-end",
   },
   titleImage: {
     height: Spacing.xl,
-    width: 92,
-    marginLeft: -Spacing.xs,
-    marginTop: -Spacing.xxs,
-  },
-  headerTitle: {
-    ...Typography.styles.h1,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-  },
-  headerSubtitle: {
-    ...Typography.styles.body,
-    color: Colors.text.secondary,
+    width: 94,
   },
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    padding: Spacing.lg,
+  content: {
+    padding: Spacing.md,
     alignItems: "center",
-    paddingBottom: 100,
-  },
-  iconContainer: {
-    marginBottom: Spacing.xxl,
-  },
-  iconGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: Borders.radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary.blue,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
   title: {
     ...Typography.styles.h2,
     color: Colors.text.primary,
-    marginBottom: Spacing.sm,
-    textAlign: "center",
-  },
-  subtitle: {
-    ...Typography.styles.body,
-    color: Colors.text.secondary,
-    textAlign: "center",
-    marginBottom: Spacing.xxl,
-    lineHeight: Typography.lineHeight.body,
-    paddingHorizontal: Spacing.xs,
-  },
-  summaryCard: {
-    backgroundColor: Colors.background.secondary,
-    borderRadius: Borders.radius.lg,
-    padding: Spacing.lg,
-    width: "100%",
-    marginBottom: Spacing.xxl,
-    borderWidth: Borders.width.default,
-    borderColor: Colors.border.default,
-  },
-  summaryTitle: {
-    fontSize: Typography.fontSize.caption,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.tertiary,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: Spacing.sm,
-    textAlign: "center",
-  },
-  surveyTitleText: {
-    ...Typography.styles.h3,
-    color: Colors.text.primary,
-    marginBottom: Spacing.lg,
-    textAlign: "center",
-  },
-  summaryModules: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  summaryModule: {
-    flex: 1,
-    backgroundColor: Colors.background.primary,
-    borderRadius: Borders.radius.md,
-    padding: Spacing.md,
-    alignItems: "center",
-    borderWidth: Borders.width.default,
-    borderColor: Colors.border.default,
-    ...Shadows.xs,
-  },
-  timeIconContainer: {
-    position: "relative",
     marginBottom: Spacing.xs,
+    textAlign: "center",
   },
-  timeEditIcon: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-  },
-  moduleValue: {
-    ...Typography.styles.h2,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xxs,
-  },
-  moduleLabel: {
-    fontSize: Typography.fontSize.caption,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text.tertiary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  publishButton: {
+  pointsCard: {
+    width: "100%",
     borderRadius: Borders.radius.lg,
     overflow: "hidden",
+    marginBottom: Spacing.md,
+    ...Shadows.lg,
+  },
+  pointsCardGradient: {
+    padding: Spacing.md,
+    alignItems: "center",
+  },
+  checkmarkContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xs,
+    width: 80,
+    height: 80,
+  },
+  checkmarkWrapper: {
+    width: 80,
+    height: 80,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  checkmarkCircle: {
+    position: "absolute",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.4)",
+  },
+  checkmarkIcon: {
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+    zIndex: 1,
+  },
+  pointsLabel: {
+    fontSize: Typography.fontSize.label,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.inverse,
+    marginTop: Spacing.xs,
+    letterSpacing: 1,
+  },
+  pointsValue: {
+    fontSize: Typography.fontSize.display,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
+    marginTop: Spacing.xxs,
+    textAlign: "center",
+  },
+  pointsSubtext: {
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.inverse,
+    opacity: 0.9,
+    marginTop: 2,
+  },
+  statsCard: {
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.lg,
+    padding: Spacing.md,
     width: "100%",
     marginBottom: Spacing.sm,
-    shadowColor: Colors.primary.purple,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    ...Shadows.sm,
+  },
+  statsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  statsTitle: {
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
+  },
+  statsItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  statsLabel: {
+    flex: 1,
+    ...Typography.styles.body,
+    color: Colors.text.secondary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  statsValueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  statsValue: {
+    ...Typography.styles.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  greatJobCard: {
+    backgroundColor: Colors.surface.purpleTint,
+    borderRadius: Borders.radius.md,
+    padding: Spacing.sm + 2,
+    width: "100%",
+    marginBottom: Spacing.md,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+  },
+  greatJobTextContainer: {
+    flex: 1,
+  },
+  greatJobTitle: {
+    ...Typography.styles.h4,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  greatJobText: {
+    fontSize: Typography.fontSize.caption,
+    color: Colors.text.secondary,
+    lineHeight: 18,
+  },
+  primaryButton: {
+    width: "100%",
+    borderRadius: Borders.radius.lg,
+    overflow: "hidden",
+    marginBottom: Spacing.xs,
+    shadowColor: Colors.primary.blue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 6,
+    opacity: 1,
   },
-  publishButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xxl,
-    gap: Spacing.xs,
-  },
-  publishButtonText: {
-    fontSize: Typography.fontSize.body,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.inverse,
-  },
-  editButton: {
+  primaryButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Borders.radius.lg,
-    backgroundColor: Colors.background.primary,
-    borderWidth: Borders.width.thick,
-    borderColor: Colors.border.default,
-    width: "100%",
-    marginBottom: Spacing.md,
     gap: Spacing.xs,
   },
-  editButtonText: {
+  primaryButtonText: {
     fontSize: Typography.fontSize.body,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.tertiary,
+    color: Colors.text.inverse,
+  },
+  secondaryButton: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.background.primary,
+    borderWidth: Borders.width.default,
+    borderColor: Colors.border.default,
+    borderRadius: Borders.radius.lg,
+    paddingVertical: Spacing.sm + 2,
+    gap: Spacing.xs,
+    marginBottom: Spacing.md,
+    opacity: 1,
+  },
+  secondaryButtonText: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.primary,
   },
   backLink: {
     paddingVertical: Spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   backLinkText: {
     fontSize: Typography.fontSize.body,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.primary.blue,
+  },
+  bottomSpacer: {
+    height: 100,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonTextDisabled: {
+    opacity: 0.6,
   },
 });

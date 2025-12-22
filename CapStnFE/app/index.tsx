@@ -30,7 +30,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const FEATURE_CARDS = [
   {
-    icon: "trophy-outline",
+    icon: "medal-outline",
     headline: "Answer surveys. Earn points.",
     body: "Earn points for every question you answer",
   },

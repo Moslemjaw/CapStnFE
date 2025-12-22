@@ -186,6 +186,7 @@ export default function SurveyPreview() {
     }
   };
 
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -216,7 +217,7 @@ export default function SurveyPreview() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       {/* Gradient Background */}
       <LinearGradient
         colors={[Colors.background.primary, Colors.surface.blueTint, Colors.surface.purpleTint]}
@@ -226,7 +227,7 @@ export default function SurveyPreview() {
       />
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
-        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
             <Text style={styles.headerSubtitle}>Survey preview</Text>
@@ -239,22 +240,8 @@ export default function SurveyPreview() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Preview Mode Banner */}
-        <View style={styles.previewBanner}>
-          <Ionicons name="eye-outline" size={20} color="#8A4DE8" />
-          <View style={styles.previewBannerTextContainer}>
-            <Text style={styles.previewBannerTitle}>Preview Mode</Text>
-            <Text style={styles.previewBannerSubtitle}>
-              This is how your survey will appear to respondents.
-            </Text>
-          </View>
-        </View>
-
         {/* Survey Header */}
         <View style={styles.surveyHeader}>
-          <View style={styles.surveyHeaderIcon}>
-            <Ionicons name="document-text-outline" size={32} color="#5FA9F5" />
-          </View>
           {survey.description && survey.description.trim() && (
             <Text style={styles.surveyDescription}>{survey.description}</Text>
           )}
@@ -262,34 +249,26 @@ export default function SurveyPreview() {
 
         {/* Survey Summary Card */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>SURVEY SUMMARY</Text>
-          <View style={styles.summaryModules}>
-            <View style={styles.summaryModule}>
-              <Ionicons name="list-outline" size={24} color="#4A63D8" />
-              <Text style={styles.moduleValue}>{questions.length}</Text>
-              <Text style={styles.moduleLabel}>Questions</Text>
-            </View>
-
-            <TouchableOpacity style={[styles.summaryModule, styles.editableModule]} onPress={openTimeEditModal} activeOpacity={0.7}>
-              <View style={styles.timeEditHeader}>
-                <Ionicons name="create-outline" size={14} color="#2BB6E9" />
-                <Text style={styles.editableLabel}>EDITABLE</Text>
+          <View style={styles.infoHeader}>
+            <Ionicons name="information-circle" size={16} color={Colors.primary.blue} />
+            <Text style={styles.infoTitle}>Survey Information</Text>
+          </View>
+          <View style={styles.infoGrid}>
+            <TouchableOpacity style={styles.infoItemEditable} onPress={openTimeEditModal} activeOpacity={0.7}>
+              <View style={styles.editableBadge}>
+                <Ionicons name="create-outline" size={10} color={Colors.text.inverse} />
+                <Text style={styles.editableBadgeText}>EDIT</Text>
               </View>
-              <View style={styles.timeIconContainer}>
-                <Ionicons name="time-outline" size={24} color="#2BB6E9" />
-              </View>
-              <Text style={styles.moduleValue}>~{survey.estimatedMinutes}</Text>
-              <Text style={styles.moduleLabel}>Minutes</Text>
-              <View style={styles.editButtonIndicator}>
-                <Ionicons name="pencil" size={12} color="#FFFFFF" />
-                <Text style={styles.editButtonText}>Tap to Edit</Text>
-              </View>
+              <Text style={styles.infoNumber}>~{survey.estimatedMinutes}</Text>
+              <Text style={styles.infoLabel}>Minutes</Text>
             </TouchableOpacity>
-
-            <View style={styles.summaryModule}>
-              <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              <Text style={styles.moduleValue}>+{survey.rewardPoints}</Text>
-              <Text style={styles.moduleLabel}>Points</Text>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoNumber}>{questions.length}</Text>
+              <Text style={styles.infoLabel}>Questions</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoNumber}>+{survey.rewardPoints}</Text>
+              <Text style={styles.infoLabel}>Points</Text>
             </View>
           </View>
         </View>
@@ -358,7 +337,7 @@ export default function SurveyPreview() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + insets.bottom + Spacing.sm, bottom: -insets.bottom }]} pointerEvents="box-none">
         <TouchableOpacity
           style={styles.editButton}
           onPress={handleEdit}
@@ -375,11 +354,12 @@ export default function SurveyPreview() {
           </LinearGradient>
         </TouchableOpacity>
 
-        <View style={styles.buttonRow}>
+        <View style={styles.buttonRow} pointerEvents="auto">
           <TouchableOpacity
             style={styles.publishButton}
             onPress={handlePublish}
             disabled={actionLoading || survey?.draft === "published"}
+            activeOpacity={0.8}
           >
             <LinearGradient
               colors={["#5FA9F5", "#4A63D8"]}
@@ -476,7 +456,8 @@ export default function SurveyPreview() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
+    backgroundColor: Colors.background.secondary,
+    overflow: "visible",
   },
   centerContainer: {
     flex: 1,
@@ -510,47 +491,15 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    zIndex: 1,
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: 200,
-  },
-  previewBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surface.purpleTint,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Borders.radius.md,
-    marginBottom: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  previewBannerTextContainer: {
-    flex: 1,
-  },
-  previewBannerTitle: {
-    fontSize: Typography.fontSize.body,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary.purple,
-    marginBottom: 2,
-  },
-  previewBannerSubtitle: {
-    fontSize: Typography.fontSize.caption,
-    color: Colors.primary.purple,
-    lineHeight: 16,
+    paddingBottom: 300,
   },
   surveyHeader: {
     marginBottom: Spacing.xxl,
     alignItems: "center",
-  },
-  surveyHeaderIcon: {
-    width: Spacing.avatar.lg,
-    height: Spacing.avatar.lg,
-    borderRadius: Borders.radius.full,
-    backgroundColor: Colors.surface.blueTint,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
   },
   surveyTitle: {
     ...Typography.styles.h2,
@@ -570,87 +519,176 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   summaryCard: {
-    backgroundColor: Colors.background.secondary,
-    borderRadius: Borders.radius.lg,
-    padding: Spacing.lg,
+    backgroundColor: Colors.surface.blueTint,
+    borderRadius: Spacing.card.borderRadius,
+    padding: Spacing.card.paddingSmall,
     marginBottom: Spacing.lg,
-    borderWidth: Borders.width.default,
-    borderColor: Colors.border.default,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    ...Shadows.sm,
   },
-  summaryTitle: {
-    fontSize: Typography.fontSize.caption,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.tertiary,
-    letterSpacing: 1,
-    marginBottom: Spacing.md,
-    textAlign: "center",
-  },
-  summaryModules: {
+  infoHeader: {
     flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  summaryModule: {
     alignItems: "center",
-    flex: 1,
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
-  moduleValue: {
-    ...Typography.styles.h2,
+  infoTitle: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.bodySmall,
     color: Colors.text.primary,
-    marginTop: Spacing.xs,
   },
-  moduleLabel: {
-    fontSize: Typography.fontSize.caption,
-    color: Colors.text.tertiary,
-    marginTop: Spacing.xxs,
+  infoGrid: {
+    flexDirection: "row",
+    gap: Spacing.xs,
   },
-  timeIconContainer: {
-    marginTop: Spacing.xs,
+  infoItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
   },
-  timeEditHeader: {
+  infoItemEditable: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    borderWidth: 2,
+    borderColor: Colors.primary.blue,
+    borderStyle: "dashed",
+    position: "relative",
+  },
+  editableBadge: {
+    position: "absolute",
+    top: -8,
+    right: -8,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(43, 182, 233, 0.15)",
-    paddingHorizontal: 8,
+    gap: 3,
+    backgroundColor: Colors.primary.blue,
+    paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: Borders.radius.full,
-    marginBottom: Spacing.xxs,
+    ...Shadows.sm,
   },
-  editableLabel: {
-    fontSize: 9,
-    fontWeight: Typography.fontWeight.bold,
-    color: "#2BB6E9",
+  editableBadgeText: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 8,
+    color: Colors.text.inverse,
     letterSpacing: 0.5,
   },
-  editableModule: {
-    backgroundColor: "rgba(43, 182, 233, 0.06)",
-    borderWidth: 2,
-    borderColor: "#2BB6E9",
-    borderStyle: "dashed",
-    borderRadius: Borders.radius.lg,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    marginHorizontal: -Spacing.xs,
+  infoNumber: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h4,
+    color: Colors.text.primary,
+    marginBottom: 2,
+    marginTop: 4,
   },
-  editButtonIndicator: {
-    flexDirection: "row",
+  infoLabel: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.label,
+    color: Colors.text.secondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#2BB6E9",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: Borders.radius.full,
-    marginTop: Spacing.xs,
+    padding: Spacing.lg,
   },
-  editButtonText: {
-    fontSize: Typography.fontSize.caption - 1,
-    color: "#FFFFFF",
+  modalContent: {
+    backgroundColor: Colors.background.primary,
+    borderRadius: Borders.radius.xxl,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: Colors.primary.blue,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 12,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderBottomWidth: Borders.width.thick,
+    borderBottomColor: Colors.border.default,
+    backgroundColor: Colors.background.secondary,
+  },
+  modalTitle: {
+    ...Typography.styles.h3,
+    color: Colors.text.primary,
+    letterSpacing: -0.3,
+  },
+  modalBody: {
+    padding: Spacing.lg,
+  },
+  modalLabel: {
+    ...Typography.styles.label,
     fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
+  },
+  modalInput: {
+    backgroundColor: Colors.background.secondary,
+    borderWidth: Borders.width.thick,
+    borderColor: Colors.border.default,
+    borderRadius: Borders.radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    fontSize: Typography.fontSize.body,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    padding: Spacing.lg,
+    borderTopWidth: Borders.width.thick,
+    borderTopColor: Colors.border.default,
+    gap: Spacing.sm,
+    backgroundColor: Colors.background.secondary,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Borders.radius.lg,
+    alignItems: "center",
+    backgroundColor: Colors.background.tertiary,
+    borderWidth: Borders.width.thick,
+    borderColor: Colors.border.default,
+  },
+  modalCancelButtonText: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.secondary,
+  },
+  modalSaveButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Borders.radius.lg,
+    alignItems: "center",
+    backgroundColor: Colors.primary.blue,
+  },
+  modalSaveButtonText: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
   },
   fixedHeader: {
     backgroundColor: Colors.background.primary,
     zIndex: 10,
     paddingBottom: 0,
+    borderTopWidth: 0,
     borderBottomLeftRadius: Borders.radius.xl,
     borderBottomRightRadius: Borders.radius.xl,
     borderBottomWidth: Borders.width.default,
@@ -820,13 +858,19 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: Spacing.lg,
     paddingTop: Spacing.md,
     backgroundColor: Colors.background.primary,
-    borderTopWidth: Borders.width.thick,
-    borderTopColor: Colors.border.default,
+    borderTopWidth: 0,
+    overflow: "visible",
     ...Shadows.lg,
-    zIndex: ZIndex.fixedButton,
+    marginBottom: 0,
+    zIndex: 9999,
+    elevation: 10,
   },
   editButton: {
     borderRadius: Borders.radius.lg,
@@ -836,7 +880,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 11,
+    zIndex: 10000,
   },
   editButtonGradient: {
     flexDirection: "row",
@@ -854,11 +899,17 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     gap: Spacing.sm,
+    zIndex: 10000,
+    elevation: 11,
+    position: "relative",
   },
   publishButton: {
     flex: 1,
     borderRadius: Borders.radius.lg,
     overflow: "hidden",
+    zIndex: 10002,
+    elevation: 12,
+    position: "relative",
   },
   publishButtonGradient: {
     flexDirection: "row",
@@ -867,6 +918,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm + 2,
     paddingHorizontal: Spacing.md,
     gap: Spacing.xs,
+    zIndex: 10001,
+    elevation: 12,
   },
   publishButtonText: {
     fontSize: Typography.fontSize.body,
@@ -885,99 +938,12 @@ const styles = StyleSheet.create({
     borderWidth: Borders.width.thick,
     borderColor: Colors.border.default,
     gap: Spacing.xs,
+    zIndex: 10000,
+    elevation: 11,
   },
   archiveButtonText: {
     fontSize: Typography.fontSize.body,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.tertiary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: Spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: Colors.background.primary,
-    borderRadius: Borders.radius.xxl,
-    width: "100%",
-    maxWidth: 400,
-    shadowColor: Colors.primary.blue,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
-    overflow: "hidden",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: Spacing.lg,
-    borderBottomWidth: Borders.width.thick,
-    borderBottomColor: Colors.border.default,
-    backgroundColor: Colors.background.secondary,
-  },
-  modalTitle: {
-    ...Typography.styles.h3,
-    color: Colors.text.primary,
-    letterSpacing: -0.3,
-  },
-  modalBody: {
-    padding: Spacing.lg,
-  },
-  modalLabel: {
-    ...Typography.styles.label,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.secondary,
-    marginBottom: Spacing.sm,
-  },
-  modalInput: {
-    backgroundColor: Colors.background.secondary,
-    borderWidth: Borders.width.thick,
-    borderColor: Colors.border.default,
-    borderRadius: Borders.radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-    fontSize: Typography.fontSize.body,
-    color: Colors.text.primary,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  modalFooter: {
-    flexDirection: "row",
-    padding: Spacing.lg,
-    borderTopWidth: Borders.width.thick,
-    borderTopColor: Colors.border.default,
-    gap: Spacing.sm,
-    backgroundColor: Colors.background.secondary,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Borders.radius.lg,
-    alignItems: "center",
-    backgroundColor: Colors.background.tertiary,
-    borderWidth: Borders.width.thick,
-    borderColor: Colors.border.default,
-  },
-  modalCancelButtonText: {
-    fontSize: Typography.fontSize.body,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.secondary,
-  },
-  modalSaveButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Borders.radius.lg,
-    alignItems: "center",
-    backgroundColor: Colors.primary.blue,
-  },
-  modalSaveButtonText: {
-    fontSize: Typography.fontSize.body,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.inverse,
   },
 });

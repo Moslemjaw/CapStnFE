@@ -479,7 +479,7 @@ export default function ResearcherProfile() {
                     </Text>
                   </View>
                   <View style={styles.trophyContainer}>
-                    <Ionicons name="trophy" size={36} color="rgba(255,255,255,0.9)" />
+                    <Ionicons name="medal" size={36} color="rgba(255,255,255,0.9)" />
                   </View>
                 </View>
 

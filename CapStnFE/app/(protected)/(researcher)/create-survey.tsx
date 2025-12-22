@@ -68,6 +68,7 @@ export default function CreateSurvey() {
   const [errors, setErrors] = useState<{
     title?: string;
   }>({});
+  const scrollViewRef = useRef<any>(null);
 
   useEffect(() => {
     loadUser();
@@ -495,14 +496,17 @@ export default function CreateSurvey() {
         </View>
       </View>
       <KeyboardAwareScrollView
+        ref={scrollViewRef}
         style={[styles.keyboardView, styles.scrollView]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         enableAutomaticScroll={true}
-        extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
-        extraHeight={120}
+        enableResetScrollToCoords={false}
+        extraScrollHeight={Platform.OS === "ios" ? 100 : 150}
+        extraHeight={Platform.OS === "ios" ? 100 : 150}
+        keyboardOpeningTime={0}
       >
           {/* Survey Information Section */}
           <View style={styles.section}>
@@ -571,14 +575,16 @@ export default function CreateSurvey() {
                 </View>
 
                 {/* Question Text Input */}
-                <TextInput
-                  style={styles.questionTextInput}
-                  placeholder="Enter your question..."
-                  placeholderTextColor="#9CA3AF"
-                  value={question.text}
-                  onChangeText={(text) => updateQuestionText(index, text)}
-                  multiline
-                />
+                <View>
+                  <TextInput
+                    style={styles.questionTextInput}
+                    placeholder="Enter your question..."
+                    placeholderTextColor="#9CA3AF"
+                    value={question.text}
+                    onChangeText={(text) => updateQuestionText(index, text)}
+                    multiline
+                  />
+                </View>
 
                 {/* Question Type Toggle */}
                 <Text style={styles.questionTypeLabel}>Question Type</Text>
@@ -751,7 +757,7 @@ export default function CreateSurvey() {
       </KeyboardAwareScrollView>
 
       {/* Action Buttons - Fixed at bottom */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 48 }]}>
+      <View style={[styles.footer, { paddingBottom: bottomNavHeight + Spacing.sm }]}>
         <TouchableOpacity
           style={styles.addQuestionButton}
           onPress={addNewQuestion}
@@ -867,7 +873,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: 220,
+    paddingBottom: 300,
   },
   section: {
     marginBottom: Spacing.xxl,
