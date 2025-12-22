@@ -153,6 +153,7 @@ export default function Register() {
           enableAutomaticScroll={true}
           extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
           extraHeight={120}
+          scrollEnabled={false}
         >
             <View style={styles.content}>
               {/* Branding Section */}
@@ -164,7 +165,6 @@ export default function Register() {
                   <Text style={styles.joinText}>Join </Text>
                   <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
                 </View>
-                <Text style={styles.subtitle}>Create your account and start exploring</Text>
               </View>
 
               {/* Profile Avatar */}
@@ -202,7 +202,7 @@ export default function Register() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Full Name</Text>
                   <View style={styles.inputContainer}>
-                    <Ionicons name="person-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
+                    <Ionicons name="person-outline" size={19} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Your full name"
@@ -221,7 +221,7 @@ export default function Register() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Email</Text>
                   <View style={styles.inputContainer}>
-                    <Ionicons name="mail-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
+                    <Ionicons name="mail-outline" size={19} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="you@example.com"
@@ -241,7 +241,7 @@ export default function Register() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Password</Text>
                   <View style={styles.inputContainer}>
-                    <Ionicons name="lock-closed-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
+                    <Ionicons name="lock-closed-outline" size={19} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Create a password"
@@ -255,7 +255,7 @@ export default function Register() {
                       autoCorrect={false}
                     />
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={Colors.text.tertiary} />
+                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={19} color={Colors.text.tertiary} />
                     </TouchableOpacity>
                   </View>
                   {password.length > 0 && password.length < 8 && (
@@ -276,7 +276,7 @@ export default function Register() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Confirm Password</Text>
                   <View style={styles.inputContainer}>
-                    <Ionicons name="lock-closed-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
+                    <Ionicons name="lock-closed-outline" size={19} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Retype your password"
@@ -290,7 +290,7 @@ export default function Register() {
                       autoCorrect={false}
                     />
                     <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeButton}>
-                      <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color={Colors.text.tertiary} />
+                      <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={19} color={Colors.text.tertiary} />
                     </TouchableOpacity>
                   </View>
                   {confirmPasswordBlurred && password !== confirmPassword && confirmPassword.length > 0 && (
@@ -437,16 +437,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: Spacing.page.paddingHorizontal,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: 21,
+    paddingBottom: 21,
   },
   brandingSection: {
     alignItems: "center",
-    marginBottom: Spacing.lg,
+    marginBottom: 18,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: Spacing.sm,
+    marginBottom: 11,
   },
   logo: {
     width: 100,
@@ -473,22 +473,22 @@ const styles = StyleSheet.create({
   },
   avatarSection: {
     alignItems: "center",
-    marginBottom: Spacing.xl,
+    marginBottom: 21,
   },
   avatarButton: {
     position: "relative",
   },
   avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     borderWidth: 3,
     borderColor: Colors.background.primary,
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   optionalText: {
     ...Typography.styles.caption,
     color: Colors.text.tertiary,
-    marginTop: Spacing.xs,
+    marginTop: 7,
   },
   form: {
     width: "100%",
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputGroup: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.md * 0.95,
   },
   inputLabel: {
     ...Typography.styles.label,
@@ -544,24 +544,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
     borderWidth: 1.5,
     borderColor: Colors.border.default,
-    borderRadius: Borders.radius.md,
-    paddingHorizontal: Spacing.md,
+    borderRadius: Borders.radius.md * 0.95,
+    paddingHorizontal: Spacing.md * 0.95 * 0.95,
   },
   inputContainerFocused: {
     borderColor: Colors.primary.blue,
     ...Shadows.xs,
   },
   inputIcon: {
-    marginRight: Spacing.sm,
+    marginRight: Spacing.sm * 0.95,
   },
   input: {
     flex: 1,
-    paddingVertical: Spacing.md,
+    paddingVertical: 10 * 1.03 * 1.05,
     ...Typography.styles.body,
+    fontSize: Typography.fontSize.body * 0.95 * 0.95 * 1.1 * 1.1 * 1.15,
+    lineHeight: Typography.fontSize.body * 0.95 * 0.95 * 1.1 * 1.1 * 1.15 * 1.2,
     color: Colors.text.primary,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   eyeButton: {
-    padding: Spacing.xs,
+    padding: Spacing.xs * 0.95,
   },
   validationRow: {
     flexDirection: "row",

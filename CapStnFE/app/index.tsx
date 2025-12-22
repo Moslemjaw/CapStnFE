@@ -10,6 +10,8 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  Animated,
+  Easing,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useContext, useState, useRef, useEffect } from "react";
@@ -56,9 +58,36 @@ export default function Index() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const autoSlideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const jellyAnim = useRef(new Animated.Value(0)).current;
 
   const { isAuthenticated, isLoading, setIsAuthenticated } = useContext(AuthContext);
   const router = useRouter();
+
+  // Logo rotation and jelly animation - 3.5 minutes (210 seconds) for full rotation
+  useEffect(() => {
+    const duration = 210000; // 3.5 minutes = 210,000 milliseconds
+    
+    // Create parallel animations that loop seamlessly
+    Animated.parallel([
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: duration,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ),
+      Animated.loop(
+        Animated.timing(jellyAnim, {
+          toValue: 1,
+          duration: duration,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ),
+    ]).start();
+  }, []);
 
   // Auto-slide carousel every 5 seconds
   useEffect(() => {
@@ -170,15 +199,34 @@ export default function Index() {
       enableAutomaticScroll={true}
       extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
       extraHeight={120}
+      scrollEnabled={false}
     >
         <View style={styles.contentContainer}>
           {/* Branding Section */}
           <View style={styles.brandingSection}>
             {/* Main Logo */}
             <View style={styles.logoContainer}>
-              <Image
+              <Animated.Image
                 source={require("@/assets/logo.png")}
-                style={styles.logo}
+                style={[
+                  styles.logo,
+                  {
+                    transform: [
+                      {
+                        rotate: rotateAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ["0deg", "360deg"],
+                        }),
+                      },
+                      {
+                        scale: jellyAnim.interpolate({
+                          inputRange: [0, 0.25, 0.5, 0.75, 1],
+                          outputRange: [1, 1.015, 1, 0.985, 1],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
                 resizeMode="contain"
               />
             </View>
@@ -251,10 +299,16 @@ export default function Index() {
             )}
 
             <View style={styles.inputContainer}>
+              <Ionicons 
+                name="mail-outline" 
+                size={19} 
+                color="#9A9A9A"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
-                  placeholder="example@sight.ai"
-                  placeholderTextColor="#969696"
+                placeholder="you@example.com"
+                placeholderTextColor="#9A9A9A"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -264,28 +318,32 @@ export default function Index() {
             </View>
 
             <View style={styles.inputContainer}>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter your password"
-                    placeholderTextColor="#969696"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
+              <Ionicons 
+                name="lock-closed-outline" 
+                size={19} 
+                color="#9A9A9A"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password"
+                placeholderTextColor="#9A9A9A"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={19}
+                  color="#9A9A9A"
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={20}
-                      color="#969696"
-                  />
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -345,17 +403,17 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 53,
+    paddingBottom: 35,
     justifyContent: "center",
   },
   brandingSection: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 26,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 18,
   },
   logo: {
     width: 210,
@@ -368,7 +426,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   featureSection: {
-    marginBottom: 40,
+    marginBottom: 35,
     marginTop: -20,
     alignItems: "center",
   },
@@ -388,11 +446,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
-    paddingVertical: 24,
+    paddingVertical: 21,
     marginHorizontal: 20,
   },
   icon: {
-    marginBottom: 16,
+    marginBottom: 14,
     alignSelf: "center",
   },
   featureHeadline: {
@@ -400,7 +458,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#222222",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 11,
   },
   featureBody: {
     fontSize: 16,
@@ -427,35 +485,29 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   inputContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCDCDC",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#111827",
-  },
-  passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DCDCDC",
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 11.4,
+    paddingHorizontal: 14.44,
+    marginBottom: 15.2,
   },
-  passwordInput: {
+  inputIcon: {
+    marginRight: 11.4,
+  },
+  input: {
     flex: 1,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#111827",
+    paddingVertical: 10 * 1.03 * 1.05 * 1.1,
+    fontSize: 15 * 0.95 * 0.95 * 1.1 * 1.1 * 1.15,
+    lineHeight: 15 * 0.95 * 0.95 * 1.1 * 1.1 * 1.15 * 1.2,
+    color: "#1A1A1A",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
-  eyeIcon: {
-    padding: 4,
+  eyeButton: {
+    padding: 7.6,
   },
   loginButton: {
     borderRadius: 12,

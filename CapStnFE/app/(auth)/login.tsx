@@ -10,6 +10,8 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  Animated,
+  Easing,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useContext, useState, useRef, useEffect } from "react";
@@ -56,9 +58,36 @@ export default function Login() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const autoSlideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const jellyAnim = useRef(new Animated.Value(0)).current;
 
   const { isAuthenticated, isLoading, setIsAuthenticated } = useContext(AuthContext);
   const router = useRouter();
+
+  // Logo rotation and jelly animation - 3.5 minutes (210 seconds) for full rotation
+  useEffect(() => {
+    const duration = 210000; // 3.5 minutes = 210,000 milliseconds
+    
+    // Create parallel animations that loop seamlessly
+    Animated.parallel([
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: duration,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ),
+      Animated.loop(
+        Animated.timing(jellyAnim, {
+          toValue: 1,
+          duration: duration,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ),
+    ]).start();
+  }, []);
 
   // Auto-slide carousel every 5 seconds
   useEffect(() => {
@@ -172,14 +201,33 @@ export default function Login() {
           enableAutomaticScroll={true}
           extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
           extraHeight={120}
+          scrollEnabled={false}
         >
             <View style={styles.contentContainer}>
               {/* Branding Section */}
               <View style={styles.brandingSection}>
                 <View style={styles.logoContainer}>
-                  <Image
+                  <Animated.Image
                     source={require("@/assets/logo.png")}
-                    style={styles.logo}
+                    style={[
+                      styles.logo,
+                      {
+                        transform: [
+                          {
+                            rotate: rotateAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ["0deg", "360deg"],
+                            }),
+                          },
+                          {
+                            scale: jellyAnim.interpolate({
+                              inputRange: [0, 0.25, 0.5, 0.75, 1],
+                              outputRange: [1, 1.015, 1, 0.985, 1],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
                     resizeMode="contain"
                   />
                 </View>
@@ -276,7 +324,7 @@ export default function Login() {
                   <View style={styles.inputContainer}>
                     <Ionicons 
                       name="lock-closed-outline" 
-                      size={20} 
+                      size={19} 
                       color={Colors.text.tertiary}
                       style={styles.inputIcon}
                     />
@@ -298,7 +346,7 @@ export default function Login() {
                     >
                       <Ionicons
                         name={showPassword ? "eye-off-outline" : "eye-outline"}
-                        size={20}
+                        size={19}
                         color={Colors.text.tertiary}
                       />
                     </TouchableOpacity>
@@ -368,17 +416,17 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: Spacing.page.paddingHorizontal,
-    paddingTop: Spacing.xxl,
-    paddingBottom: Spacing.xl,
+    paddingTop: 28,
+    paddingBottom: 21,
     justifyContent: "center",
   },
   brandingSection: {
     alignItems: "center",
-    marginBottom: Spacing.xl,
+    marginBottom: 21,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: Spacing.lg,
+    marginBottom: 18,
   },
   logo: {
     width: 180,
@@ -389,7 +437,7 @@ const styles = StyleSheet.create({
     width: 120,
   },
   featureSection: {
-    marginBottom: Spacing.xxl,
+    marginBottom: 28,
     alignItems: "center",
   },
   carouselScrollView: {
@@ -407,18 +455,18 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     alignItems: "center",
-    paddingVertical: Spacing.xl,
+    paddingVertical: 21,
     paddingHorizontal: Spacing.xxl,
     width: "100%",
   },
   featureIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: Colors.surface.blueTint,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: Spacing.md,
+    marginBottom: 14,
   },
   featureHeadline: {
     ...Typography.styles.h5,
@@ -465,7 +513,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputGroup: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.md * 0.95,
   },
   inputLabel: {
     ...Typography.styles.label,
@@ -479,24 +527,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
     borderWidth: 1.5,
     borderColor: Colors.border.default,
-    borderRadius: Borders.radius.md,
-    paddingHorizontal: Spacing.md,
+    borderRadius: Borders.radius.md * 0.95,
+    paddingHorizontal: Spacing.md * 0.95 * 0.95,
   },
   inputContainerFocused: {
     borderColor: Colors.primary.blue,
     ...Shadows.xs,
   },
   inputIcon: {
-    marginRight: Spacing.sm,
+    marginRight: Spacing.sm * 0.95,
   },
   input: {
     flex: 1,
-    paddingVertical: Spacing.md,
+    paddingVertical: 10 * 1.03 * 1.05 * 1.1,
     ...Typography.styles.body,
+    fontSize: Typography.fontSize.body * 0.95 * 0.95 * 1.1 * 1.1 * 1.15,
+    lineHeight: Typography.fontSize.body * 0.95 * 0.95 * 1.1 * 1.1 * 1.15 * 1.2,
     color: Colors.text.primary,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   eyeButton: {
-    padding: Spacing.xs,
+    padding: Spacing.xs * 0.95,
   },
   loginButtonWrapper: {
     marginTop: Spacing.lg,
