@@ -63,7 +63,7 @@ export default function ResearcherSurveys() {
   const [showQuestionDropdown, setShowQuestionDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
 
   // Search input ref
   const searchInputRef = useRef<TextInput>(null);
@@ -404,16 +404,14 @@ export default function ResearcherSurveys() {
           </View>
 
           {/* Search Bar */}
-          <View style={[styles.searchContainer, isSearchFocused && styles.searchContainerFocused]}>
-            <Ionicons name="search" size={18} color={isSearchFocused ? Colors.primary.blue : Colors.text.tertiary} />
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={18} color={Colors.text.tertiary} />
             <TextInput
               ref={searchInputRef}
               style={styles.searchInput}
               placeholder="Search surveys..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)}
               placeholderTextColor={Colors.text.tertiary}
               returnKeyType="search"
               autoCorrect={false}

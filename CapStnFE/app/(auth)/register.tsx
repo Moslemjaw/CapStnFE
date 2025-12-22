@@ -37,12 +37,6 @@ export default function Register() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [confirmPasswordBlurred, setConfirmPasswordBlurred] = useState(false);
   
-  // Focus states
-  const [nameFocused, setNameFocused] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
-  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
-  
   const router = useRouter();
   const { setIsAuthenticated } = useContext(AuthContext);
 
@@ -207,16 +201,16 @@ export default function Register() {
                 {/* Name Input */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Full Name</Text>
-                  <View style={[styles.inputContainer, nameFocused && styles.inputContainerFocused]}>
-                    <Ionicons name="person-outline" size={20} color={nameFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="person-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Your full name"
                       placeholderTextColor={Colors.text.tertiary}
                       value={name}
                       onChangeText={setName}
-                      onFocus={() => setNameFocused(true)}
-                      onBlur={() => setNameFocused(false)}
+
+
                       autoCapitalize="words"
                       autoCorrect={false}
                     />
@@ -226,16 +220,16 @@ export default function Register() {
                 {/* Email Input */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Email</Text>
-                  <View style={[styles.inputContainer, emailFocused && styles.inputContainerFocused]}>
-                    <Ionicons name="mail-outline" size={20} color={emailFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="mail-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="you@example.com"
                       placeholderTextColor={Colors.text.tertiary}
                       value={email}
                       onChangeText={setEmail}
-                      onFocus={() => setEmailFocused(true)}
-                      onBlur={() => setEmailFocused(false)}
+
+
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -246,16 +240,16 @@ export default function Register() {
                 {/* Password Input */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Password</Text>
-                  <View style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}>
-                    <Ionicons name="lock-closed-outline" size={20} color={passwordFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Create a password"
                       placeholderTextColor={Colors.text.tertiary}
                       value={password}
                       onChangeText={setPassword}
-                      onFocus={() => setPasswordFocused(true)}
-                      onBlur={() => setPasswordFocused(false)}
+
+
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -281,16 +275,16 @@ export default function Register() {
                 {/* Confirm Password Input */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Confirm Password</Text>
-                  <View style={[styles.inputContainer, confirmPasswordFocused && styles.inputContainerFocused]}>
-                    <Ionicons name="lock-closed-outline" size={20} color={confirmPasswordFocused ? Colors.primary.blue : Colors.text.tertiary} style={styles.inputIcon} />
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Retype your password"
                       placeholderTextColor={Colors.text.tertiary}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
-                      onFocus={() => setConfirmPasswordFocused(true)}
-                      onBlur={() => { setConfirmPasswordFocused(false); setConfirmPasswordBlurred(true); }}
+
+                      onBlur={() => setConfirmPasswordBlurred(true)}
                       secureTextEntry={!showConfirmPassword}
                       autoCapitalize="none"
                       autoCorrect={false}

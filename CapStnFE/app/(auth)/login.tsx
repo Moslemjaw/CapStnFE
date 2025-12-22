@@ -53,8 +53,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const autoSlideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -251,11 +249,11 @@ export default function Login() {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Email</Text>
-                  <View style={[styles.inputContainer, emailFocused && styles.inputContainerFocused]}>
+                  <View style={styles.inputContainer}>
                     <Ionicons 
                       name="mail-outline" 
                       size={20} 
-                      color={emailFocused ? Colors.primary.blue : Colors.text.tertiary}
+                      color={Colors.text.tertiary}
                       style={styles.inputIcon}
                     />
                     <TextInput
@@ -264,22 +262,22 @@ export default function Login() {
                       placeholderTextColor={Colors.text.tertiary}
                       value={email}
                       onChangeText={setEmail}
-                      onFocus={() => setEmailFocused(true)}
-                      onBlur={() => setEmailFocused(false)}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
+                      key="username"
+
                     />
                   </View>
                 </View>
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Password</Text>
-                  <View style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}>
+                  <View style={styles.inputContainer}>
                     <Ionicons 
                       name="lock-closed-outline" 
                       size={20} 
-                      color={passwordFocused ? Colors.primary.blue : Colors.text.tertiary}
+                      color={Colors.text.tertiary}
                       style={styles.inputIcon}
                     />
                     <TextInput
@@ -288,8 +286,8 @@ export default function Login() {
                       placeholderTextColor={Colors.text.tertiary}
                       value={password}
                       onChangeText={setPassword}
-                      onFocus={() => setPasswordFocused(true)}
-                      onBlur={() => setPasswordFocused(false)}
+
+
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
