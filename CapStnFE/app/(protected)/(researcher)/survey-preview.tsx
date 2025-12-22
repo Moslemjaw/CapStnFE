@@ -12,17 +12,31 @@ import {
   Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { getSurveyById, publishSurvey, unpublishSurvey, updateSurvey } from "@/api/surveys";
+import {
+  getSurveyById,
+  publishSurvey,
+  unpublishSurvey,
+  updateSurvey,
+} from "@/api/surveys";
 import { getQuestionsBySurveyId } from "@/api/questions";
 import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
-import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Borders,
+  Shadows,
+} from "@/constants/design";
 
 export default function SurveyPreview() {
   const router = useRouter();
@@ -93,7 +107,7 @@ export default function SurveyPreview() {
       if (survey.draft === "published") {
         await unpublishSurvey(surveyId);
       }
-      
+
       // Navigate to success page (replace to prevent going back to preview)
       router.replace({
         pathname: "/(protected)/(researcher)/survey-archive-success",
@@ -108,7 +122,9 @@ export default function SurveyPreview() {
       console.error("Error archiving survey:", err);
       Alert.alert(
         "Error",
-        err.response?.data?.message || err.message || "Failed to archive survey. Please try again."
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to archive survey. Please try again."
       );
       setActionLoading(false);
     }
@@ -120,7 +136,7 @@ export default function SurveyPreview() {
     setActionLoading(true);
     try {
       await publishSurvey(surveyId);
-      
+
       // Navigate to success page (replace to prevent going back to preview)
       // Don't update state before navigation to avoid button being disabled
       router.replace({
@@ -136,7 +152,9 @@ export default function SurveyPreview() {
       console.error("Error publishing survey:", err);
       Alert.alert(
         "Error",
-        err.response?.data?.message || err.message || "Failed to publish survey. Please try again."
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to publish survey. Please try again."
       );
     } finally {
       setActionLoading(false);
@@ -179,7 +197,9 @@ export default function SurveyPreview() {
       console.error("Error updating time:", err);
       Alert.alert(
         "Error",
-        err.response?.data?.message || err.message || "Failed to update time. Please try again."
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to update time. Please try again."
       );
     } finally {
       setActionLoading(false);
@@ -216,255 +236,278 @@ export default function SurveyPreview() {
 
   return (
     <FadeInView style={{ flex: 1 }}>
-    <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
-      {/* Gradient Background */}
-      <LinearGradient
-        colors={[Colors.background.primary, Colors.surface.blueTint, Colors.surface.purpleTint]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      {/* Fixed Header Section */}
-      <View style={styles.fixedHeader}>
-        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>{survey?.title || "Survey"}</Text>
-            <Text style={styles.headerSubtitle}>Survey preview</Text>
-          </View>
-          <Image source={require("@/assets/title.png")} style={styles.titleImage} resizeMode="contain" />
-        </View>
-      </View>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <SafeAreaView
+        style={styles.container}
+        edges={["bottom", "left", "right"]}
       >
-        {/* Preview Mode Banner */}
-        <View style={styles.previewBanner}>
-          <Ionicons name="eye-outline" size={20} color="#8A4DE8" />
-          <View style={styles.previewBannerTextContainer}>
-            <Text style={styles.previewBannerTitle}>Preview Mode</Text>
-            <Text style={styles.previewBannerSubtitle}>
-              This is how your survey will appear to respondents.
-            </Text>
-          </View>
-        </View>
-
-        {/* Survey Header */}
-        <View style={styles.surveyHeader}>
-          <View style={styles.surveyHeaderIcon}>
-            <Ionicons name="document-text-outline" size={32} color="#5FA9F5" />
-          </View>
-          {survey.description && survey.description.trim() && (
-            <Text style={styles.surveyDescription}>{survey.description}</Text>
-          )}
-        </View>
-
-        {/* Survey Summary Card */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>SURVEY SUMMARY</Text>
-          <View style={styles.summaryModules}>
-            <View style={styles.summaryModule}>
-              <Ionicons name="list-outline" size={24} color="#4A63D8" />
-              <Text style={styles.moduleValue}>{questions.length}</Text>
-              <Text style={styles.moduleLabel}>Questions</Text>
-            </View>
-
-            <TouchableOpacity style={[styles.summaryModule, styles.editableModule]} onPress={openTimeEditModal}>
-              <View style={styles.timeIconContainer}>
-                <Ionicons name="time-outline" size={24} color="#2BB6E9" />
-                <View style={styles.editBadge}>
-                  <Ionicons name="pencil" size={12} color="#FFFFFF" />
-                </View>
-              </View>
-              <Text style={styles.moduleValue}>~{survey.estimatedMinutes}</Text>
-              <Text style={styles.moduleLabel}>Minutes</Text>
-              <Text style={styles.editHint}>Tap to edit</Text>
-            </TouchableOpacity>
-
-            <View style={styles.summaryModule}>
-              <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              <Text style={styles.moduleValue}>+{survey.rewardPoints}</Text>
-              <Text style={styles.moduleLabel}>Points</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Questions Section */}
-        <View style={styles.questionsSection}>
-          <Text style={styles.sectionTitle}>Questions</Text>
-
-          {questions.length === 0 ? (
-            <View style={styles.emptyQuestions}>
-              <Ionicons name="help-circle-outline" size={32} color="#9CA3AF" />
-              <Text style={styles.emptyQuestionsText}>
-                No questions available for this survey
-              </Text>
-            </View>
-          ) : (
-            questions.map((question, index) => (
-              <View key={question._id} style={styles.questionCard}>
-                <View style={styles.questionHeader}>
-                  <View style={styles.questionNumberBadge}>
-                    <Text style={styles.questionNumber}>{index + 1}</Text>
-                  </View>
-                  <View style={styles.questionHeaderRight}>
-                    {question.isRequired && (
-                      <View style={styles.requiredBadge}>
-                        <Text style={styles.requiredText}>REQUIRED</Text>
-                      </View>
-                    )}
-                    <Text style={styles.questionTypeLabel}>
-                      {question.type === "text" 
-                        ? "Numeric input" 
-                        : question.type === "multiple_choice"
-                        ? "Single choice"
-                        : "Single choice"}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.questionText}>{question.text}</Text>
-
-                {question.options && question.options.length > 0 ? (
-                  <View style={styles.optionsContainer}>
-                    {question.options.map((option, optIndex) => (
-                      <View key={optIndex} style={styles.optionButton}>
-                        <View style={styles.optionRadio}>
-                          <View style={styles.optionRadioDot} />
-                        </View>
-                        <Text style={styles.optionButtonText}>{option}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={styles.textInputContainer}>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Enter number..."
-                      placeholderTextColor="#9CA3AF"
-                      editable={false}
-                    />
-                  </View>
-                )}
-              </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Action Buttons */}
-      <View style={[styles.footer, { paddingBottom: bottomNavHeight + 8 }]}>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={handleEdit}
-          disabled={actionLoading}
-        >
-          <LinearGradient
-            colors={["#A23DD8", "#D13DB8"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.editButtonGradient}
+        {/* Gradient Background */}
+        <LinearGradient
+          colors={[
+            Colors.background.primary,
+            Colors.surface.blueTint,
+            Colors.surface.purpleTint,
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Fixed Header Section */}
+        <View style={styles.fixedHeader}>
+          <View
+            style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
           >
-            <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.editButtonText}>Edit Survey</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerTitle}>
+                {survey?.title || "Survey"}
+              </Text>
+              <Text style={styles.headerSubtitle}>Survey preview</Text>
+            </View>
+            <Image
+              source={require("@/assets/title.png")}
+              style={styles.titleImage}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Survey Header */}
+          <View style={styles.surveyHeader}>
+            {survey.description && survey.description.trim() && (
+              <Text style={styles.surveyDescription}>{survey.description}</Text>
+            )}
+          </View>
 
-        <View style={styles.buttonRow}>
+          {/* Survey Summary Card */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryModules}>
+              <View style={styles.summaryModule}>
+                <Text style={styles.moduleValue}>{questions.length}</Text>
+                <Text style={styles.moduleLabel}>Questions</Text>
+              </View>
+              <View style={styles.summaryModule}>
+                <Text style={styles.moduleValue}>
+                  {questions.filter((q) => q.isRequired).length}
+                </Text>
+                <Text style={styles.moduleLabel}>Required</Text>
+              </View>
+              <View style={styles.summaryModule}>
+                <Text style={styles.moduleValue}>
+                  {questions.filter((q) => !q.isRequired).length}
+                </Text>
+                <Text style={styles.moduleLabel}>Optional</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.summaryModule}
+                onPress={openTimeEditModal}
+              >
+                <Text style={styles.moduleValue}>
+                  ~{survey.estimatedMinutes}
+                </Text>
+                <Text style={styles.moduleLabel}>Minutes</Text>
+                <Text style={styles.editHint}>Tap to edit</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Questions Section */}
+          <View style={styles.questionsSection}>
+            <Text style={styles.sectionTitle}>Questions</Text>
+
+            {questions.length === 0 ? (
+              <View style={styles.emptyQuestions}>
+                <Ionicons
+                  name="help-circle-outline"
+                  size={32}
+                  color="#9CA3AF"
+                />
+                <Text style={styles.emptyQuestionsText}>
+                  No questions available for this survey
+                </Text>
+              </View>
+            ) : (
+              questions.map((question, index) => (
+                <View key={question._id} style={styles.questionCard}>
+                  <View style={styles.questionHeader}>
+                    <View style={styles.questionNumberBadge}>
+                      <Text style={styles.questionNumber}>{index + 1}</Text>
+                    </View>
+                    <View style={styles.questionHeaderRight}>
+                      {question.isRequired && (
+                        <View style={styles.requiredBadge}>
+                          <Text style={styles.requiredText}>REQUIRED</Text>
+                        </View>
+                      )}
+                      <Text style={styles.questionTypeLabel}>
+                        {question.type === "text"
+                          ? "Numeric input"
+                          : question.type === "multiple_choice"
+                          ? "Single choice"
+                          : "Single choice"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.questionText}>{question.text}</Text>
+
+                  {question.options && question.options.length > 0 ? (
+                    <View style={styles.optionsContainer}>
+                      {question.options.map((option, optIndex) => (
+                        <View key={optIndex} style={styles.optionButton}>
+                          <View style={styles.optionRadio}>
+                            <View style={styles.optionRadioDot} />
+                          </View>
+                          <Text style={styles.optionButtonText}>{option}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.textInputContainer}>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Enter number..."
+                        placeholderTextColor="#9CA3AF"
+                        editable={false}
+                      />
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Action Buttons */}
+        <View style={[styles.footer, { paddingBottom: bottomNavHeight + 4 }]}>
           <TouchableOpacity
-            style={styles.publishButton}
-            onPress={handlePublish}
-            disabled={actionLoading || survey?.draft === "published"}
+            style={styles.editButton}
+            onPress={handleEdit}
+            disabled={actionLoading}
           >
             <LinearGradient
-              colors={["#5FA9F5", "#4A63D8"]}
+              colors={["#A23DD8", "#D13DB8"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.publishButtonGradient}
+              style={styles.editButtonGradient}
             >
-              {actionLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="paper-plane-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.publishButtonText}>Publish</Text>
-                </>
-              )}
+              <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.editButtonText}>Edit Survey</Text>
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.archiveButton}
-            onPress={handleArchive}
-            disabled={actionLoading}
-          >
-            {actionLoading ? (
-              <ActivityIndicator size="small" color="#6B7280" />
-            ) : (
-              <>
-                <Ionicons name="archive-outline" size={18} color="#6B7280" />
-                <Text style={styles.archiveButtonText}>Archive</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Time Edit Modal */}
-      <Modal
-        visible={showTimeEditModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTimeEditModal(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowTimeEditModal(false)}
-        >
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Estimated Time</Text>
-              <TouchableOpacity onPress={() => setShowTimeEditModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.tertiary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.modalLabel}>Estimated Minutes</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter estimated time in minutes"
-                placeholderTextColor={Colors.text.tertiary}
-                value={editedMinutes}
-                onChangeText={(text) => setEditedMinutes(text.replace(/[^0-9]/g, ""))}
-                keyboardType="number-pad"
-              />
-            </View>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowTimeEditModal(false)}
-              >
-                <Text style={styles.modalCancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalSaveButton}
-                onPress={saveTimeEdit}
-                disabled={actionLoading}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.publishButton}
+              onPress={handlePublish}
+              disabled={actionLoading || survey?.draft === "published"}
+            >
+              <LinearGradient
+                colors={["#5FA9F5", "#4A63D8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.publishButtonGradient}
               >
                 {actionLoading ? (
-                  <ActivityIndicator size="small" color={Colors.text.inverse} />
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.modalSaveButtonText}>Save</Text>
+                  <>
+                    <Ionicons
+                      name="paper-plane-outline"
+                      size={18}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.publishButtonText}>Publish</Text>
+                  </>
                 )}
-              </TouchableOpacity>
-            </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.archiveButton}
+              onPress={handleArchive}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator size="small" color="#6B7280" />
+              ) : (
+                <>
+                  <Ionicons name="archive-outline" size={18} color="#6B7280" />
+                  <Text style={styles.archiveButtonText}>Archive</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Time Edit Modal */}
+        <Modal
+          visible={showTimeEditModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowTimeEditModal(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowTimeEditModal(false)}
+          >
+            <Pressable
+              style={styles.modalContent}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Edit Estimated Time</Text>
+                <TouchableOpacity onPress={() => setShowTimeEditModal(false)}>
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={Colors.text.tertiary}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <Text style={styles.modalLabel}>Estimated Minutes</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter estimated time in minutes"
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={editedMinutes}
+                  onChangeText={(text) =>
+                    setEditedMinutes(text.replace(/[^0-9]/g, ""))
+                  }
+                  keyboardType="number-pad"
+                />
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={() => setShowTimeEditModal(false)}
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalSaveButton}
+                  onPress={saveTimeEdit}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={Colors.text.inverse}
+                    />
+                  ) : (
+                    <Text style={styles.modalSaveButtonText}>Save</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
     </FadeInView>
   );
 }
@@ -511,119 +554,49 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: 200,
   },
-  previewBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surface.purpleTint,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Borders.radius.md,
-    marginBottom: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  previewBannerTextContainer: {
-    flex: 1,
-  },
-  previewBannerTitle: {
-    fontSize: Typography.fontSize.body,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary.purple,
-    marginBottom: 2,
-  },
-  previewBannerSubtitle: {
-    fontSize: Typography.fontSize.caption,
-    color: Colors.primary.purple,
-    lineHeight: 16,
-  },
   surveyHeader: {
-    marginBottom: Spacing.xxl,
-    alignItems: "center",
-  },
-  surveyHeaderIcon: {
-    width: Spacing.avatar.lg,
-    height: Spacing.avatar.lg,
-    borderRadius: Borders.radius.full,
-    backgroundColor: Colors.surface.blueTint,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
-  },
-  surveyTitle: {
-    ...Typography.styles.h2,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-    textAlign: "center",
-  },
-  surveyQuestionCount: {
-    ...Typography.styles.body,
-    color: Colors.text.tertiary,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   surveyDescription: {
     ...Typography.styles.body,
     color: Colors.text.secondary,
     lineHeight: Typography.lineHeight.body,
-    textAlign: "center",
+    marginBottom: Spacing.lg,
   },
   summaryCard: {
-    backgroundColor: Colors.background.secondary,
-    borderRadius: Borders.radius.lg,
-    padding: Spacing.lg,
+    backgroundColor: Colors.surface.blueTint,
+    borderRadius: Spacing.card.borderRadius,
+    padding: Spacing.card.paddingSmall,
     marginBottom: Spacing.lg,
-    borderWidth: Borders.width.default,
-    borderColor: Colors.border.default,
-  },
-  summaryTitle: {
-    fontSize: Typography.fontSize.caption,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.tertiary,
-    letterSpacing: 1,
-    marginBottom: Spacing.md,
-    textAlign: "center",
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    ...Shadows.sm,
   },
   summaryModules: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    gap: Spacing.xs,
   },
   summaryModule: {
-    alignItems: "center",
     flex: 1,
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Spacing.button.borderRadiusSmall,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
   },
   moduleValue: {
-    ...Typography.styles.h2,
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.h4,
     color: Colors.text.primary,
-    marginTop: Spacing.xs,
+    marginBottom: 2,
   },
   moduleLabel: {
-    fontSize: Typography.fontSize.caption,
-    color: Colors.text.tertiary,
-    marginTop: Spacing.xxs,
-  },
-  timeIconContainer: {
-    position: "relative",
-  },
-  editBadge: {
-    position: "absolute",
-    bottom: -6,
-    right: -8,
-    backgroundColor: "#2BB6E9",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: Colors.background.secondary,
-  },
-  editableModule: {
-    backgroundColor: "rgba(43, 182, 233, 0.08)",
-    borderWidth: 1.5,
-    borderColor: "rgba(43, 182, 233, 0.4)",
-    borderStyle: "dashed",
-    borderRadius: Borders.radius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-    marginHorizontal: -Spacing.xs,
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: Typography.fontSize.label,
+    color: Colors.text.secondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   editHint: {
     fontSize: Typography.fontSize.caption - 1,
