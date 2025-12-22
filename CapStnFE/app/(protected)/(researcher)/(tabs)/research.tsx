@@ -449,17 +449,17 @@ const ResearchSurveyCard: React.FC<ResearchSurveyCardProps> = ({
                   <Text style={styles.secondaryButtonText}>View</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryButton} onPress={onToggleStatus}>
-                  <Ionicons name="folder-outline" size={16} color={Colors.text.secondary} />
+                  <Text style={styles.secondaryButtonText}>Archive</Text>
                 </TouchableOpacity>
               </View>
             </>
           ) : isDraft ? (
             <>
-              <TouchableOpacity style={styles.publishButton} onPress={onToggleStatus} activeOpacity={0.9}>
-                <Ionicons name="send-outline" size={16} color={Colors.background.primary} />
-                <Text style={styles.publishButtonText}>Publish</Text>
-              </TouchableOpacity>
               <View style={styles.secondaryActions}>
+                <TouchableOpacity style={styles.publishButton} onPress={onToggleStatus} activeOpacity={0.9}>
+                  <Ionicons name="send-outline" size={16} color={Colors.background.primary} />
+                  <Text style={styles.publishButtonText}>Publish</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryButton} onPress={onView}>
                   <Text style={styles.secondaryButtonText}>View</Text>
                 </TouchableOpacity>
@@ -695,6 +695,7 @@ const styles = StyleSheet.create({
     height: 34,
   },
   publishButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export function useBottomNavHeight(): number {
   const insets = useSafeAreaInsets();
   // Base height (60) + safe area bottom inset
-  return 20 + Math.max(insets.bottom, 5);
+  return 60 + Math.max(insets.bottom, 5);
 }
 
 /**

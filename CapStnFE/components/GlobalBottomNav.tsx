@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     ...Shadows.md,
     width: "100%",
-    zIndex: ZIndex.header,
+    zIndex: ZIndex.bottomNav,
     position: "relative",
   },
   navItem: {

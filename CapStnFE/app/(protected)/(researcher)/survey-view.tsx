@@ -9,6 +9,7 @@ import {
   Platform,
   Image,
   Animated,
+  Keyboard,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useEffect, useState, useRef } from "react";
@@ -48,6 +49,7 @@ export default function SurveyView() {
   const [checkingAnswered, setCheckingAnswered] = useState(true);
   const [userResponse, setUserResponse] = useState<Response | null>(null);
   const [optionSearchQueries, setOptionSearchQueries] = useState<Record<string, string>>({});
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const questionPositions = useRef<Record<string, number>>({});
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -68,6 +70,27 @@ export default function SurveyView() {
       useNativeDriver: false,
     }).start();
   }, [answers, questions]);
+
+  // Handle keyboard show/hide
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   const checkIfAlreadyAnswered = async () => {
     if (!surveyId) return;
@@ -140,9 +163,11 @@ export default function SurveyView() {
       const position = questionPositions.current[nextQuestionId];
 
       if (position !== undefined && scrollViewRef.current) {
+        // Add extra offset to account for keyboard and submit button
+        const offset = keyboardHeight > 0 ? keyboardHeight + 100 : 200;
         setTimeout(() => {
           scrollViewRef.current?.scrollTo({
-            y: Math.max(0, position - 100),
+            y: Math.max(0, position - offset),
             animated: true,
           });
         }, 300);
@@ -155,8 +180,13 @@ export default function SurveyView() {
       ...prev,
       [questionId]: value,
     }));
+    // Don't auto-scroll on text change - only scroll on enter
+  };
 
-    if (value && value.trim()) {
+  const handleTextSubmit = (questionId: string) => {
+    const question = questions.find((q) => q._id === questionId);
+    if (question && question.type === "text") {
+      // Move to next question when enter is pressed
       scrollToNextQuestion(questionId);
     }
   };
@@ -190,6 +220,10 @@ export default function SurveyView() {
   ) => {
     if (questionType === "single_choice" || questionType === "dropdown") {
       handleAnswerChange(questionId, option);
+      // Auto-scroll to next question for single choice/dropdown
+      if (option && option.trim()) {
+        scrollToNextQuestion(questionId);
+      }
     } else if (
       questionType === "multiple_choice" ||
       questionType === "checkbox"
@@ -208,6 +242,11 @@ export default function SurveyView() {
         ...prev,
         [questionId]: selectedOptions.join(","),
       }));
+      
+      // Auto-scroll to next question for multiple choice/checkbox when an option is selected
+      if (selectedOptions.length > 0) {
+        scrollToNextQuestion(questionId);
+      }
     }
   };
 
@@ -373,8 +412,9 @@ export default function SurveyView() {
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           enableAutomaticScroll={true}
-          extraScrollHeight={Platform.OS === "ios" ? 20 : 100}
-          extraHeight={120}
+          extraScrollHeight={Platform.OS === "ios" ? 100 : 150}
+          extraHeight={150}
+          keyboardOpeningTime={0}
         >
             {/* Survey Info */}
             <View style={styles.surveyInfo}>
@@ -440,9 +480,9 @@ export default function SurveyView() {
                         placeholderTextColor={Colors.text.tertiary}
                         value={answers[question._id] || ""}
                         onChangeText={(text) => handleAnswerChange(question._id, text)}
-                        multiline
-                        numberOfLines={4}
-                        textAlignVertical="top"
+                        onSubmitEditing={() => handleTextSubmit(question._id)}
+                        returnKeyType="next"
+                        blurOnSubmit={false}
                         editable={!hasAnswered}
                       />
                     ) : question.options && question.options.length > 0 ? (
@@ -601,7 +641,7 @@ export default function SurveyView() {
 
         {/* Floating Submit Button */}
         {!hasAnswered && (
-          <View style={[styles.floatingSubmitContainer, { bottom: bottomNavHeight + 16 }]}>
+          <View style={[styles.floatingSubmitContainer, { bottom: keyboardHeight > 0 ? keyboardHeight + 16 : bottomNavHeight + 16 }]}>
             <TouchableOpacity
               style={styles.submitButton}
               onPress={handleSubmit}
@@ -808,7 +848,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.regular,
     fontSize: Typography.fontSize.body,
     color: Colors.text.primary,
-    minHeight: 100,
+    height: 48,
   },
   textInputReadOnly: {
     backgroundColor: Colors.background.tertiary,
@@ -877,17 +917,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    alignItems: "center",
     paddingHorizontal: Spacing.page.paddingHorizontal,
     zIndex: 100,
   },
   submitButton: {
     borderRadius: Spacing.button.borderRadiusPill,
     overflow: "hidden",
+    width: "100%",
     ...Shadows.primary,
   },
   submitButtonBackground: {
-    backgroundColor: Colors.background.tertiary,
+    backgroundColor: "#D1D5DB",
     borderRadius: Spacing.button.borderRadiusPill,
     overflow: "hidden",
     position: "relative",
@@ -908,24 +948,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: Spacing.button.paddingVerticalLarge,
-    paddingHorizontal: Spacing.xl,
     gap: Spacing.xs,
-    minWidth: 200,
   },
   submitButtonText: {
     fontFamily: Typography.fontFamily.semiBold,
     fontSize: Typography.fontSize.bodyLarge,
     color: Colors.background.primary,
     letterSpacing: 0.3,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   submitButtonTextDark: {
-    color: Colors.text.secondary,
-    textShadowColor: 'rgba(255, 255, 255, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: Colors.text.primary,
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   completedSectionInline: {
     marginTop: Spacing.xl,

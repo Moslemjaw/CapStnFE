@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { View, StyleSheet } from "react-native";
 import GlobalBottomNav from "@/components/GlobalBottomNav";
+import { ZIndex } from "@/constants/design";
 
 export default function ResearcherLayout() {
   return (
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 9999,
-    elevation: 9999,
+    zIndex: ZIndex.bottomNav,
+    elevation: ZIndex.bottomNav,
   },
 });

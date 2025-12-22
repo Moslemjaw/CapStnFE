@@ -22,7 +22,7 @@ import { Survey } from "@/api/surveys";
 import { Question } from "@/api/questions";
 import { useBottomNavHeight } from "@/utils/bottomNavHeight";
 import { FadeInView } from "@/components/FadeInView";
-import { Colors, Typography, Spacing, Borders, Shadows } from "@/constants/design";
+import { Colors, Typography, Spacing, Borders, Shadows, ZIndex } from "@/constants/design";
 
 export default function SurveyPreview() {
   const router = useRouter();
@@ -826,6 +826,7 @@ const styles = StyleSheet.create({
     borderTopWidth: Borders.width.thick,
     borderTopColor: Colors.border.default,
     ...Shadows.lg,
+    zIndex: ZIndex.fixedButton,
   },
   editButton: {
     borderRadius: Borders.radius.lg,
